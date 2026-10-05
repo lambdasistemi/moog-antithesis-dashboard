@@ -4,5 +4,7 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+Environment=PATH=/run/wrappers/bin:%h/.nix-profile/bin:/etc/profiles/per-user/%u/bin:/run/current-system/sw/bin
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.sock
 ExecStart=/code/moog-antithesis-dashboard/deploy/cycle.sh
 TimeoutStartSec=8min
