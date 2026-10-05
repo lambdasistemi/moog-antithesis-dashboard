@@ -1,0 +1,8 @@
+[Unit]
+Description=Collect and publish the moog Antithesis dashboard
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/code/moog-antithesis-dashboard/deploy/cycle.sh
+TimeoutStartSec=8min

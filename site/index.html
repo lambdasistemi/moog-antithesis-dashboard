@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moog Antithesis Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a65; --line: #e2e0d8;
+  --ok: #1f7a4d; --ok-bg: #e3f2ea; --bad: #b3261e; --bad-bg: #fbe6e4;
+  --warn: #8a5a00; --warn-bg: #fdf0d5; --run: #1f5fa8; --run-bg: #e3edf9;
+  --idle: #6b6a65; --idle-bg: #eeede8;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2f2e2b;
+    --ok: #5cc28f; --ok-bg: #173325; --bad: #f08a80; --bad-bg: #3a1a17;
+    --warn: #e6b450; --warn-bg: #3a2c10; --run: #7fb0ec; --run-bg: #16273d;
+    --idle: #9a998f; --idle-bg: #262523;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2f2e2b;
+  --ok: #5cc28f; --ok-bg: #173325; --bad: #f08a80; --bad-bg: #3a1a17;
+  --warn: #e6b450; --warn-bg: #3a2c10; --run: #7fb0ec; --run-bg: #16273d;
+  --idle: #9a998f; --idle-bg: #262523;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 20px; font-weight: 600; margin: 0; }
+h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 32px 0 10px; }
+code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
+a { color: var(--run); }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+.meta { color: var(--muted); font-size: 13px; }
+.banner { margin-top: 16px; padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); display: none; }
+.banner.show { display: block; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.ok { color: var(--ok); background: var(--ok-bg); } .bad { color: var(--bad); background: var(--bad-bg); }
+.warn { color: var(--warn); background: var(--warn-bg); } .run { color: var(--run); background: var(--run-bg); }
+.idle { color: var(--idle); background: var(--idle-bg); }
+.chain { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.node { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; position: relative; }
+.node .name { font-weight: 600; }
+.node .detail { color: var(--muted); font-size: 12.5px; margin-top: 4px; overflow-wrap: anywhere; }
+.node .chip { margin-top: 8px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.failing { color: var(--bad); font-size: 12.5px; }
+.ignored { color: var(--muted); font-size: 12.5px; }
+.stages { display: flex; gap: 2px; }
+.stages span { width: 12px; height: 12px; border-radius: 2px; background: var(--idle-bg); }
+.stages span.passed { background: var(--ok); } .stages span.stopped { background: var(--bad); }
+.stages span.reached { background: var(--run); } .stages span.halted { background: var(--muted); }
+.counts { display: flex; flex-wrap: wrap; gap: 10px; }
+.count { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 120px; }
+.count b { display: block; font-size: 22px; font-weight: 600; }
+.count small { color: var(--muted); }
+.sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.empty { padding: 16px; color: var(--muted); }
+footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
+@media (max-width: 640px) { .hide-sm { display: none; } th, td { padding: 6px 8px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Moog → Antithesis pipeline</h1>
+    <div class="meta"><span id="generated">loading…</span> · <span id="next"></span></div>
+  </header>
+  <div class="banner" id="banner"></div>
+  <div class="sources" id="sources"></div>
+
+  <h2>Pipeline</h2>
+  <div class="chain" id="chain"></div>
+
+  <h2>Antithesis runs</h2>
+  <div class="panel"><table>
+    <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Status</th><th>Properties</th></tr></thead>
+    <tbody id="runs"></tbody>
+  </table></div>
+
+  <h2>On-chain test runs</h2>
+  <div class="counts" id="phases"></div>
+  <div class="panel" style="margin-top:10px"><table>
+    <thead><tr><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Phase</th><th>Outcome</th><th class="hide-sm">Slot</th></tr></thead>
+    <tbody id="facts"></tbody>
+  </table></div>
+
+  <h2>Nightly Amaru integration</h2>
+  <div class="panel"><table>
+    <thead><tr><th>Day</th><th>Result</th><th>Stopped at</th><th class="hide-sm">Stages</th><th>Reason</th><th class="hide-sm">Upstream</th></tr></thead>
+    <tbody id="nightly"></tbody>
+  </table></div>
+
+  <footer>
+    Collected every 10 minutes from the Antithesis API, the moog on-chain facts, the oracle and agent hosts, the
+    Antithesis proxy, the run freshness monitor and GitHub Actions. Each source keeps its last good value when it fails.
+    The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
+  </footer>
+</main>
+<script>
+const IGNORED = new Set(["Recent software version provided"]);
+const STALE_AFTER_S = 25 * 60;
+const POLL_MS = 60 * 1000;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const chip = (cls, text) => `<span class="chip ${cls}">${esc(text)}</span>`;
+const short = sha => sha ? sha.slice(0, 8) : "–";
+const testnet = d => d ? d.replace(/^testnets\//, "") : "–";
+const commitLink = (repo, sha) => sha && repo
+  ? `<a class="mono" href="https://github.com/${esc(repo)}/commit/${esc(sha)}">${short(sha)}</a>` : `<span class="mono">${short(sha)}</span>`;
+
+function ago(iso) {
+  if (!iso) return "never";
+  const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+  if (s < 90) return `${Math.round(s)} s ago`;
+  if (s < 5400) return `${Math.round(s / 60)} min ago`;
+  if (s < 172800) return `${Math.round(s / 3600)} h ago`;
+  return `${Math.round(s / 86400)} days ago`;
+}
+const when = iso => iso ? new Date(iso).toLocaleString([], {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"}) : "–";
+
+function renderHeader(d) {
+  $("generated").textContent = `updated ${ago(d.generated_at)}`;
+  $("generated").title = d.generated_at;
+  const age = (Date.now() - Date.parse(d.generated_at)) / 1000;
+  const b = $("banner");
+  if (age > STALE_AFTER_S) {
+    b.textContent = `This snapshot is ${ago(d.generated_at).replace(" ago", "")} old; the collector may be stopped.`;
+    b.classList.add("show");
+  } else b.classList.remove("show");
+  const next = Math.max(0, d.refresh_seconds - age);
+  $("next").textContent = next > 0 ? `next collection in about ${Math.ceil(next / 60)} min` : "next collection due";
+  $("sources").innerHTML = Object.entries(d.sources).map(([n, s]) =>
+    `<span title="${esc(s.error || "")}${s.last_success ? " · last success " + esc(s.last_success) : ""}">${chip(
+      s.status === "ok" ? "ok" : s.status === "stale" ? "warn" : "bad",
+      `${n}${s.status === "ok" ? "" : ": " + s.status}`)}</span>`).join("");
+}
+
+function monitorDetail(m) {
+  if (!m) return "–";
+  const kv = Object.fromEntries((m.last.match(/\w+=\S+/g) || []).map(s => s.split("=")));
+  const h = s => s ? (parseFloat(s) / 3600).toFixed(1) : "?";
+  return kv.age ? `primary run ${kv.status || "?"} · ${h(kv.age)} h old of ${h(kv.maximum)} h allowed` : m.last.split(" ")[0];
+}
+
+function renderChain(d) {
+  const runs = d.runs || [], h = d.hosts || {}, ph = (d.chain && d.chain.phases) || {};
+  const running = runs.filter(r => r.status === "in_progress").length;
+  const lastDone = runs.find(r => r.status === "completed");
+  const img = xs => (xs && xs[0]) ? xs[0].image.replace(/^moog-(oracle|agent):/, "") : "–";
+  const up = xs => xs && xs.length && /^Up/.test(xs[0].status);
+  const nodes = [
+    {name: "Requests", detail: `${d.token?.pending_requests ?? "?"} pending on the token`,
+     state: d.token ? (d.token.pending_requests > 0 ? ["run", "queued"] : ["ok", "drained"]) : ["bad", "unknown"]},
+    {name: "Oracle", detail: `${img(h.oracle)} · ${h.oracle?.[0]?.status ?? "–"}`,
+     state: up(h.oracle) ? ["ok", "up"] : ["bad", "down"]},
+    {name: "Agent", detail: `${img(h.agent)} · ${h.agent_published_24h ?? "?"} results published in 24 h · ${h.agent_errors_6h ?? "?"} errors in 6 h`,
+     state: !up(h.agent) ? ["bad", "down"] : h.agent_errors_6h > 0 ? ["warn", "errors"] : ["ok", "up"]},
+    {name: "Antithesis", detail: `${running} running · last completed ${lastDone ? ago(lastDone.created_at) : "–"}`,
+     state: running ? ["run", "running"] : ["idle", "idle"]},
+    {name: "On chain", detail: `${ph.accepted ?? 0} accepted · ${ph.pending ?? 0} pending`,
+     state: (ph.pending || ph.accepted) ? ["run", "in flight"] : ["ok", "settled"]},
+    {name: "Proxy", detail: `readiness ${d.proxy?.http_code ?? "?"}`,
+     state: d.proxy?.ready ? ["ok", "ready"] : ["bad", "not ready"]},
+    {name: "Freshness monitor", detail: monitorDetail(d.monitor),
+     state: d.monitor ? (d.monitor.ok ? ["ok", "ok"] : ["bad", "alerting"]) : ["bad", "unknown"]},
+  ];
+  $("chain").innerHTML = nodes.map(n =>
+    `<div class="node"><div class="name">${esc(n.name)}</div><div class="detail">${esc(n.detail)}</div>${chip(...n.state)}</div>`).join("");
+}
+
+function propsCell(p, status) {
+  if (status === "in_progress") return `<span class="ignored">running</span>`;
+  if (!p || p.total === 0) return `<span class="ignored">no properties</span>`;
+  const real = p.failing.filter(n => !IGNORED.has(n)), ignored = p.failing.filter(n => IGNORED.has(n));
+  const passing = p.total - real.length - ignored.length;
+  let html = real.length ? chip("bad", `${real.length} failing`) : chip("ok", `${passing}/${p.total - ignored.length} passing`);
+  if (real.length) html += `<div class="failing">${real.map(esc).join("<br>")}</div>`;
+  if (ignored.length) html += `<div class="ignored">${ignored.map(esc).join("<br>")} (not ours)</div>`;
+  return html;
+}
+
+function renderRuns(d) {
+  const runs = d.runs || [];
+  if (!runs.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
+  const st = s => s === "completed" ? chip("ok", "completed") : s === "in_progress" ? chip("run", "running")
+    : s === "incomplete" ? chip("warn", "incomplete") : chip("idle", s);
+  $("runs").innerHTML = runs.map(r => `<tr>
+    <td title="${esc(r.created_at)}">${when(r.created_at)}</td>
+    <td>${esc(testnet(r.directory))}</td>
+    <td class="hide-sm">${commitLink(r.repository, r.commit)} · ${esc(r.try ?? "–")}</td>
+    <td>${r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–"}</td>
+    <td>${st(r.status)}</td>
+    <td>${propsCell(r.properties, r.status)}</td></tr>`).join("");
+}
+
+function renderFacts(d) {
+  const c = d.chain;
+  if (!c) { $("phases").innerHTML = ""; $("facts").innerHTML = `<tr><td colspan="5" class="empty">No data.</td></tr>`; return; }
+  $("phases").innerHTML = ["pending", "accepted", "finished", "rejected"].map(p =>
+    `<div class="count"><b>${c.phases[p] ?? 0}</b><small>${p}</small></div>`).join("");
+  const out = f => f.phase !== "finished" ? "" : f.outcome === "success" ? chip("ok", "success") : f.outcome ? chip("bad", f.outcome) : "";
+  const phase = p => p === "finished" ? chip("idle", p) : p === "rejected" ? chip("warn", p) : chip("run", p);
+  $("facts").innerHTML = c.recent.slice(0, 15).map(f => `<tr>
+    <td>${esc(testnet(f.directory))}</td>
+    <td class="hide-sm">${commitLink(d.repository, f.commit)} · ${esc(f.try)}</td>
+    <td>${phase(f.phase)}</td><td>${out(f)}</td>
+    <td class="hide-sm mono">${esc(f.slot)}</td></tr>`).join("");
+}
+
+function renderNightly(d) {
+  const ns = d.nightly || [], stages = d.nightly_stages || [];
+  if (!ns.length) { $("nightly").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
+  $("nightly").innerHTML = ns.map(n => {
+    const r = n.receipt || {};
+    const i = stages.indexOf(r.stage);
+    const ok = n.conclusion === "success";
+    const res = n.status !== "completed" ? chip("run", "running") : ok ? chip("ok", "launched")
+      : r.error === "unchanged-head" ? chip("idle", "no change") : chip("bad", n.conclusion || "failed");
+    const bar = stages.map((s, k) => `<span title="${esc(s)}" class="${
+      i < 0 ? "" : k < i ? "passed" : k === i ? (ok ? "passed" : n.status !== "completed" ? "reached" : r.error === "unchanged-head" ? "halted" : "stopped") : ""}"></span>`).join("");
+    return `<tr>
+      <td><a href="${esc(n.url)}">${esc(r.day || when(n.createdAt))}</a>${n.event === "schedule" ? "" : ` <span class="ignored">${esc(n.event)}</span>`}</td>
+      <td>${res}</td>
+      <td>${esc(r.stage || "–")}</td>
+      <td class="hide-sm"><div class="stages">${bar}</div></td>
+      <td>${esc(r.error || "")}</td>
+      <td class="hide-sm">${r.upstream_sha ? `<a class="mono" href="https://github.com/pragma-org/amaru/commit/${esc(r.upstream_sha)}">${short(r.upstream_sha)}</a>` : "–"}</td></tr>`;
+  }).join("");
+}
+
+let last = null;
+function render(d) {
+  last = d;
+  for (const f of [renderHeader, renderChain, renderRuns, renderFacts, renderNightly]) {
+    try { f(d); } catch (e) { console.error(f.name, e); }
+  }
+}
+async function load() {
+  try {
+    const r = await fetch(`data.json?t=${Date.now()}`, {cache: "no-store"});
+    if (!r.ok) throw new Error(r.status);
+    render(await r.json());
+  } catch (e) {
+    const b = $("banner");
+    b.textContent = `Could not load data.json (${e.message}).${last ? " Showing the previous snapshot." : ""}`;
+    b.classList.add("show");
+  }
+}
+load();
+setInterval(load, POLL_MS);
+setInterval(() => last && renderHeader(last), 15 * 1000);
+</script>
+</body>
+</html>
