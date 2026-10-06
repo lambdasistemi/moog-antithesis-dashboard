@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-gate:
+    name: Build Gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Build all derivations
+        run: >-
+          nix build --quiet
+          .#checks.x86_64-linux.shellcheck
+          .#checks.x86_64-linux.format-check
+          .#checks.x86_64-linux.syntax
+          .#checks.x86_64-linux.secrets-gate
+          .#checks.x86_64-linux.systemd-check
+          .#checks.x86_64-linux.site-check
+          .#devShells.x86_64-linux.default.inputDerivation
+
+  shellcheck:
+    name: CI shellcheck
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Run shellcheck
+        run: nix run --quiet .#shellcheck
+
+  format:
+    name: CI format
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check formatting
+        run: nix run --quiet .#format-check
+
+  syntax:
+    name: CI syntax
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check syntax
+        run: nix run --quiet .#syntax
+
+  secrets-gate:
+    name: CI secrets gate
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check for secrets
+        run: nix run --quiet .#secrets-gate
+
+  systemd:
+    name: CI systemd
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Verify units
+        run: nix run --quiet .#systemd-check
+      - name: systemd-analyze verify (host, outside the sandbox)
+        run: systemd-analyze verify systemd/moog-antithesis-dashboard.service
+
+  site:
+    name: CI site
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check site
+        run: nix run --quiet .#site-check
