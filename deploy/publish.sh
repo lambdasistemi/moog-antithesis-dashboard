@@ -12,7 +12,10 @@ OUT_DIR=${DASHBOARD_OUT:-$CACHE/out}
 ANTI_KEY_FILE=${ANTITHESIS_API_KEY_FILE:-$HOME/.secrets/antithesis-api-key}
 REMOTE=${DASHBOARD_REMOTE:-git@github.com:lambdasistemi/moog-antithesis-dashboard.git}
 
-[[ -s $OUT_DIR/data.json ]] || { echo "no data.json in $OUT_DIR" >&2; exit 1; }
+[[ -s $OUT_DIR/data.json ]] || {
+    echo "no data.json in $OUT_DIR" >&2
+    exit 1
+}
 
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT

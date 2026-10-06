@@ -59,7 +59,10 @@ run_source() {
 
 # The key goes through curl's stdin config, never argv.
 anti_get() {
-    [[ -r "$ANTI_KEY_FILE" ]] || { echo "no Antithesis key file" >&2; return 1; }
+    [[ -r "$ANTI_KEY_FILE" ]] || {
+        echo "no Antithesis key file" >&2
+        return 1
+    }
     printf 'header = "Authorization: Bearer %s"\nurl = "https://%s.antithesis.com/api/v0/%s"\nsilent\nshow-error\nfail\n' \
         "$(cat "$ANTI_KEY_FILE")" "$TENANT" "$1" | curl -K - --max-time 60
 }
@@ -83,14 +86,23 @@ src_runs() {
 props_for() {
     local rid=$1 status=$2
     local cached="$CACHE/props/$rid.json"
-    if [[ -s $cached ]]; then cat "$cached"; return 0; fi
-    [[ $status == completed || $status == incomplete ]] || { echo null; return 0; }
+    if [[ -s $cached ]]; then
+        cat "$cached"
+        return 0
+    fi
+    [[ $status == completed || $status == incomplete ]] || {
+        echo null
+        return 0
+    }
     local summary
     summary=$(anti_get "runs/$rid/properties" | jq -c '
       [.data[] | select(.is_group | not)] as $p
       | { total: ($p | length),
           passing: ([$p[] | select(.status == "Passing")] | length),
-          failing: [$p[] | select(.status != "Passing") | .name] }') || { echo null; return 0; }
+          failing: [$p[] | select(.status != "Passing") | .name] }') || {
+        echo null
+        return 0
+    }
     [[ $status == completed ]] && printf '%s\n' "$summary" >"$cached"
     printf '%s\n' "$summary"
 }
@@ -103,8 +115,10 @@ moog_env() {
 
 # On-chain test-run facts. The url field carries a report auth token: dropped.
 src_chain() {
-    ( moog_env
-      moog facts test-runs --whose "$REQUESTER" --no-pretty ) | jq '
+    (
+        moog_env
+        moog facts test-runs --whose "$REQUESTER" --no-pretty
+    ) | jq '
       [ .[] | { directory: .key.directory, commit: .key.commitId, try: .key.try,
                 phase: .value.phase, outcome: (.value.outcome // null),
                 duration: (.value.duration // null), slot } ] as $f
@@ -113,8 +127,10 @@ src_chain() {
 }
 
 src_token() {
-    ( moog_env
-      moog token --no-pretty ) | jq '{ pending_requests: (.requests | length) }'
+    (
+        moog_env
+        moog token --no-pretty
+    ) | jq '{ pending_requests: (.requests | length) }'
 }
 
 # Containers and agent log counts. Agent logs embed credentials, so only
@@ -147,9 +163,12 @@ src_proxy() {
 
 src_monitor() {
     local line
-    line=$(journalctl -u "$MONITOR_UNIT" -n 200 --no-pager -o cat 2>/dev/null \
-        | grep -E '^(OK|FAIL|STALE)' | tail -1 | sed 's/https\?:[^ ]*//g')
-    [[ -n $line ]] || { echo "no verdict in journal" >&2; return 1; }
+    line=$(journalctl -u "$MONITOR_UNIT" -n 200 --no-pager -o cat 2>/dev/null |
+        grep -E '^(OK|FAIL|STALE)' | tail -1 | sed 's/https\?:[^ ]*//g')
+    [[ -n $line ]] || {
+        echo "no verdict in journal" >&2
+        return 1
+    }
     jq -n --arg l "$line" '{ last: $l, ok: ($l | startswith("OK")) }'
 }
 
@@ -157,18 +176,30 @@ src_monitor() {
 receipt_for() {
     local id=$1 conclusion=$2
     local cached="$CACHE/nightly/$id.json"
-    if [[ -s $cached ]]; then cat "$cached"; return 0; fi
+    if [[ -s $cached ]]; then
+        cat "$cached"
+        return 0
+    fi
     local url dir
     url=$(gh api "repos/$CNA_REPO/actions/runs/$id/artifacts" \
         --jq '.artifacts[] | select(.name | startswith("daily-amaru-receipt")) | .archive_download_url' \
         2>/dev/null | head -1)
-    [[ -n $url ]] || { echo null; return 0; }
+    [[ -n $url ]] || {
+        echo null
+        return 0
+    }
     dir=$(mktemp -d -p "$WORK")
-    gh api "$url" >"$dir/r.zip" 2>/dev/null && unzip -q -o "$dir/r.zip" -d "$dir" 2>/dev/null \
-        || { echo null; return 0; }
+    if ! gh api "$url" >"$dir/r.zip" 2>/dev/null; then
+        echo null
+        return 0
+    fi
+    if ! unzip -q -o "$dir/r.zip" -d "$dir" 2>/dev/null; then
+        echo null
+        return 0
+    fi
     local summary
-    summary=$(cat "$dir"/receipt 2>/dev/null | grep -E '^(day|stage|outcome|error|upstream_sha|bootstrap_candidate_sha)=' \
-        | jq -R 'capture("^(?<k>[^=]+)=(?<v>.*)$") | {(.k): .v}' | jq -s 'add // {}')
+    summary=$(grep -E '^(day|stage|outcome|error|upstream_sha|bootstrap_candidate_sha)=' "$dir"/receipt 2>/dev/null |
+        jq -R 'capture("^(?<k>[^=]+)=(?<v>.*)$") | {(.k): .v}' | jq -s 'add // {}')
     [[ -n $conclusion && $conclusion != null ]] && printf '%s\n' "$summary" >"$cached"
     printf '%s\n' "$summary"
 }
@@ -219,7 +250,7 @@ jq -n \
        nightly_stages: ["head-resolution", "runner-preflight", "day-claim", "resolve-upstream",
          "launch-attempt", "bootstrap-proposal", "bootstrap-checks", "image-resolution",
          "consumer-repin", "consumer-checks", "producer-check", "supervised-integration",
-         "launch-cap", "launch"] }' >"$OUT_DIR/data.json.new" \
-    && mv "$OUT_DIR/data.json.new" "$OUT_DIR/data.json"
+         "launch-cap", "launch"] }' >"$OUT_DIR/data.json.new" &&
+    mv "$OUT_DIR/data.json.new" "$OUT_DIR/data.json"
 
 echo "collected: $(for s in runs chain token hosts proxy monitor nightly; do printf '%s=%s ' "$s" "${SRC_STATUS[$s]}"; done)"

@@ -1,0 +1,10 @@
+# LLM investigation notes (local only)
+.llm/
+
+# Nix build outputs
+result
+result-*
+
+# Dashboard collector outputs (host-local cache and staged data)
+out/
+*.new
