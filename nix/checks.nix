@@ -32,7 +32,7 @@ let
         # collected data. CI has no data.json, so gate the static artifact.
         # Gate definitions in deploy/ and nix/ legitimately name these
         # patterns, so they are out of scope here.
-        if rg -n 'auth=|v2\.public|Bearer |Authorization|-u [^ ]+:[^ ]+|password' site README.md systemd justfile flake.nix; then
+        if rg -n 'auth=|v2\.public|Bearer |Authorization|-u [^ ]+:[^ ]+|password' site preview-sample README.md systemd justfile flake.nix; then
           echo "secrets gate: match found" >&2
           exit 1
         fi
