@@ -58,6 +58,13 @@ tr:last-child td { border-bottom: 0; }
 .stages span { width: 12px; height: 12px; border-radius: 2px; background: var(--idle-bg); }
 .stages span.passed { background: var(--ok); } .stages span.stopped { background: var(--bad); }
 .stages span.reached { background: var(--run); } .stages span.halted { background: var(--muted); }
+tbody#runs tr[data-run] { cursor: pointer; }
+tbody#runs tr[data-run]:hover td { background: var(--run-bg); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+.kv dt { color: var(--muted); font-size: 12.5px; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.detail-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ce { border-left: 3px solid var(--line); padding: 6px 10px; margin: 8px 0; }
 .counts { display: flex; flex-wrap: wrap; gap: 10px; }
 .count { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 120px; }
 .count b { display: block; font-size: 22px; font-weight: 600; }
@@ -99,10 +106,13 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
     <tbody id="nightly"></tbody>
   </table></div>
 
+  <h2 id="detail-heading" style="display:none">Run detail</h2>
+  <div class="panel" id="detail-panel" style="display:none"><div id="detail" style="padding:12px 14px"></div></div>
+
   <footer>
     Collected every 10 minutes from the Antithesis API, the moog on-chain facts, the oracle and agent hosts, the
     Antithesis proxy, the run freshness monitor and GitHub Actions. Each source keeps its last good value when it fails.
-    The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
+    Click a run to see its full detail. The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
   </footer>
 </main>
 <script>
@@ -193,7 +203,7 @@ function renderRuns(d) {
   if (!runs.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
   const st = s => s === "completed" ? chip("ok", "completed") : s === "in_progress" ? chip("run", "running")
     : s === "incomplete" ? chip("warn", "incomplete") : chip("idle", s);
-  $("runs").innerHTML = runs.map(r => `<tr>
+  $("runs").innerHTML = runs.map(r => `<tr data-run="${esc(r.run_id)}" tabindex="0">
     <td title="${esc(r.created_at)}">${when(r.created_at)}</td>
     <td>${esc(testnet(r.directory))}</td>
     <td class="hide-sm">${commitLink(r.repository, r.commit)} · ${esc(r.try ?? "–")}</td>
@@ -237,6 +247,106 @@ function renderNightly(d) {
   }).join("");
 }
 
+function currentRunId() {
+  const m = location.hash.match(/^#run=(.+)$/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// A failing property is outside this pipeline's control when it is on the
+// ignored list, or when it is "No Antithesis errors" failing only because
+// the environment could not be set up (state_cant_be_materialized).
+function outsideControl(p) {
+  if (IGNORED.has(p.name)) return true;
+  if (p.name !== "No Antithesis errors") return false;
+  const ces = p.counterexamples || [];
+  return ces.length > 0 && ces.every(c => String(c.antithesis_error || "").includes("state_cant_be_materialized"));
+}
+
+function ceHtml(c) {
+  const rows = [
+    ["moment", c.moment ? `vtime ${c.moment.vtime}, input ${c.moment.input_hash}` : null],
+    ["output", c.output_text],
+    ["source", c.source ? `${c.source.name || ""} (${c.source.stream || ""})` : null],
+    ["event group", c.event_group],
+    ["Antithesis error", c.antithesis_error],
+    ["guest stopped", c.guest_stopped == null ? null : String(c.guest_stopped)],
+    ["exit code", c.exit_code == null ? null : String(c.exit_code)],
+  ].filter(([, v]) => v != null && v !== "");
+  return `<div class="ce">${rows.map(([k, v]) => `<div><span class="ignored">${esc(k)}:</span> <span class="mono">${esc(v)}</span></div>`).join("")}</div>`;
+}
+
+function detailHtml(d) {
+  if (d.unavailable) return `<div class="empty">Detail for this run is not available yet; it appears once the collector has fetched it.</div>`;
+  const st = d.status === "completed" ? chip("ok", "completed") : d.status === "in_progress" ? chip("run", "running")
+    : chip("idle", d.status || "?");
+  const params = Object.entries(d.parameters || {}).map(([k, v]) =>
+    `<tr><td class="mono">${esc(k)}</td><td class="mono">${esc(v)}</td></tr>`).join("");
+  const props = (d.properties || []).map(p => {
+    const oc = outsideControl(p);
+    const pst = p.status === "Passing" ? chip("ok", "passing") : oc ? chip("idle", "outside pipeline control") : chip("bad", "failing");
+    const kind = p.is_group ? "group" : p.is_event ? "event" : "assertion";
+    return `<tr><td>${esc(p.name)}</td><td>${pst}</td><td>${kind}</td>
+      <td>${p.example_count ?? "–"} / ${p.counterexample_count ?? "–"}</td>
+      <td class="ignored">${esc(p.description || "")}</td></tr>`;
+  }).join("");
+  const ceSections = (d.properties || []).filter(p => p.status !== "Passing").map(p => {
+    const oc = outsideControl(p);
+    const ces = (p.counterexamples || []).map(ceHtml).join("") || `<div class="ignored">no counterexamples reported</div>`;
+    return `<h3 style="font-size:13px;margin:16px 0 4px">${esc(p.name)} ${oc ? chip("idle", "outside pipeline control") : chip("bad", "failing")}</h3>${ces}`;
+  }).join("");
+  const chain = d.chain
+    ? `${esc(d.chain.phase)} · ${esc(d.chain.outcome || "–")} · slot <span class="mono">${esc(d.chain.slot)}</span>`
+    : "no matching on-chain record";
+  const nightly = (d.nightly || []).map(n =>
+    `<div><a href="${esc(n.url)}">${esc(n.day || "?")}</a> · ${esc(n.stage || n.conclusion || "?")}${n.error ? ` · ${esc(n.error)}` : ""}</div>`).join("")
+    || (d.directory === "testnets/cardano_amaru" ? "no nightly runs the same day" : "not a nightly testnet run");
+  return `<div class="detail-head"><div><a href="#">← all runs</a></div><div>${st}</div></div>
+    <h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span></h3>
+    <dl class="kv">
+      <dt>run id</dt><dd class="mono">${esc(d.run_id)}</dd>
+      <dt>created</dt><dd>${esc(d.created_at || "–")}</dd>
+      <dt>started</dt><dd>${esc(d.started_at || "–")}</dd>
+      <dt>completed</dt><dd>${esc(d.completed_at || "–")}</dd>
+      <dt>test</dt><dd>${esc(d.test_name || "–")}</dd>
+      <dt>requester</dt><dd>${esc(d.requester || "–")}</dd>
+      <dt>repository</dt><dd>${esc(d.repository || "–")}</dd>
+      <dt>on chain</dt><dd>${chain}</dd>
+    </dl>
+    <h3 style="font-size:13px;margin:16px 0 4px">Nightly Amaru integration</h3><div>${nightly}</div>
+    <h3 style="font-size:13px;margin:16px 0 4px">Parameters</h3>
+    <div class="panel"><table><tbody>${params}</tbody></table></div>
+    <h3 style="font-size:13px;margin:16px 0 4px">Properties</h3>
+    <div class="panel"><table><thead><tr><th>Name</th><th>Status</th><th>Kind</th><th>Examples / counterexamples</th><th>Description</th></tr></thead><tbody>${props}</tbody></table></div>
+    ${ceSections}`;
+}
+
+async function showDetail(id) {
+  $("detail-heading").style.display = "";
+  $("detail-panel").style.display = "";
+  $("detail").innerHTML = `<div class="empty">Loading ${esc(id)}…</div>`;
+  $("detail-heading").scrollIntoView();
+  try {
+    const r = await fetch(`runs/${encodeURIComponent(id)}.json?t=${Date.now()}`, {cache: "no-store"});
+    if (!r.ok) throw new Error(r.status);
+    $("detail").innerHTML = detailHtml(await r.json());
+  } catch (e) {
+    $("detail").innerHTML = `<div class="empty">Could not load detail for ${esc(id)} (${esc(e.message)}).</div>`;
+  }
+}
+
+function hideDetail() {
+  $("detail-heading").style.display = "none";
+  $("detail-panel").style.display = "none";
+  $("detail").innerHTML = "";
+}
+
+function routeFromHash() {
+  const id = currentRunId();
+  if (id) showDetail(id);
+  else hideDetail();
+}
+window.addEventListener("hashchange", routeFromHash);
+
 let last = null;
 function render(d) {
   last = d;
@@ -255,7 +365,12 @@ async function load() {
     b.classList.add("show");
   }
 }
+$("runs").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-run]");
+  if (tr) location.hash = `run=${encodeURIComponent(tr.dataset.run)}`;
+});
 load();
+routeFromHash();
 setInterval(load, POLL_MS);
 setInterval(() => last && renderHeader(last), 15 * 1000);
 </script>

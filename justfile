@@ -21,6 +21,9 @@ syntax:
 secrets-gate:
     nix run --quiet .#secrets-gate
 
+publish-gate:
+    nix run --quiet .#publish-gate
+
 systemd-check:
     nix run --quiet .#systemd-check
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Collect the state of the moog + Antithesis pipeline into one public JSON file.
+# Collect the state of the moog + Antithesis pipeline into public JSON files.
 #
 # Each source is fetched independently. A failing source keeps its last good
 # result, marked stale, so one outage never blanks the page. Immutable facts
-# are cached forever: properties of completed Antithesis runs and receipts of
-# concluded nightly runs.
+# are cached forever: properties of completed Antithesis runs, per-run detail
+# files, and receipts of concluded nightly runs.
 #
 # Nothing secret leaves this script: report URLs (they carry auth tokens) are
 # dropped, agent logs are reduced to counts on the host.
@@ -24,7 +24,7 @@ MONITOR_UNIT=${MONITOR_UNIT:-antithesis-run-freshness-monitor.service}
 RUNS_LIMIT=25
 NIGHTLY_LIMIT=14
 
-mkdir -p "$CACHE"/{props,nightly,last} "$OUT_DIR"
+mkdir -p "$CACHE"/{props,details,nightly,last} "$OUT_DIR" "$OUT_DIR/runs"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
@@ -204,6 +204,76 @@ receipt_for() {
     printf '%s\n' "$summary"
 }
 
+# Full detail of one run for the click-through view; cached forever once the
+# run stops changing. The run object's links carry report access tokens, so
+# they are dropped here and never reach the published files.
+detail_unavailable() {
+    jq -n --arg rid "$1" --arg st "$2" \
+        '{run_id: $rid, status: $st, unavailable: true,
+          properties: [], chain: null, nightly: []}'
+}
+
+detail_for() {
+    local rid=$1 status=$2
+    local cached="$CACHE/details/$rid.json"
+    if [[ -s $cached ]]; then
+        cat "$cached"
+        return 0
+    fi
+    local run props detail st
+    run=$(anti_get "runs/$rid") || {
+        detail_unavailable "$rid" "$status"
+        return 0
+    }
+    props=$(anti_get "runs/$rid/properties") || {
+        detail_unavailable "$rid" "$status"
+        return 0
+    }
+    st=$(jq -r '.status // ""' <<<"$run")
+    [[ -n $st ]] || st=$status
+    detail=$(jq -n --arg rid "$rid" --arg st "$st" \
+        --argjson run "$run" --argjson props "$props" \
+        --slurpfile chain "$WORK/chain.json" --slurpfile nightly "$WORK/nightly.json" '
+        ($run.description | fromjson? | .testRun // {}) as $t
+        | ($t.directory // null) as $dir
+        | ($t.commitId // null) as $c
+        | ($t.try // null) as $t_try
+        | (($chain[0] | .recent?) // []) as $facts
+        | (($nightly[0] // []) | if type == "array" then . else [] end) as $ns
+        | (($run.created_at // "")[0:10]) as $day
+        | { run_id: $rid, status: $st,
+            created_at: ($run.created_at // null),
+            started_at: ($run.started_at // null),
+            completed_at: ($run.completed_at // null),
+            test_name: ($run.parameters["antithesis.test_name"] // null),
+            duration_minutes: (($run.parameters["antithesis.duration"] // "0") | tonumber? // null),
+            directory: $dir, commit: $c, try: $t_try,
+            requester: ($t.requester // null),
+            repository: (if $t.repository then "\($t.repository.organization)/\($t.repository.repo)" else null end),
+            parameters: ($run.parameters // {}),
+            properties: [$props.data[]? | { name, description, status,
+              is_group, is_event: (.is_event // null),
+              example_count: (.example_count // null),
+              counterexample_count: (.counterexample_count // null),
+              counterexamples: (.counterexamples // []) }],
+            chain: (if $c == null then null else
+              ($facts | map(select(.directory == $dir and .commit == $c and .try == $t_try)) | .[0]
+                 | if . == null then null else {phase, outcome, slot} end) end),
+            nightly: (if $dir == "testnets/cardano_amaru" then
+              [$ns[] | select(((.createdAt // "")[0:10]) == $day)
+                 | { day: (.receipt.day // null), url, conclusion, status,
+                     stage: (.receipt.stage // null), error: (.receipt.error // null) }]
+              else [] end) }') ||
+        {
+            detail_unavailable "$rid" "$status"
+            return 0
+        }
+    if [[ $st == completed || $st == incomplete ]]; then
+        printf '%s\n' "$detail" >"$cached"
+    fi
+    printf '%s\n' "$detail"
+}
+
 src_nightly() {
     local runs
     runs=$(gh run list -R "$CNA_REPO" -w daily-amaru.yaml -e schedule -L "$NIGHTLY_LIMIT" \
@@ -227,6 +297,16 @@ if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
         st=$(jq -r .status <<<"$r")
         jq -c --argjson p "$(props_for "$rid" "$st")" '. + { properties: $p }' <<<"$r"
     done | jq -s . >"$WORK/runs.with-props.json" && mv "$WORK/runs.with-props.json" "$WORK/runs.json"
+fi
+
+# Per-run detail files beside data.json. Completed runs are served from the
+# cache; runs still in progress are refetched every cycle.
+if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
+    jq -c '.[]' "$WORK/runs.json" | while read -r r; do
+        rid=$(jq -r .run_id <<<"$r")
+        st=$(jq -r .status <<<"$r")
+        detail_for "$rid" "$st" >"$OUT_DIR/runs/$rid.json"
+    done
 fi
 
 sources=$(for s in runs chain token hosts proxy monitor nightly; do

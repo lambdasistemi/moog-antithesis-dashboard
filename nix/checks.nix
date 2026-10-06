@@ -53,9 +53,47 @@ let
       '';
     };
 
-    site-check = {
-      runtimeInputs = [ pkgs.python3 ];
+    publish-gate = {
+      runtimeInputs = [ pkgs.bash pkgs.git pkgs.jq pkgs.coreutils pkgs.gnugrep ];
       text = ''
+        # Behavioural test of deploy/publish.sh against a local bare remote:
+        # a report link in a detail file must refuse the whole publication,
+        # and a clean tree must publish data.json with the detail files.
+        set -euo pipefail
+        fixture="$TMPDIR/publish-fixture"
+        remote="$TMPDIR/publish-remote.git"
+        rm -rf "$fixture" "$remote"
+        mkdir -p "$fixture/runs"
+        git init -q --bare "$remote"
+        printf '{"generated_at":"2026-01-01T00:00:00Z","runs":[]}' >"$fixture/data.json"
+        printf '{"run_id":"probe","status":"completed","properties":[]}' >"$fixture/runs/probe.json"
+        printf 'gate-fixture-key' >"$TMPDIR/fixture.key"
+        export DASHBOARD_OUT="$fixture" DASHBOARD_REMOTE="$remote" ANTITHESIS_API_KEY_FILE="$TMPDIR/fixture.key"
+        printf '{"run_id":"evil","link":"https://x.antithesis.com/report/a.html?auth=v2.public_probe"}' \
+          >"$fixture/runs/evil.json"
+        if bash deploy/publish.sh; then
+          echo "publish gate let a report link through" >&2
+          exit 1
+        fi
+        rm "$fixture/runs/evil.json"
+        bash deploy/publish.sh
+        git --git-dir="$remote" show gh-pages:data.json | grep -q generated_at
+        git --git-dir="$remote" show gh-pages:runs/probe.json | grep -q probe
+        echo "publish gate ok"
+      '';
+    };
+
+    site-check = {
+      runtimeInputs = [ pkgs.python3 pkgs.nodejs ];
+      text = ''
+        js_out="$TMPDIR/inline.js"
+        python3 - "$js_out" <<'PY'
+import os, re, sys
+html = open('site/index.html').read()
+inline = [m.group(1) for m in re.finditer(r'<script>(.*?)</script>', html, re.S)]
+open(sys.argv[1], 'w').write('\n'.join(inline))
+PY
+        node --check "$js_out"
         python3 -c "
 import html.parser, sys
 
@@ -116,6 +154,7 @@ in
   format-check = mkCheck "format-check" scripts.format-check;
   syntax = mkCheck "syntax" scripts.syntax;
   secrets-gate = mkCheck "secrets-gate" scripts.secrets-gate;
+  publish-gate = mkCheck "publish-gate" scripts.publish-gate;
   systemd-check = mkCheck "systemd-check" scripts.systemd-check;
   site-check = mkCheck "site-check" scripts.site-check;
 
