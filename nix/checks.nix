@@ -208,7 +208,7 @@ let
     };
 
     container-smoke = {
-      runtimeInputs = [ pkgs.docker pkgs.gnugrep pkgs.bash ];
+      runtimeInputs = [ pkgs.docker pkgs.gnugrep pkgs.coreutils pkgs.bash ];
       text = ''
         # End-to-end run of the collector image under the compose
         # restrictions (uid 1000, read-only rootfs, tmpfs /tmp, cap_drop
@@ -236,10 +236,10 @@ let
         fi
         tag="moog-collector:container-smoke"
         docker build -q -t "$tag" .
-        secvol="smoke-secrets-$$"
-        vol="smoke-cache-$$"
-        remvol="smoke-remote-$$"
-        cyc="smoke-cycle-$$"
+        secvol="smoke-secrets-$$-$RANDOM"
+        vol="smoke-cache-$$-$RANDOM"
+        remvol="smoke-remote-$$-$RANDOM"
+        cyc="smoke-cycle-$$-$RANDOM"
         cleanup() {
           docker rm -f "$cyc" "$cyc-plant" "$cyc-env" >/dev/null 2>&1 || true
           docker volume rm "$secvol" "$vol" "$remvol" >/dev/null 2>&1 || true
@@ -267,11 +267,31 @@ let
         '
         mapfile -t lits < <(docker run --rm "$m_sec" "$tag" cat /s/patterns)
         lits_text=$(printf '%s\n' "''${lits[@]}")
-        base=(--rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
+        redact() {
+          local text lit
+          text=$(cat)
+          while IFS= read -r lit; do
+            [[ -n $lit ]] || continue
+            text=''${text//"$lit"/'<fake-secret>'}
+          done <<<"$lits_text"
+          printf '%s\n' "$text"
+        }
+        base=(--user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
           "$m_secrets" "$m_cache" "$m_remote"
           -e DASHBOARD_CACHE=/cache
           -e DASHBOARD_REMOTE=file:///remote.git
           -e DASHBOARD_MAX_CYCLES=1)
+        probe_flags=(--rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
+          "$m_secrets" "$m_cache" "$m_remote")
+        diag_cycle() {
+          echo "smoke: $1" >&2
+          code=$(docker inspect --format='{{.State.ExitCode}}' "$2" 2>/dev/null || echo unknown)
+          echo "smoke: container $2 exit code: $code" >&2
+          echo "smoke: last 40 lines of cycle output (fake secrets redacted):" >&2
+          printf '%s\n' "$3" | tail -n 40 | redact >&2
+          echo "smoke: container-side probe (id, mounts, uid):" >&2
+          docker run "''${probe_flags[@]}" "$tag" bash -c 'id; ls -ld /cache /run/secrets /tmp; id -u' 2>&1 | redact >&2 || true
+        }
         gitr() {
           docker run --rm "$m_remroot" "$m_sec" "$tag" git --git-dir=/r "$@"
         }
@@ -279,30 +299,31 @@ let
           printf '%s\n' "$1" | grep -qF -e "$2" && return 1
           return 0
         }
-        if ! out=$(docker run --name "$cyc" "''${base[@]}" "$tag" 2>&1); then
-          echo "smoke: clean cycle failed" >&2
+        if out=$(docker run --name "$cyc" "''${base[@]}" "$tag" 2>&1); then
+          :
+        else
+          diag_cycle "clean cycle failed" "$cyc" "$out"
           exit 1
         fi
         gitr show gh-pages:data.json | grep -q generated_at || {
-          echo "smoke: clean cycle published nothing" >&2
+          diag_cycle "clean cycle published nothing" "$cyc" "$out"
           exit 1
         }
         hits=$(gitr grep -F -l -f /s/patterns gh-pages -- 2>/dev/null || true)
         if [[ -n "$hits" ]]; then
-          echo "smoke: secret literal published in:" >&2
-          printf '%s\n' "$hits" >&2
+          diag_cycle "secret literal published in: $hits" "$cyc" "$out"
           exit 1
         fi
         while IFS= read -r lit; do
           absent_from "$out" "$lit" || {
-            echo "smoke: secret literal in cycle logs" >&2
+            diag_cycle "secret literal in cycle logs" "$cyc" "$out"
             exit 1
           }
         done <<<"$lits_text"
         env_out=$(docker run --name "$cyc-env" "''${base[@]}" "$tag" env)
         while IFS= read -r lit; do
           absent_from "$env_out" "$lit" || {
-            echo "smoke: secret literal in run env" >&2
+            diag_cycle "secret literal in run env" "$cyc-env" "$env_out"
             exit 1
           }
         done <<<"$lits_text"
@@ -315,17 +336,17 @@ let
         ref_before=$(gitr rev-parse gh-pages)
         out2=$(docker run --name "$cyc-plant" "''${base[@]}" "$tag" 2>&1)
         printf '%s\n' "$out2" | grep -q 'evil.json' || {
-          echo "smoke: plant refusal names no file" >&2
+          diag_cycle "plant refusal names no file" "$cyc-plant" "$out2"
           exit 1
         }
         while IFS= read -r lit; do
           absent_from "$out2" "$lit" || {
-            echo "smoke: secret literal in refusal logs" >&2
+            diag_cycle "secret literal in refusal logs" "$cyc-plant" "$out2"
             exit 1
           }
         done <<<"$lits_text"
         if [[ $(gitr rev-parse gh-pages) != "$ref_before" ]]; then
-          echo "smoke: planted cycle pushed" >&2
+          diag_cycle "planted cycle pushed" "$cyc-plant" "$out2"
           exit 1
         fi
         echo "container smoke ok"
