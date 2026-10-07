@@ -41,9 +41,12 @@ flowchart LR
    `data.json`: Antithesis runs and their properties, on-chain test-run
    facts and pending requests, oracle and agent containers with agent error
    and publication counts, proxy readiness, the freshness monitor's last
-   verdict, and nightly Amaru integration runs with their receipts.
+   verdict, and nightly Amaru integration runs with their receipts. It also
+   writes one detail file per run (`runs/<run_id>.json`) with the run's full
+   parameters, every property with its counterexamples, the matching
+   on-chain record, and same-day nightly runs.
 2. `deploy/publish.sh` runs a secrets gate and force-pushes `site/` plus
-   `data.json` as a single orphan commit to `gh-pages`.
+   `data.json` and the detail files as a single orphan commit to `gh-pages`.
 
 The page re-reads `data.json` every minute and warns when the snapshot is
 older than 25 minutes.
@@ -51,9 +54,9 @@ older than 25 minutes.
 ## Caching
 
 - A source that fails keeps its last good value, marked `stale` on the page.
-- Properties of completed Antithesis runs and receipts of concluded nightly
-  runs never change, so they are fetched once and kept in
-  `~/.cache/moog-antithesis-dashboard`.
+- Properties of completed Antithesis runs, per-run detail files, and receipts
+  of concluded nightly runs never change, so they are fetched once and kept
+  in `~/.cache/moog-antithesis-dashboard`.
 
 ## What never leaves the host
 
@@ -94,6 +97,7 @@ systemctl --user enable --now moog-antithesis-dashboard.timer
 | No versioned releases | release-please | There is no installable artifact. The dashboard deploys continuously from the host; a version tag on every change would be noise. |
 | No separate documentation site | MkDocs site on Pages | Pages already serves the dashboard itself. This README is the documentation; it carries the stories and the diagram above. |
 | One failing source never blanks the page | Fail the whole snapshot on any source error | Each source is independent. The page shows the last good value marked `stale` so one outage stays visible without hiding the rest. |
+| Nightly runs match by same day, only for the nightly testnet | An exact receipt-to-run join | Receipts carry no run key and no nightly run ever reached the launch stage, so same-day runs for `testnets/cardano_amaru` are the strongest available signal. Other runs show no nightly section rather than a guessed one. |
 
 ## License
 

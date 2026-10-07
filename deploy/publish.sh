@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Publish site/ plus the collected data.json to the gh-pages branch.
+# Publish site/ plus the collected data.json and per-run detail files to
+# the gh-pages branch.
 #
 # The branch is a single orphan commit, force-pushed each cycle, so history
 # never grows. A secrets gate refuses to publish anything that looks like a
@@ -21,6 +22,10 @@ STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp "$HERE"/site/* "$STAGE"/
 cp "$OUT_DIR/data.json" "$STAGE"/
+if compgen -G "$OUT_DIR/runs/*.json" >/dev/null; then
+    mkdir -p "$STAGE/runs"
+    cp "$OUT_DIR"/runs/*.json "$STAGE/runs/"
+fi
 touch "$STAGE/.nojekyll"
 
 # Secrets gate: authenticated report links, bearer tokens, basic-auth
