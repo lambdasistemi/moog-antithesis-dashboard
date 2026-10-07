@@ -9,6 +9,6 @@
 - [x] add-publish-dry-run-mode
 - [x] add-schema-reject-and-host-stale-checks
 ## agent-end-to-end
-- [ ] report-agent-log-counts-through-docker-api
-- [ ] read-agent-status-issue
-- [ ] delete-ssh-pulls-and-interim-stub
+- [x] report-agent-log-counts-through-docker-api
+- [x] read-agent-status-issue
+- [x] delete-ssh-pulls-and-interim-stub
