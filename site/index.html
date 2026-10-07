@@ -60,11 +60,17 @@ tr:last-child td { border-bottom: 0; }
 .stages span.reached { background: var(--run); } .stages span.halted { background: var(--muted); }
 tbody#runs tr[data-run] { cursor: pointer; }
 tbody#runs tr[data-run]:hover td { background: var(--run-bg); }
+tbody#runs tr[data-run].open td { background: var(--run-bg); }
+tr.detail-row > td { background: var(--panel); padding: 12px 14px; }
+tr.prop-row[data-prop-index] { cursor: pointer; }
+tr.prop-row[data-prop-index]:hover td { background: var(--run-bg); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
 .kv dt { color: var(--muted); font-size: 12.5px; }
 .kv dd { margin: 0; overflow-wrap: anywhere; }
 .detail-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .ce { border-left: 3px solid var(--line); padding: 6px 10px; margin: 8px 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.filters input, .filters select { font: inherit; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
 .counts { display: flex; flex-wrap: wrap; gap: 10px; }
 .count { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 120px; }
 .count b { display: block; font-size: 22px; font-weight: 600; }
@@ -88,6 +94,22 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
   <div class="chain" id="chain"></div>
 
   <h2>Antithesis runs</h2>
+  <div class="filters" id="run-filters">
+    <input id="flt-q" type="search" placeholder="filter: commit, requester, test…" aria-label="filter runs by text">
+    <select id="flt-status" aria-label="filter by status">
+      <option value="">any status</option>
+      <option value="in_progress">running</option>
+      <option value="completed">completed</option>
+      <option value="incomplete">incomplete</option>
+    </select>
+    <select id="flt-result" aria-label="filter by result">
+      <option value="">any result</option>
+      <option value="failing">has failures</option>
+      <option value="passing">passing</option>
+    </select>
+    <select id="flt-testnet" aria-label="filter by testnet"><option value="">all testnets</option></select>
+    <span class="meta" id="runs-count"></span>
+  </div>
   <div class="panel"><table>
     <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Status</th><th>Properties</th></tr></thead>
     <tbody id="runs"></tbody>
@@ -106,13 +128,12 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
     <tbody id="nightly"></tbody>
   </table></div>
 
-  <h2 id="detail-heading" style="display:none">Run detail</h2>
-  <div class="panel" id="detail-panel" style="display:none"><div id="detail" style="padding:12px 14px"></div></div>
-
   <footer>
     Collected every 10 minutes from the Antithesis API, the moog on-chain facts, the oracle and agent hosts, the
     Antithesis proxy, the run freshness monitor and GitHub Actions. Each source keeps its last good value when it fails.
-    Click a run to see its full detail. The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
+    Click a run to expand it in place; click a failing property for its counterexamples.
+    Filter the runs by text, status, result, or testnet.
+    The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
   </footer>
 </main>
 <script>
@@ -198,9 +219,45 @@ function propsCell(p, status) {
   return html;
 }
 
+let runsData = [];
+
+function realFailures(p) {
+  if (!p) return [];
+  return (p.failing || []).filter(n => !IGNORED.has(n));
+}
+
+function runMatches(r) {
+  const q = ($("flt-q").value || "").toLowerCase().trim();
+  if (q) {
+    const hay = `${r.run_id} ${r.commit || ""} ${r.requester || ""} ${r.test_name || ""} ${r.directory || ""}`.toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  const st = $("flt-status").value;
+  if (st && r.status !== st) return false;
+  const res = $("flt-result").value;
+  if (res === "failing" && realFailures(r.properties).length === 0) return false;
+  if (res === "passing" && !(r.status === "completed" && realFailures(r.properties).length === 0)) return false;
+  const tn = $("flt-testnet").value;
+  if (tn && r.directory !== tn) return false;
+  return true;
+}
+
 function renderRuns(d) {
-  const runs = d.runs || [];
-  if (!runs.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
+  runsData = d.runs || [];
+  const sel = $("flt-testnet");
+  const keep = sel.value;
+  const nets = [...new Set(runsData.map(r => r.directory).filter(Boolean))].sort();
+  sel.innerHTML = `<option value="">all testnets</option>` + nets.map(n =>
+    `<option value="${esc(n)}">${esc(testnet(n))}</option>`).join("");
+  if (nets.includes(keep)) sel.value = keep;
+  renderRunRows();
+}
+
+function renderRunRows() {
+  if (!runsData.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
+  const runs = runsData.filter(runMatches);
+  $("runs-count").textContent = `showing ${runs.length} of ${runsData.length}`;
+  if (!runs.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs match the filters.</td></tr>`; return; }
   const st = s => s === "completed" ? chip("ok", "completed") : s === "in_progress" ? chip("run", "running")
     : s === "incomplete" ? chip("warn", "incomplete") : chip("idle", s);
   $("runs").innerHTML = runs.map(r => `<tr data-run="${esc(r.run_id)}" tabindex="0">
@@ -210,6 +267,11 @@ function renderRuns(d) {
     <td>${r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–"}</td>
     <td>${st(r.status)}</td>
     <td>${propsCell(r.properties, r.status)}</td></tr>`).join("");
+}
+
+function restoreExpansion() {
+  const [rid, rprop] = parseHash();
+  if (rid) expandRow(rid, rprop, false);
 }
 
 function renderFacts(d) {
@@ -247,9 +309,16 @@ function renderNightly(d) {
   }).join("");
 }
 
-function currentRunId() {
-  const m = location.hash.match(/^#run=(.+)$/);
-  return m ? decodeURIComponent(m[1]) : null;
+const detailCache = {};
+
+function parseHash() {
+  const m = location.hash.match(/^#run=([^&]+)(?:&prop=(.+))?$/);
+  if (!m) return [null, null];
+  try {
+    return [decodeURIComponent(m[1]), m[2] ? decodeURIComponent(m[2]) : null];
+  } catch (e) {
+    return [null, null];
+  }
 }
 
 // A failing property is outside this pipeline's control when it is on the
@@ -281,18 +350,14 @@ function detailHtml(d) {
     : chip("idle", d.status || "?");
   const params = Object.entries(d.parameters || {}).map(([k, v]) =>
     `<tr><td class="mono">${esc(k)}</td><td class="mono">${esc(v)}</td></tr>`).join("");
-  const props = (d.properties || []).map(p => {
+  const props = (d.properties || []).map((p, i) => {
     const oc = outsideControl(p);
     const pst = p.status === "Passing" ? chip("ok", "passing") : oc ? chip("idle", "outside pipeline control") : chip("bad", "failing");
     const kind = p.is_group ? "group" : p.is_event ? "event" : "assertion";
-    return `<tr><td>${esc(p.name)}</td><td>${pst}</td><td>${kind}</td>
+    const expandable = (p.counterexamples || []).length > 0;
+    return `<tr${expandable ? ` class="prop-row" data-prop-index="${i}" tabindex="0" title="show counterexamples"` : ""}><td>${esc(p.name)}</td><td>${pst}</td><td>${kind}</td>
       <td>${p.example_count ?? "–"} / ${p.counterexample_count ?? "–"}</td>
       <td class="ignored">${esc(p.description || "")}</td></tr>`;
-  }).join("");
-  const ceSections = (d.properties || []).filter(p => p.status !== "Passing").map(p => {
-    const oc = outsideControl(p);
-    const ces = (p.counterexamples || []).map(ceHtml).join("") || `<div class="ignored">no counterexamples reported</div>`;
-    return `<h3 style="font-size:13px;margin:16px 0 4px">${esc(p.name)} ${oc ? chip("idle", "outside pipeline control") : chip("bad", "failing")}</h3>${ces}`;
   }).join("");
   const chain = d.chain
     ? `${esc(d.chain.phase)} · ${esc(d.chain.outcome || "–")} · slot <span class="mono">${esc(d.chain.slot)}</span>`
@@ -317,33 +382,72 @@ function detailHtml(d) {
     <div class="panel"><table><tbody>${params}</tbody></table></div>
     <h3 style="font-size:13px;margin:16px 0 4px">Properties</h3>
     <div class="panel"><table><thead><tr><th>Name</th><th>Status</th><th>Kind</th><th>Examples / counterexamples</th><th>Description</th></tr></thead><tbody>${props}</tbody></table></div>
-    ${ceSections}`;
+`;
 }
 
-async function showDetail(id) {
-  $("detail-heading").style.display = "";
-  $("detail-panel").style.display = "";
-  $("detail").innerHTML = `<div class="empty">Loading ${esc(id)}…</div>`;
-  $("detail-heading").scrollIntoView();
+function collapseAll() {
+  document.querySelectorAll("tbody#runs tr.detail-row").forEach(n => n.remove());
+  document.querySelectorAll("tbody#runs tr[data-run].open").forEach(n => n.classList.remove("open"));
+}
+
+// One run open at a time. The detail file is fetched on first expansion
+// and kept for the session; runs still in progress are refetched.
+async function expandRow(id, propName, scroll = true) {
+  const tr = document.querySelector(`tbody#runs tr[data-run="${CSS.escape(id)}"]`);
+  if (!tr) { collapseAll(); return; }
+  const sib = tr.nextElementSibling;
+  const already = tr.classList.contains("open") && sib && sib.classList.contains("detail-row");
+  if (!already) {
+    collapseAll();
+    tr.classList.add("open");
+    tr.insertAdjacentHTML("afterend",
+      `<tr class="detail-row"><td colspan="6"><div class="empty">Loading ${esc(id)}…</div></td></tr>`);
+  }
+  const detailTr = tr.nextElementSibling;
   try {
-    const r = await fetch(`runs/${encodeURIComponent(id)}.json?t=${Date.now()}`, {cache: "no-store"});
-    if (!r.ok) throw new Error(r.status);
-    $("detail").innerHTML = detailHtml(await r.json());
+    let d = detailCache[id];
+    if (!d || d.status === "in_progress") {
+      const r = await fetch(`runs/${encodeURIComponent(id)}.json?t=${Date.now()}`, {cache: "no-store"});
+      if (!r.ok) throw new Error(r.status);
+      d = await r.json();
+      detailCache[id] = d;
+    }
+    if (!tr.classList.contains("open")) return;
+    detailTr.firstChild.innerHTML = detailHtml(d);
+    if (scroll) tr.scrollIntoView({block: "nearest"});
+    if (propName) expandProp(detailTr, d, propName);
+    else detailTr.querySelectorAll("tr.ce-row").forEach(n => n.remove());
   } catch (e) {
-    $("detail").innerHTML = `<div class="empty">Could not load detail for ${esc(id)} (${esc(e.message)}).</div>`;
+    if (!tr.classList.contains("open")) return;
+    detailTr.firstChild.innerHTML = `<div class="empty">Could not load detail for ${esc(id)} (${esc(e.message)}).</div>`;
   }
 }
 
-function hideDetail() {
-  $("detail-heading").style.display = "none";
-  $("detail-panel").style.display = "none";
-  $("detail").innerHTML = "";
+function expandProp(detailTr, d, propName) {
+  const idx = (d.properties || []).findIndex(p => p.name === propName && (p.counterexamples || []).length > 0);
+  if (idx < 0) return;
+  const propTr = detailTr.querySelector(`tr.prop-row[data-prop-index="${idx}"]`);
+  if (!propTr) return;
+  toggleProp(detailTr, d, propTr);
+}
+
+// Returns "open" or "closed" so the click handler can sync the address.
+function toggleProp(detailTr, d, propTr) {
+  const next = propTr.nextElementSibling;
+  if (next && next.classList.contains("ce-row")) { next.remove(); return "closed"; }
+  detailTr.querySelectorAll("tr.ce-row").forEach(n => n.remove());
+  const p = d.properties[Number(propTr.dataset.propIndex)];
+  const ces = (p.counterexamples || []).map(ceHtml).join("") || `<div class="ignored">no counterexamples reported</div>`;
+  const oc = outsideControl(p);
+  propTr.insertAdjacentHTML("afterend",
+    `<tr class="ce-row"><td colspan="5"><div style="margin:2px 0 6px">${esc(p.name)} ${oc ? chip("idle", "outside pipeline control") : chip("bad", "failing")}</div>${ces}</td></tr>`);
+  return "open";
 }
 
 function routeFromHash() {
-  const id = currentRunId();
-  if (id) showDetail(id);
-  else hideDetail();
+  const [id, prop] = parseHash();
+  if (id) expandRow(id, prop);
+  else collapseAll();
 }
 window.addEventListener("hashchange", routeFromHash);
 
@@ -359,6 +463,7 @@ async function load() {
     const r = await fetch(`data.json?t=${Date.now()}`, {cache: "no-store"});
     if (!r.ok) throw new Error(r.status);
     render(await r.json());
+    restoreExpansion();
   } catch (e) {
     const b = $("banner");
     b.textContent = `Could not load data.json (${e.message}).${last ? " Showing the previous snapshot." : ""}`;
@@ -366,8 +471,35 @@ async function load() {
   }
 }
 $("runs").addEventListener("click", e => {
-  const tr = e.target.closest("tr[data-run]");
-  if (tr) location.hash = `run=${encodeURIComponent(tr.dataset.run)}`;
+  if (e.target.closest("a")) return;
+  const propTr = e.target.closest("tr.prop-row");
+  if (propTr) {
+    const detailRow = propTr.closest("tr.detail-row");
+    const runTr = detailRow ? detailRow.previousElementSibling : null;
+    const id = runTr ? runTr.dataset.run : null;
+    const d = id ? detailCache[id] : null;
+    if (!d) return;
+    const state = toggleProp(detailRow, d, propTr);
+    const pname = d.properties[Number(propTr.dataset.propIndex)].name;
+    location.hash = state === "open"
+      ? `run=${encodeURIComponent(id)}&prop=${encodeURIComponent(pname)}`
+      : `run=${encodeURIComponent(id)}`;
+    return;
+  }
+  const runTr = e.target.closest("tr[data-run]");
+  if (runTr) {
+    if (runTr.classList.contains("open")) location.hash = "#";
+    else location.hash = `run=${encodeURIComponent(runTr.dataset.run)}`;
+  }
+});
+["flt-q", "flt-status", "flt-result", "flt-testnet"].forEach(id =>
+  $(id).addEventListener("input", () => { renderRunRows(); restoreExpansion(); }));
+$("runs").addEventListener("keydown", e => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const tr = e.target.closest("tr[data-run], tr.prop-row");
+  if (!tr) return;
+  e.preventDefault();
+  tr.click();
 });
 load();
 routeFromHash();
