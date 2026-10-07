@@ -1,0 +1,37 @@
+# Reporter image for the moog Antithesis dashboard (oracle host).
+#
+# Holds only the reporter scripts. The status token arrives as a read-only
+# file mounted at runtime; nothing secret-shaped is baked in here: no ARG,
+# no ENV, no secret file, no docker CLI (the socket is queried with curl).
+FROM debian:bookworm-20250811-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        jq \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY reporter /app/reporter
+
+# File modes belong to the image, not the build context: checkouts and
+# daemons that strip modes must still yield a runnable, readable tree.
+# Directories 0755, regular files 0644, scripts 0755, all root-owned and
+# never writable by the runtime user.
+RUN find /app -type d -exec chmod 0755 {} + \
+    && find /app -type f -exec chmod 0644 {} + \
+    && find /app/reporter -name '*.sh' -exec chmod 0755 {} + \
+    && chown -R root:root /app
+
+# Non-root runtime user. HOME comes from the passwd entry (Docker sets it
+# for USER), so no ENV is needed for any of this.
+RUN groupadd -g 1000 reporter \
+    && useradd -m -u 1000 -g 1000 -d /home/reporter -s /bin/bash reporter \
+    && mkdir -p /home/reporter \
+    && chown reporter:reporter /home/reporter
+USER reporter
+
+WORKDIR /app
+
+CMD ["/app/reporter/loop.sh"]

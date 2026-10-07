@@ -1,0 +1,23 @@
+# Status reporter for the moog Antithesis dashboard (oracle host).
+# One reporter container per host loops reporter/report.sh every 5 minutes
+# and PATCHes one status issue. The Docker group GID is injected from the
+# host so the non-root user can read the socket; find it with
+# `getent group docker`.
+services:
+  reporter:
+    image: ghcr.io/lambdasistemi/moog-antithesis-dashboard-reporter:main
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    group_add:
+      - ${DOCKER_GID:-999}
+    environment:
+      REPORTER_ROLE: ${REPORTER_ROLE:-oracle}
+      STATUS_ISSUE_NUMBER: ${STATUS_ISSUE_NUMBER:?set STATUS_ISSUE_NUMBER to the status issue number}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /srv/moog-status-reporter/status-token:/run/secrets/status-token:ro

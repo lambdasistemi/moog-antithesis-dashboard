@@ -11,3 +11,4 @@ out/
 
 # Assembled PR preview site
 preview-site/
+/gate.sh
