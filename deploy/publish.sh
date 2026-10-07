@@ -22,6 +22,7 @@ STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
 cp "$HERE"/site/* "$STAGE"/
 cp "$OUT_DIR/data.json" "$STAGE"/
+[[ -s $OUT_DIR/property-descriptions.json ]] && cp "$OUT_DIR/property-descriptions.json" "$STAGE"/
 if compgen -G "$OUT_DIR/runs/*.json" >/dev/null; then
     mkdir -p "$STAGE/runs"
     cp "$OUT_DIR"/runs/*.json "$STAGE/runs/"

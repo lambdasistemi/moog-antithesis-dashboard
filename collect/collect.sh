@@ -213,27 +213,31 @@ detail_unavailable() {
           properties: [], chain: null, nightly: []}'
 }
 
+# Descriptions repeat verbatim across runs, so they are published once in
+# property-descriptions.json and stripped from the per-run files. The
+# collector still reads them from every response to rebuild the shared
+# map; first text wins when a name drifts between runs.
 detail_for() {
     local rid=$1 status=$2
     local cached="$CACHE/details/$rid.json"
+    local full
     if [[ -s $cached ]]; then
-        cat "$cached"
-        return 0
-    fi
-    local run props detail st
-    run=$(anti_get "runs/$rid") || {
-        detail_unavailable "$rid" "$status"
-        return 0
-    }
-    props=$(anti_get "runs/$rid/properties") || {
-        detail_unavailable "$rid" "$status"
-        return 0
-    }
-    st=$(jq -r '.status // ""' <<<"$run")
-    [[ -n $st ]] || st=$status
-    detail=$(jq -n --arg rid "$rid" --arg st "$st" \
-        --argjson run "$run" --argjson props "$props" \
-        --slurpfile chain "$WORK/chain.json" --slurpfile nightly "$WORK/nightly.json" '
+        full=$(cat "$cached")
+    else
+        local run props detail st
+        run=$(anti_get "runs/$rid") || {
+            detail_unavailable "$rid" "$status"
+            return 0
+        }
+        props=$(anti_get "runs/$rid/properties") || {
+            detail_unavailable "$rid" "$status"
+            return 0
+        }
+        st=$(jq -r '.status // ""' <<<"$run")
+        [[ -n $st ]] || st=$status
+        detail=$(jq -n --arg rid "$rid" --arg st "$st" \
+            --argjson run "$run" --argjson props "$props" \
+            --slurpfile chain "$WORK/chain.json" --slurpfile nightly "$WORK/nightly.json" '
         ($run.description | fromjson? | .testRun // {}) as $t
         | ($t.directory // null) as $dir
         | ($t.commitId // null) as $c
@@ -264,14 +268,17 @@ detail_for() {
                  | { day: (.receipt.day // null), url, conclusion, status,
                      stage: (.receipt.stage // null), error: (.receipt.error // null) }]
               else [] end) }') ||
-        {
-            detail_unavailable "$rid" "$status"
-            return 0
-        }
-    if [[ $st == completed || $st == incomplete ]]; then
-        printf '%s\n' "$detail" >"$cached"
+            {
+                detail_unavailable "$rid" "$status"
+                return 0
+            }
+        if [[ $st == completed || $st == incomplete ]]; then
+            printf '%s\n' "$detail" >"$cached"
+        fi
+        full=$detail
     fi
-    printf '%s\n' "$detail"
+    jq -c '.properties[] | select(.description) | {name, description}' <<<"$full" >>"$WORK/descriptions.jsonl"
+    jq '.properties |= map(del(.description))' <<<"$full"
 }
 
 src_nightly() {
@@ -307,6 +314,12 @@ if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
         st=$(jq -r .status <<<"$r")
         detail_for "$rid" "$st" >"$OUT_DIR/runs/$rid.json"
     done
+    if [[ -s $WORK/descriptions.jsonl ]]; then
+        jq -s 'reverse | map({(.name): .description}) | add // {}' \
+            "$WORK/descriptions.jsonl" >"$OUT_DIR/property-descriptions.json"
+    else
+        echo '{}' >"$OUT_DIR/property-descriptions.json"
+    fi
 fi
 
 sources=$(for s in runs chain token hosts proxy monitor nightly; do

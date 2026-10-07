@@ -54,22 +54,22 @@ th { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap
 tr:last-child td { border-bottom: 0; }
 .failing { color: var(--bad); font-size: 12.5px; }
 .ignored { color: var(--muted); font-size: 12.5px; }
-.stages { display: flex; gap: 2px; }
-.stages span { width: 12px; height: 12px; border-radius: 2px; background: var(--idle-bg); }
-.stages span.passed { background: var(--ok); } .stages span.stopped { background: var(--bad); }
-.stages span.reached { background: var(--run); } .stages span.halted { background: var(--muted); }
 tbody#runs tr[data-run] { cursor: pointer; }
 tbody#runs tr[data-run]:hover td { background: var(--run-bg); }
+tbody#runs tr[data-run].open td { background: var(--run-bg); }
+tr.detail-row > td { background: var(--panel); padding: 12px 14px; }
+tr.prop-row[data-prop-index] { cursor: pointer; }
+tr.prop-row[data-prop-index]:hover td { background: var(--run-bg); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
 .kv dt { color: var(--muted); font-size: 12.5px; }
 .kv dd { margin: 0; overflow-wrap: anywhere; }
-.detail-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .ce { border-left: 3px solid var(--line); padding: 6px 10px; margin: 8px 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.filters input, .filters select { font: inherit; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
 .counts { display: flex; flex-wrap: wrap; gap: 10px; }
 .count { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 120px; }
 .count b { display: block; font-size: 22px; font-weight: 600; }
 .count small { color: var(--muted); }
-.sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .empty { padding: 16px; color: var(--muted); }
 footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
 @media (max-width: 640px) { .hide-sm { display: none; } th, td { padding: 6px 8px; } }
@@ -82,37 +82,47 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
     <div class="meta"><span id="generated">loading…</span> · <span id="next"></span></div>
   </header>
   <div class="banner" id="banner"></div>
-  <div class="sources" id="sources"></div>
 
   <h2>Pipeline</h2>
   <div class="chain" id="chain"></div>
 
-  <h2>Antithesis runs</h2>
+  <h2>Test runs</h2>
+  <div class="counts" id="phases"></div>
+  <div class="filters" id="run-filters" style="margin-top:10px">
+    <input id="flt-q" type="search" placeholder="filter: commit, requester, test…" aria-label="filter runs by text">
+    <select id="flt-status" aria-label="filter by status">
+      <option value="">any status</option>
+      <option value="in_progress">running</option>
+      <option value="completed">completed</option>
+      <option value="incomplete">incomplete</option>
+    </select>
+    <select id="flt-result" aria-label="filter by result">
+      <option value="">any result</option>
+      <option value="failing">has failures</option>
+      <option value="passing">passing</option>
+    </select>
+    <select id="flt-phase" aria-label="filter by on-chain phase">
+      <option value="">any phase</option>
+      <option value="pending">pending</option>
+      <option value="accepted">accepted</option>
+      <option value="finished">finished</option>
+      <option value="rejected">rejected</option>
+    </select>
+    <select id="flt-testnet" aria-label="filter by testnet"><option value="">all testnets</option></select>
+    <span class="meta" id="runs-count"></span>
+  </div>
   <div class="panel"><table>
-    <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Status</th><th>Properties</th></tr></thead>
+    <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Antithesis</th><th>On chain</th></tr></thead>
     <tbody id="runs"></tbody>
   </table></div>
-
-  <h2>On-chain test runs</h2>
-  <div class="counts" id="phases"></div>
-  <div class="panel" style="margin-top:10px"><table>
-    <thead><tr><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Phase</th><th>Outcome</th><th class="hide-sm">Slot</th></tr></thead>
-    <tbody id="facts"></tbody>
-  </table></div>
-
-  <h2>Nightly Amaru integration</h2>
-  <div class="panel"><table>
-    <thead><tr><th>Day</th><th>Result</th><th>Stopped at</th><th class="hide-sm">Stages</th><th>Reason</th><th class="hide-sm">Upstream</th></tr></thead>
-    <tbody id="nightly"></tbody>
-  </table></div>
-
-  <h2 id="detail-heading" style="display:none">Run detail</h2>
-  <div class="panel" id="detail-panel" style="display:none"><div id="detail" style="padding:12px 14px"></div></div>
 
   <footer>
     Collected every 10 minutes from the Antithesis API, the moog on-chain facts, the oracle and agent hosts, the
     Antithesis proxy, the run freshness monitor and GitHub Actions. Each source keeps its last good value when it fails.
-    Click a run to see its full detail. The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
+    One table of test runs joins Antithesis runs with their on-chain record.
+    Click a run to expand it in place; click a failing property for its counterexamples.
+    Filter by text, status, result, on-chain phase, or testnet.
+    The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
   </footer>
 </main>
 <script>
@@ -141,17 +151,21 @@ function renderHeader(d) {
   $("generated").textContent = `updated ${ago(d.generated_at)}`;
   $("generated").title = d.generated_at;
   const age = (Date.now() - Date.parse(d.generated_at)) / 1000;
+  const bad = Object.entries(d.sources || {}).filter(([, s]) => s.status !== "ok");
+  const staleList = bad.map(([n, s]) =>
+    `${n} (${s.status}${s.last_success ? ", last success " + ago(s.last_success) : ""})`).join(", ");
   const b = $("banner");
+  b.title = bad.map(([n, s]) => s.error ? `${n}: ${s.error}` : "").filter(Boolean).join("\n");
   if (age > STALE_AFTER_S) {
-    b.textContent = `This snapshot is ${ago(d.generated_at).replace(" ago", "")} old; the collector may be stopped.`;
+    b.textContent = `This snapshot is ${ago(d.generated_at).replace(" ago", "")} old; the collector may be stopped.` +
+      (bad.length ? ` Sources not fresh: ${staleList}.` : "");
+    b.classList.add("show");
+  } else if (bad.length) {
+    b.textContent = `Stale sources showing last good values: ${staleList}.`;
     b.classList.add("show");
   } else b.classList.remove("show");
   const next = Math.max(0, d.refresh_seconds - age);
   $("next").textContent = next > 0 ? `next collection in about ${Math.ceil(next / 60)} min` : "next collection due";
-  $("sources").innerHTML = Object.entries(d.sources).map(([n, s]) =>
-    `<span title="${esc(s.error || "")}${s.last_success ? " · last success " + esc(s.last_success) : ""}">${chip(
-      s.status === "ok" ? "ok" : s.status === "stale" ? "warn" : "bad",
-      `${n}${s.status === "ok" ? "" : ": " + s.status}`)}</span>`).join("");
 }
 
 function monitorDetail(m) {
@@ -184,7 +198,7 @@ function renderChain(d) {
      state: d.monitor ? (d.monitor.ok ? ["ok", "ok"] : ["bad", "alerting"]) : ["bad", "unknown"]},
   ];
   $("chain").innerHTML = nodes.map(n =>
-    `<div class="node"><div class="name">${esc(n.name)}</div><div class="detail">${esc(n.detail)}</div>${chip(...n.state)}</div>`).join("");
+    `<div class="node"><div class="name">${esc(n.name)} ${chip(...n.state)}</div><div class="detail">${esc(n.detail)}</div></div>`).join("");
 }
 
 function propsCell(p, status) {
@@ -198,58 +212,117 @@ function propsCell(p, status) {
   return html;
 }
 
+let testRows = []; // {run, fact}, either side may be missing
+
+function realFailures(p) {
+  if (!p) return [];
+  return (p.failing || []).filter(n => !IGNORED.has(n));
+}
+
+// One table on the test-run grain: Antithesis runs joined with their
+// on-chain record, plus on-chain records with no run in the window.
+function buildTestRows(d) {
+  const byKey = new Map();
+  const k = (dir, c, t) => `${dir}|${c}|${t}`;
+  for (const f of ((d.chain && d.chain.recent) || []))
+    byKey.set(k(f.directory, f.commit, f.try), {run: null, fact: f});
+  for (const r of (d.runs || [])) {
+    const e = byKey.get(k(r.directory, r.commit, r.try));
+    if (e && !e.run) e.run = r;
+    else if (!e) byKey.set(k(r.directory, r.commit, r.try), {run: r, fact: null});
+    else byKey.set(r.run_id, {run: r, fact: null});
+  }
+  const withRun = [...byKey.values()].filter(x => x.run)
+    .sort((a, b) => String(b.run.created_at || "").localeCompare(String(a.run.created_at || "")));
+  const factOnly = [...byKey.values()].filter(x => !x.run)
+    .sort((a, b) => (b.fact.slot || 0) - (a.fact.slot || 0));
+  return withRun.concat(factOnly);
+}
+
+function rowMatches(x) {
+  const r = x.run, f = x.fact;
+  const q = ($("flt-q").value || "").toLowerCase().trim();
+  if (q) {
+    const hay = `${r ? `${r.run_id} ${r.commit || ""} ${r.requester || ""} ${r.test_name || ""}` : ""} ${f ? `${f.commit || ""} ${f.slot ?? ""} ${f.outcome || ""}` : ""} ${r ? r.directory : f.directory || ""}`.toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  const st = $("flt-status").value;
+  if (st && (!r || r.status !== st)) return false;
+  const res = $("flt-result").value;
+  if (res === "failing" && !(r && realFailures(r.properties).length > 0)) return false;
+  if (res === "passing" && !(r && r.status === "completed" && realFailures(r.properties).length === 0)) return false;
+  const ph = $("flt-phase").value;
+  if (ph && (!f || f.phase !== ph)) return false;
+  const tn = $("flt-testnet").value;
+  if (tn && (r ? r.directory : f.directory) !== tn) return false;
+  return true;
+}
+
 function renderRuns(d) {
-  const runs = d.runs || [];
-  if (!runs.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
+  testRows = buildTestRows(d);
+  const sel = $("flt-testnet");
+  const keep = sel.value;
+  const nets = [...new Set(testRows.map(x => x.run ? x.run.directory : x.fact.directory).filter(Boolean))].sort();
+  sel.innerHTML = `<option value="">all testnets</option>` + nets.map(n =>
+    `<option value="${esc(n)}">${esc(testnet(n))}</option>`).join("");
+  if (nets.includes(keep)) sel.value = keep;
+  renderRunRows();
+}
+
+function testRowHtml(x, repo) {
+  const r = x.run, f = x.fact;
+  const dir = r ? r.directory : f.directory, cm = r ? r.commit : f.commit, t = r ? r.try : f.try;
+  const started = r ? `<td title="${esc(r.created_at)}">${when(r.created_at)}</td>` : `<td>–</td>`;
+  const hours = r && r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–";
   const st = s => s === "completed" ? chip("ok", "completed") : s === "in_progress" ? chip("run", "running")
     : s === "incomplete" ? chip("warn", "incomplete") : chip("idle", s);
-  $("runs").innerHTML = runs.map(r => `<tr data-run="${esc(r.run_id)}" tabindex="0">
-    <td title="${esc(r.created_at)}">${when(r.created_at)}</td>
-    <td>${esc(testnet(r.directory))}</td>
-    <td class="hide-sm">${commitLink(r.repository, r.commit)} · ${esc(r.try ?? "–")}</td>
-    <td>${r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–"}</td>
-    <td>${st(r.status)}</td>
-    <td>${propsCell(r.properties, r.status)}</td></tr>`).join("");
+  const anti = r ? `${st(r.status)}<br>${propsCell(r.properties, r.status)}` : `<span class="ignored">–</span>`;
+  const chain = f ? `<span title="slot ${esc(f.slot)}">${phaseChip(f.phase)} ${outcomeChip(f)}</span>` : `<span class="ignored">–</span>`;
+  const open = r ? ` data-run="${esc(r.run_id)}" tabindex="0"` : "";
+  return `<tr${open}>
+    ${started}
+    <td>${esc(testnet(dir))}</td>
+    <td class="hide-sm">${commitLink(repo, cm)} · ${esc(t ?? "–")}</td>
+    <td>${hours}</td>
+    <td>${anti}</td>
+    <td>${chain}</td></tr>`;
 }
 
-function renderFacts(d) {
+function renderRunRows() {
+  if (!testRows.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
+  const rows = testRows.filter(rowMatches);
+  $("runs-count").textContent = `showing ${rows.length} of ${testRows.length} test runs`;
+  if (!rows.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs match the filters.</td></tr>`; return; }
+  $("runs").innerHTML = rows.map(x => testRowHtml(x, last.repository)).join("");
+}
+
+function restoreExpansion() {
+  const [rid, rprop] = parseHash();
+  if (rid) expandRow(rid, rprop, false);
+}
+
+const phaseChip = p => p === "finished" ? chip("idle", p) : p === "rejected" ? chip("warn", p) : chip("run", p);
+const outcomeChip = f => f.phase !== "finished" ? "" : f.outcome === "success" ? chip("ok", "success") : f.outcome ? chip("bad", f.outcome) : "";
+
+function renderPhaseCounts(d) {
   const c = d.chain;
-  if (!c) { $("phases").innerHTML = ""; $("facts").innerHTML = `<tr><td colspan="5" class="empty">No data.</td></tr>`; return; }
+  if (!c) { $("phases").innerHTML = ""; return; }
   $("phases").innerHTML = ["pending", "accepted", "finished", "rejected"].map(p =>
     `<div class="count"><b>${c.phases[p] ?? 0}</b><small>${p}</small></div>`).join("");
-  const out = f => f.phase !== "finished" ? "" : f.outcome === "success" ? chip("ok", "success") : f.outcome ? chip("bad", f.outcome) : "";
-  const phase = p => p === "finished" ? chip("idle", p) : p === "rejected" ? chip("warn", p) : chip("run", p);
-  $("facts").innerHTML = c.recent.slice(0, 15).map(f => `<tr>
-    <td>${esc(testnet(f.directory))}</td>
-    <td class="hide-sm">${commitLink(d.repository, f.commit)} · ${esc(f.try)}</td>
-    <td>${phase(f.phase)}</td><td>${out(f)}</td>
-    <td class="hide-sm mono">${esc(f.slot)}</td></tr>`).join("");
 }
 
-function renderNightly(d) {
-  const ns = d.nightly || [], stages = d.nightly_stages || [];
-  if (!ns.length) { $("nightly").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
-  $("nightly").innerHTML = ns.map(n => {
-    const r = n.receipt || {};
-    const i = stages.indexOf(r.stage);
-    const ok = n.conclusion === "success";
-    const res = n.status !== "completed" ? chip("run", "running") : ok ? chip("ok", "launched")
-      : r.error === "unchanged-head" ? chip("idle", "no change") : chip("bad", n.conclusion || "failed");
-    const bar = stages.map((s, k) => `<span title="${esc(s)}" class="${
-      i < 0 ? "" : k < i ? "passed" : k === i ? (ok ? "passed" : n.status !== "completed" ? "reached" : r.error === "unchanged-head" ? "halted" : "stopped") : ""}"></span>`).join("");
-    return `<tr>
-      <td><a href="${esc(n.url)}">${esc(r.day || when(n.createdAt))}</a>${n.event === "schedule" ? "" : ` <span class="ignored">${esc(n.event)}</span>`}</td>
-      <td>${res}</td>
-      <td>${esc(r.stage || "–")}</td>
-      <td class="hide-sm"><div class="stages">${bar}</div></td>
-      <td>${esc(r.error || "")}</td>
-      <td class="hide-sm">${r.upstream_sha ? `<a class="mono" href="https://github.com/pragma-org/amaru/commit/${esc(r.upstream_sha)}">${short(r.upstream_sha)}</a>` : "–"}</td></tr>`;
-  }).join("");
-}
 
-function currentRunId() {
-  const m = location.hash.match(/^#run=(.+)$/);
-  return m ? decodeURIComponent(m[1]) : null;
+const detailCache = {};
+let sharedDescriptions = null;
+
+function parseHash() {
+  const m = location.hash.match(/^#run=([^&]+)(?:&prop=(.+))?$/);
+  if (!m) return [null, null];
+  try {
+    return [decodeURIComponent(m[1]), m[2] ? decodeURIComponent(m[2]) : null];
+  } catch (e) {
+    return [null, null];
+  }
 }
 
 // A failing property is outside this pipeline's control when it is on the
@@ -281,18 +354,15 @@ function detailHtml(d) {
     : chip("idle", d.status || "?");
   const params = Object.entries(d.parameters || {}).map(([k, v]) =>
     `<tr><td class="mono">${esc(k)}</td><td class="mono">${esc(v)}</td></tr>`).join("");
-  const props = (d.properties || []).map(p => {
+  const props = (d.properties || []).map((p, i) => {
     const oc = outsideControl(p);
     const pst = p.status === "Passing" ? chip("ok", "passing") : oc ? chip("idle", "outside pipeline control") : chip("bad", "failing");
     const kind = p.is_group ? "group" : p.is_event ? "event" : "assertion";
-    return `<tr><td>${esc(p.name)}</td><td>${pst}</td><td>${kind}</td>
+    const expandable = (p.counterexamples || []).length > 0;
+    const desc = p.description || (sharedDescriptions || {})[p.name] || "";
+    return `<tr${expandable ? ` class="prop-row" data-prop-index="${i}" tabindex="0" title="show counterexamples"` : ""}><td>${esc(p.name)}</td><td>${pst}</td><td>${kind}</td>
       <td>${p.example_count ?? "–"} / ${p.counterexample_count ?? "–"}</td>
-      <td class="ignored">${esc(p.description || "")}</td></tr>`;
-  }).join("");
-  const ceSections = (d.properties || []).filter(p => p.status !== "Passing").map(p => {
-    const oc = outsideControl(p);
-    const ces = (p.counterexamples || []).map(ceHtml).join("") || `<div class="ignored">no counterexamples reported</div>`;
-    return `<h3 style="font-size:13px;margin:16px 0 4px">${esc(p.name)} ${oc ? chip("idle", "outside pipeline control") : chip("bad", "failing")}</h3>${ces}`;
+      <td class="ignored">${esc(desc)}</td></tr>`;
   }).join("");
   const chain = d.chain
     ? `${esc(d.chain.phase)} · ${esc(d.chain.outcome || "–")} · slot <span class="mono">${esc(d.chain.slot)}</span>`
@@ -300,8 +370,7 @@ function detailHtml(d) {
   const nightly = (d.nightly || []).map(n =>
     `<div><a href="${esc(n.url)}">${esc(n.day || "?")}</a> · ${esc(n.stage || n.conclusion || "?")}${n.error ? ` · ${esc(n.error)}` : ""}</div>`).join("")
     || (d.directory === "testnets/cardano_amaru" ? "no nightly runs the same day" : "not a nightly testnet run");
-  return `<div class="detail-head"><div><a href="#">← all runs</a></div><div>${st}</div></div>
-    <h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span></h3>
+  return `<h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span> ${st}</h3>
     <dl class="kv">
       <dt>run id</dt><dd class="mono">${esc(d.run_id)}</dd>
       <dt>created</dt><dd>${esc(d.created_at || "–")}</dd>
@@ -317,40 +386,87 @@ function detailHtml(d) {
     <div class="panel"><table><tbody>${params}</tbody></table></div>
     <h3 style="font-size:13px;margin:16px 0 4px">Properties</h3>
     <div class="panel"><table><thead><tr><th>Name</th><th>Status</th><th>Kind</th><th>Examples / counterexamples</th><th>Description</th></tr></thead><tbody>${props}</tbody></table></div>
-    ${ceSections}`;
+`;
 }
 
-async function showDetail(id) {
-  $("detail-heading").style.display = "";
-  $("detail-panel").style.display = "";
-  $("detail").innerHTML = `<div class="empty">Loading ${esc(id)}…</div>`;
-  $("detail-heading").scrollIntoView();
+function collapseAll() {
+  document.querySelectorAll("tbody#runs tr.detail-row").forEach(n => n.remove());
+  document.querySelectorAll("tbody#runs tr[data-run].open").forEach(n => n.classList.remove("open"));
+}
+
+// One run open at a time. The detail file is fetched on first expansion
+// and kept for the session; runs still in progress are refetched.
+async function expandRow(id, propName, scroll = true) {
+  const tr = document.querySelector(`tbody#runs tr[data-run="${CSS.escape(id)}"]`);
+  if (!tr) { collapseAll(); return; }
+  const sib = tr.nextElementSibling;
+  const already = tr.classList.contains("open") && sib && sib.classList.contains("detail-row");
+  if (!already) {
+    collapseAll();
+    tr.classList.add("open");
+    tr.insertAdjacentHTML("afterend",
+      `<tr class="detail-row"><td colspan="6"><div class="empty">Loading ${esc(id)}…</div></td></tr>`);
+  }
+  const detailTr = tr.nextElementSibling;
   try {
-    const r = await fetch(`runs/${encodeURIComponent(id)}.json?t=${Date.now()}`, {cache: "no-store"});
-    if (!r.ok) throw new Error(r.status);
-    $("detail").innerHTML = detailHtml(await r.json());
+    let d = detailCache[id];
+    if (!d || d.status === "in_progress") {
+      const r = await fetch(`runs/${encodeURIComponent(id)}.json?t=${Date.now()}`, {cache: "no-store"});
+      if (!r.ok) throw new Error(r.status);
+      d = await r.json();
+      detailCache[id] = d;
+    }
+    if (!tr.classList.contains("open")) return;
+    if (sharedDescriptions === null) {
+      try {
+        const dr = await fetch(`property-descriptions.json?t=${Date.now()}`, {cache: "no-store"});
+        sharedDescriptions = dr.ok ? await dr.json() : {};
+      } catch (e) {
+        sharedDescriptions = {};
+      }
+    }
+    detailTr.firstChild.innerHTML = detailHtml(d);
+    if (scroll) tr.scrollIntoView({block: "nearest"});
+    if (propName) expandProp(detailTr, d, propName);
+    else detailTr.querySelectorAll("tr.ce-row").forEach(n => n.remove());
   } catch (e) {
-    $("detail").innerHTML = `<div class="empty">Could not load detail for ${esc(id)} (${esc(e.message)}).</div>`;
+    if (!tr.classList.contains("open")) return;
+    detailTr.firstChild.innerHTML = `<div class="empty">Could not load detail for ${esc(id)} (${esc(e.message)}).</div>`;
   }
 }
 
-function hideDetail() {
-  $("detail-heading").style.display = "none";
-  $("detail-panel").style.display = "none";
-  $("detail").innerHTML = "";
+function expandProp(detailTr, d, propName) {
+  const idx = (d.properties || []).findIndex(p => p.name === propName && (p.counterexamples || []).length > 0);
+  if (idx < 0) return;
+  const propTr = detailTr.querySelector(`tr.prop-row[data-prop-index="${idx}"]`);
+  if (!propTr) return;
+  toggleProp(detailTr, d, propTr);
+}
+
+// Returns "open" or "closed" so the click handler can sync the address.
+function toggleProp(detailTr, d, propTr) {
+  const next = propTr.nextElementSibling;
+  if (next && next.classList.contains("ce-row")) { next.remove(); return "closed"; }
+  detailTr.querySelectorAll("tr.ce-row").forEach(n => n.remove());
+  const p = d.properties[Number(propTr.dataset.propIndex)];
+  const ces = (p.counterexamples || []).map(ceHtml).join("") || `<div class="ignored">no counterexamples reported</div>`;
+  const oc = outsideControl(p);
+  propTr.insertAdjacentHTML("afterend",
+    `<tr class="ce-row"><td colspan="5"><div style="margin:2px 0 6px">${esc(p.name)} ${oc ? chip("idle", "outside pipeline control") : chip("bad", "failing")}</div>${ces}</td></tr>`);
+  return "open";
 }
 
 function routeFromHash() {
-  const id = currentRunId();
-  if (id) showDetail(id);
-  else hideDetail();
+  const [id, prop] = parseHash();
+  if (id) expandRow(id, prop);
+  else collapseAll();
 }
 window.addEventListener("hashchange", routeFromHash);
 
 let last = null;
 function render(d) {
   last = d;
-  for (const f of [renderHeader, renderChain, renderRuns, renderFacts, renderNightly]) {
+  for (const f of [renderHeader, renderChain, renderRuns, renderPhaseCounts]) {
     try { f(d); } catch (e) { console.error(f.name, e); }
   }
 }
@@ -359,6 +475,7 @@ async function load() {
     const r = await fetch(`data.json?t=${Date.now()}`, {cache: "no-store"});
     if (!r.ok) throw new Error(r.status);
     render(await r.json());
+    restoreExpansion();
   } catch (e) {
     const b = $("banner");
     b.textContent = `Could not load data.json (${e.message}).${last ? " Showing the previous snapshot." : ""}`;
@@ -366,8 +483,35 @@ async function load() {
   }
 }
 $("runs").addEventListener("click", e => {
-  const tr = e.target.closest("tr[data-run]");
-  if (tr) location.hash = `run=${encodeURIComponent(tr.dataset.run)}`;
+  if (e.target.closest("a")) return;
+  const propTr = e.target.closest("tr.prop-row");
+  if (propTr) {
+    const detailRow = propTr.closest("tr.detail-row");
+    const runTr = detailRow ? detailRow.previousElementSibling : null;
+    const id = runTr ? runTr.dataset.run : null;
+    const d = id ? detailCache[id] : null;
+    if (!d) return;
+    const state = toggleProp(detailRow, d, propTr);
+    const pname = d.properties[Number(propTr.dataset.propIndex)].name;
+    location.hash = state === "open"
+      ? `run=${encodeURIComponent(id)}&prop=${encodeURIComponent(pname)}`
+      : `run=${encodeURIComponent(id)}`;
+    return;
+  }
+  const runTr = e.target.closest("tr[data-run]");
+  if (runTr) {
+    if (runTr.classList.contains("open")) location.hash = "#";
+    else location.hash = `run=${encodeURIComponent(runTr.dataset.run)}`;
+  }
+});
+["flt-q", "flt-status", "flt-result", "flt-phase", "flt-testnet"].forEach(id =>
+  $(id).addEventListener("input", () => { renderRunRows(); restoreExpansion(); }));
+$("runs").addEventListener("keydown", e => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const tr = e.target.closest("tr[data-run], tr.prop-row");
+  if (!tr) return;
+  e.preventDefault();
+  tr.click();
 });
 load();
 routeFromHash();

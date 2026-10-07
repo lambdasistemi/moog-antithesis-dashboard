@@ -14,8 +14,8 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   `stale` instead of blanking the page, and a snapshot older than 25 minutes
   raises a banner that the collector may be stopped.
 - **The operator running the collector** installs the systemd timer below,
-  then checks the same page. When something turns red, the per-source chips
-  at the top say which of the seven sources failed and when it last worked.
+  then checks the same page. When a source stops refreshing, a banner names
+  it and its last success instead of silently showing old numbers.
 
 ## How it works
 
@@ -56,7 +56,9 @@ older than 25 minutes.
 - A source that fails keeps its last good value, marked `stale` on the page.
 - Properties of completed Antithesis runs, per-run detail files, and receipts
   of concluded nightly runs never change, so they are fetched once and kept
-  in `~/.cache/moog-antithesis-dashboard`.
+  in `~/.cache/moog-antithesis-dashboard`. Property descriptions repeat
+  verbatim across runs, so they publish once in
+  `property-descriptions.json` instead of inside every detail file.
 
 ## What never leaves the host
 

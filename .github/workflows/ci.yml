@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -141,38 +141,29 @@ jobs:
           mkdir -p preview-site/runs
           cp site/index.html preview-site/
           cp preview-sample/data.json preview-site/
+          cp preview-sample/property-descriptions.json preview-site/
           cp preview-sample/runs/*.json preview-site/runs/
       - name: Smoke test preview on localhost
-        run: |
-          nix --quiet shell nixpkgs#python3 nixpkgs#curl nixpkgs#jq -c bash -euo pipefail <<'SCRIPT'
-          python3 -m http.server 4173 --bind 127.0.0.1 --directory preview-site &
-          server_pid=$!
-          trap 'kill "$server_pid"' EXIT
-          for _ in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
-              break
-            fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:4173/ | grep -q 'Moog.*Antithesis pipeline'
-          curl -fsS http://127.0.0.1:4173/data.json | jq -e '.runs | length > 0' >/dev/null
-          for rid in $(jq -r '.runs[].run_id' preview-site/data.json); do
-            curl -fsS "http://127.0.0.1:4173/runs/$rid.json" | jq -e --arg r "$rid" '.run_id == $r' >/dev/null
-          done
-          SCRIPT
+        run: nix run --quiet .#preview-smoke
       - id: preview
         uses: paolino/dev-assets/static-preview@main
         with:
           path: preview-site
       - name: Verify served preview files
-        run: |
-          nix --quiet shell nixpkgs#curl nixpkgs#jq -c bash -euo pipefail <<'SCRIPT'
-          base="${{ steps.preview.outputs.preview-url }}"
-          [ -n "$base" ]
-          curl -fsS "$base/data.json" | jq -e '.runs | length > 0' >/dev/null
-          rid=$(jq -r '.runs[0].run_id' preview-site/data.json)
-          curl -fsS "$base/runs/$rid.json" | jq -e --arg r "$rid" '.run_id == $r' >/dev/null
-          SCRIPT
+        run: nix run --quiet .#preview-verify -- "${{ steps.preview.outputs.preview-url }}"
+
+  dev-shell:
+    name: CI dev shell
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check shell tools
+        run: nix develop --quiet -c bash -c 'command -v shellcheck && command -v shfmt && command -v jq && command -v just'
 
   pr-preview-cleanup:
     name: CI PR preview cleanup

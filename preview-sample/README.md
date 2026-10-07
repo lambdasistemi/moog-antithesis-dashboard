@@ -1,9 +1,10 @@
 # Sample snapshot for PR previews
 
 This is a frozen, sanitized sample of a real collection (two runs with
-their detail files), served by pull-request previews so the dashboard UI
-can be clicked through before merge. It is stale by design: the staleness
-banner on a preview is expected.
+their detail files and the shared property-description map), served by
+pull-request previews so the dashboard UI can be clicked through before
+merge. It is stale by design: the staleness banner on a preview is
+expected.
 
 Regenerate only from published data that already passed the secrets gate:
 
@@ -15,4 +16,10 @@ jq '{generated_at, started_at, refresh_seconds, tenant, repository, sources,
   "$CACHE/out/data.json" > preview-sample/data.json
 cp "$CACHE/out"/runs/{fe222c247145a3186799298d5bd9a08b-62-14,198bfff10e31159dfa8e967431d5ec5b-62-14}.json \
   preview-sample/runs/
+for f in preview-sample/runs/*.json; do
+  jq '.properties |= map(del(.description))' "$f" >"$f.new" && mv "$f.new" "$f"
+done
+jq -s 'reverse | map(.properties[] | select(.description) | {(.name): .description}) | add // {}' \
+  "$CACHE/out"/runs/{fe222c247145a3186799298d5bd9a08b-62-14,198bfff10e31159dfa8e967431d5ec5b-62-14}.json \
+  > preview-sample/property-descriptions.json
 ```

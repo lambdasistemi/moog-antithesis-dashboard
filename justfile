@@ -24,6 +24,12 @@ secrets-gate:
 publish-gate:
     nix run --quiet .#publish-gate
 
+preview-smoke:
+    nix run --quiet .#preview-smoke
+
+preview-verify url:
+    nix run --quiet .#preview-verify -- "{{url}}"
+
 systemd-check:
     nix run --quiet .#systemd-check
 
