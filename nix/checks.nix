@@ -4,14 +4,14 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh
+        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh
+        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh
       '';
     };
 
@@ -24,6 +24,7 @@ let
         bash -n deploy/loop.sh
         bash -n reporter/report.sh
         bash -n reporter/loop.sh
+        bash -n reporter/push-verdict.sh
         echo "syntax ok"
       '';
     };
@@ -75,13 +76,13 @@ let
           MOOG_READ_ENV_FILE="$TMPDIR/fixture.moogenv" \
           DASHBOARD_SECRETS_DIR="$TMPDIR/fixture.secrets"
         write_clean() {
-          printf '{"generated_at":"2026-01-01T00:00:00Z","runs":[],"note":"crab sample"}' \
+          printf '{"generated_at":"2026-01-01T00:00:00Z","runs":[{"run_id":"probe","url":"https://github.com/owner/repo/actions/runs/42"}],"monitor":{"last":"OK all green","ok":true},"note":"crab sample"}' \
             >"$fixture/data.json"
-          printf '{"run_id":"probe","status":"completed","properties":[]}' \
+          printf '{"run_id":"probe","status":"completed","properties":[],"nightly":[{"url":"https://github.com/owner/repo/actions/runs/42"}]}' \
             >"$fixture/runs/probe.json"
           printf '{"reporter":"probe","verdict":"ok"}' \
             >"$fixture/status/probe.json"
-          rm -f "$fixture/runs/case.json" "$fixture/runs/evil.json" "$fixture/status/case.json"
+          rm -f "$fixture/runs/case.json" "$fixture/runs/evil.json" "$fixture/status/case.json" "$fixture/status/monitor.json"
         }
         pushed_ref() {
           git --git-dir="$remote" rev-parse gh-pages 2>/dev/null || echo none
@@ -123,6 +124,8 @@ let
         git --git-dir="$remote" show gh-pages:data.json | grep -q generated_at
         git --git-dir="$remote" show gh-pages:runs/probe.json | grep -q probe
         git --git-dir="$remote" show gh-pages:status/probe.json | grep -q probe
+        git --git-dir="$remote" show gh-pages:data.json | grep -q '"last":"OK all green"'
+        git --git-dir="$remote" show gh-pages:runs/probe.json | grep -q actions/runs/42
         ref_before=$(pushed_ref)
         if PAGES_PUSH_TOKEN_FILE="$TMPDIR/fixture.missing" bash deploy/publish.sh; then
           echo "publish gate pushed without a token file" >&2
@@ -162,6 +165,70 @@ let
           echo "publish gate dry run pushed a secret" >&2
           exit 1
         fi
+        # Monitor payload: a planted URL in the monitor body (status file or
+        # data.json monitor subtree) refuses with exit 2 and never pushes;
+        # run/detail URLs stay legal (the clean baseline above carries them
+        # and publishes). A mounted-secret literal in the monitor body
+        # refuses through the literal gate; the clean monitor body publishes.
+        write_clean
+        printf '{"role":"monitor","verdict":"see https://example.invalid/v","ok":false,"reported_at":"2026-01-01T00:00:00Z"}' \
+          >"$fixture/status/monitor.json"
+        ref_before=$(pushed_ref)
+        if bash deploy/publish.sh; then
+          echo "publish gate let monitor URL through (status file)" >&2
+          exit 1
+        else
+          code=$?
+          if [[ $code -ne 2 ]]; then
+            echo "publish gate monitor URL exit $code, want 2" >&2
+            exit 1
+          fi
+        fi
+        if [[ $(pushed_ref) != "$ref_before" ]]; then
+          echo "publish gate pushed monitor URL (status file)" >&2
+          exit 1
+        fi
+        write_clean
+        jq '.monitor={last:"see https://example.invalid/v",ok:false}' "$fixture/data.json" >"$fixture/data.json.new" \
+          && mv "$fixture/data.json.new" "$fixture/data.json"
+        ref_before=$(pushed_ref)
+        if bash deploy/publish.sh; then
+          echo "publish gate let monitor URL through (data.json)" >&2
+          exit 1
+        else
+          code=$?
+          if [[ $code -ne 2 ]]; then
+            echo "publish gate monitor URL exit $code, want 2" >&2
+            exit 1
+          fi
+        fi
+        if [[ $(pushed_ref) != "$ref_before" ]]; then
+          echo "publish gate pushed monitor URL (data.json)" >&2
+          exit 1
+        fi
+        write_clean
+        printf '{"role":"monitor","verdict":"%s here","ok":false,"reported_at":"2026-01-01T00:00:00Z"}' \
+          "$push_value" >"$fixture/status/monitor.json"
+        ref_before=$(pushed_ref)
+        if bash deploy/publish.sh; then
+          echo "publish gate let monitor secret through" >&2
+          exit 1
+        else
+          code=$?
+          if [[ $code -ne 2 ]]; then
+            echo "publish gate monitor secret exit $code, want 2" >&2
+            exit 1
+          fi
+        fi
+        if [[ $(pushed_ref) != "$ref_before" ]]; then
+          echo "publish gate pushed monitor secret" >&2
+          exit 1
+        fi
+        write_clean
+        printf '{"role":"monitor","verdict":"OK all green","ok":true,"reported_at":"2026-01-01T00:00:00Z"}' \
+          >"$fixture/status/monitor.json"
+        bash deploy/publish.sh
+        git --git-dir="$remote" show gh-pages:status/monitor.json | grep -q 'OK all green'
         echo "publish gate ok"
       '';
     };
@@ -804,6 +871,225 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
       '';
     };
 
+    push-verdict-smoke = {
+      runtimeInputs = [ pkgs.docker pkgs.jq pkgs.gnugrep pkgs.coreutils pkgs.bash ];
+      text = ''
+        # End-to-end run of reporter/push-verdict.sh in the reporter image
+        # (no Docker socket anywhere): dry runs print exactly the payload
+        # (ok true for OK, false for FAIL/STALE, URL stripped) and make no
+        # outward request with no token needed; a real run against a fake
+        # GitHub endpoint records exactly the payload with the token only in
+        # the Authorization header; an empty verdict line exits non-zero with
+        # no request. A planted credential-shaped literal in the verdict
+        # survives (operator input, not a secret) while the token never
+        # leaves the header. Only paths are reported, never token values.
+        #
+        # No host bind mount anywhere: fixtures live in named volumes,
+        # written by helper containers, results read back the same way. The
+        # guard below fails the run if a bind mount ever reappears here.
+        # Every docker step is bounded with timeout (30s) and the fake has
+        # a readiness probe; nothing waits forever.
+        set -euo pipefail
+        self="$0"
+        bind_start='-v "'
+        bind_end='$'
+        mount_start='--mount'
+        mount_end=' type=bind'
+        if grep -qF -e "$bind_start$bind_end" "$self" \
+          || grep -qF -e "$mount_start$mount_end" "$self"; then
+          echo "push-verdict-smoke: host bind mount in smoke script" >&2
+          exit 1
+        fi
+        tag="moog-reporter:push-verdict-smoke"
+        timeout 120 docker build -q -f Dockerfile.reporter -t "$tag" . >/dev/null \
+          || { echo "push-verdict-smoke: build timed out or failed" >&2; exit 1; }
+        bad=$(timeout 30 docker run --rm --user 1000:1000 "$tag" find /app/reporter -name '*.sh' ! -executable -print) \
+          || { echo "push-verdict-smoke: find timed out" >&2; exit 1; }
+        if [[ -n $bad ]]; then
+          echo "push-verdict-smoke: reporter scripts not executable:" >&2
+          printf '%s\n' "$bad" >&2
+          exit 1
+        fi
+        ls_out=$(timeout 30 docker run --rm --user 1000:1000 "$tag" ls /app/reporter/push-verdict.sh) \
+          || { echo "push-verdict-smoke: push-verdict.sh missing from image" >&2; exit 1; }
+        [[ $ls_out == *push-verdict.sh ]] || { echo "push-verdict-smoke: push-verdict.sh missing from image" >&2; exit 1; }
+        secvol="push-verdict-smoke-sec-$$-$RANDOM"
+        recvol="push-verdict-smoke-rec-$$-$RANDOM"
+        net="push-verdict-smoke-net-$$-$RANDOM"
+        gh="push-verdict-smoke-gh-$$-$RANDOM"
+        vname="push-verdict-smoke-rep-$$-$RANDOM"
+        cleanup() {
+          timeout 20 docker rm -f "$gh" "$vname" >/dev/null 2>&1 || true
+          timeout 20 docker volume rm "$secvol" "$recvol" >/dev/null 2>&1 || true
+          timeout 20 docker network rm "$net" >/dev/null 2>&1 || true
+        }
+        trap cleanup EXIT
+        m_sec="--mount=type=volume,src=$secvol,dst=/s"
+        m_secrets="--mount=type=volume,src=$secvol,dst=/run/secrets,readonly"
+        timeout 30 docker volume create "$secvol" >/dev/null \
+          || { echo "push-verdict-smoke: sec volume" >&2; exit 1; }
+        timeout 30 docker volume create "$recvol" >/dev/null \
+          || { echo "push-verdict-smoke: rec volume" >&2; exit 1; }
+        timeout 30 docker network create "$net" >/dev/null \
+          || { echo "push-verdict-smoke: network" >&2; exit 1; }
+        # shellcheck disable=SC2016
+        # shellcheck disable=SC2016
+        timeout 30 docker run --rm --user 0:0 "$m_sec" "$tag" bash -c '
+          # $RANDOM expands inside the helper: secrets never reach host argv.
+          set -euo pipefail
+          r=$RANDOM$RANDOM
+          printf "%s" "smoke-push-$r" >/s/status-token
+          printf "%s\n" "smoke-push-$r" >/s/pattern
+          printf "%s" "ghp_pushm0ke_$r" >/s/cred
+          printf "%s\n" "ghp_pushm0ke_$r" >/s/credpat
+          printf "OK %s all green https://x.antithesis.com/report/b.html?auth=v2.public_probe\n" "$(cat /s/cred)" >/s/verdict
+          chmod 400 /s/status-token /s/pattern /s/cred /s/credpat /s/verdict
+          chown 1000:1000 /s /s/status-token /s/pattern /s/cred /s/credpat /s/verdict
+        ' || { echo "push-verdict-smoke: token setup" >&2; exit 1; }
+        timeout 30 docker run -d --name "$gh" --network "$net" --network-alias fake-gh \
+          --mount=type=volume,src="$recvol",dst=/rec python:3.12-slim python3 -c '
+import json, time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+class H(BaseHTTPRequestHandler):
+  def do_GET(self):
+    r=b"ok"
+    self.send_response(200)
+    self.send_header("Content-Length",str(len(r)))
+    self.end_headers()
+    self.wfile.write(r)
+  def do_PATCH(self):
+    n=int(self.headers.get("Content-Length",0))
+    body=self.rfile.read(n).decode()
+    open("/rec/last.json","w").write(json.dumps({
+      "auth": self.headers.get("Authorization",""),
+      "headers": dict(self.headers),
+      "body": body, "path": self.path}))
+    time.sleep(3)
+    r=b"{}"
+    self.send_response(200)
+    self.send_header("Content-Type","application/json")
+    self.send_header("Content-Length",str(len(r)))
+    self.end_headers()
+    self.wfile.write(r)
+  def log_message(self,*a): pass
+print("gh fake ready", flush=True)
+HTTPServer(("0.0.0.0",8080),H).serve_forever()
+' >/dev/null || { echo "push-verdict-smoke: fake github start" >&2; exit 1; }
+        ready=0
+        for _ in $(seq 1 30); do
+          if timeout 10 docker run --rm --network "$net" python:3.12-slim \
+              python3 -c 'import urllib.request; urllib.request.urlopen("http://fake-gh:8080/", timeout=5).read()' 2>/dev/null; then
+            ready=1; break; fi
+          sleep 1
+        done
+        [[ $ready -eq 1 ]] || { echo "push-verdict-smoke: fake github never ready" >&2; exit 1; }
+        pat=$(timeout 15 docker run --rm "$m_sec" "$tag" cat /s/pattern) \
+          || { echo "push-verdict-smoke: read pattern" >&2; exit 1; }
+        cred=$(timeout 15 docker run --rm "$m_sec" "$tag" cat /s/credpat) \
+          || { echo "push-verdict-smoke: read cred" >&2; exit 1; }
+        run_dry() {
+          timeout 30 docker run --rm -i --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL \
+            -e DOCKER_SOCKET=/nonexistent.sock -e REPORT_DRY_RUN=1 \
+            "$tag" /app/reporter/push-verdict.sh
+        }
+        ok_line="OK run_id=abc age=100s maximum=200s see https://x.antithesis.com/report/a.html?auth=v2.public_probe"
+        ok_out=$(printf '%s\n' "$ok_line" | run_dry) \
+          || { echo "push-verdict-smoke: OK dry run" >&2; exit 1; }
+        printf '%s' "$ok_out" | jq -e '.role=="monitor" and .ok==true' >/dev/null \
+          || { echo "push-verdict-smoke: OK dry-run ok wrong" >&2; exit 1; }
+        printf '%s' "$ok_out" | jq -e '.verdict=="OK run_id=abc age=100s maximum=200s see "' >/dev/null \
+          || { echo "push-verdict-smoke: OK dry-run URL not stripped" >&2; exit 1; }
+        printf '%s' "$ok_out" | jq -e '.reported_at|test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")' >/dev/null \
+          || { echo "push-verdict-smoke: OK dry-run reported_at" >&2; exit 1; }
+        if printf '%s' "$ok_out" | grep -E 'https?://|auth='; then
+          echo "push-verdict-smoke: OK dry run leaked URL" >&2
+          exit 1
+        fi
+        fail_out=$(printf 'FAIL age 30000s exceeds maximum 20000s\n' | run_dry) \
+          || { echo "push-verdict-smoke: FAIL dry run" >&2; exit 1; }
+        printf '%s' "$fail_out" | jq -e '.role=="monitor" and .ok==false and .verdict=="FAIL age 30000s exceeds maximum 20000s"' >/dev/null \
+          || { echo "push-verdict-smoke: FAIL dry-run payload" >&2; exit 1; }
+        stale_out=$(printf 'STALE no recent runs\n' | run_dry) \
+          || { echo "push-verdict-smoke: STALE dry run" >&2; exit 1; }
+        printf '%s' "$stale_out" | jq -e '.role=="monitor" and .ok==false' >/dev/null \
+          || { echo "push-verdict-smoke: STALE dry-run payload" >&2; exit 1; }
+        if timeout 10 docker run --rm --mount=type=volume,src="$recvol",dst=/rec \
+            python:3.12-slim ls /rec/last.json 2>/dev/null; then
+          echo "push-verdict-smoke: dry run made an outward request" >&2
+          exit 1
+        fi
+        timeout 30 docker run -d --name "$vname" --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL \
+          --network "$net" "$m_secrets" "$m_sec" \
+          -e DOCKER_SOCKET=/nonexistent.sock -e REPORT_REPOSITORY=owner/repo \
+          -e STATUS_ISSUE_NUMBER=77 -e STATUS_TOKEN_FILE=/run/secrets/status-token \
+          -e REPORT_API_BASE=http://fake-gh:8080 \
+          "$tag" /app/reporter/push-verdict.sh /s/verdict \
+          >/dev/null || { echo "push-verdict-smoke: real run start" >&2; exit 1; }
+        sleep 1
+        vtop_out=$(timeout 15 docker top "$vname" 2>/dev/null || true)
+        if printf '%s' "$vtop_out" | grep -qF "$pat"; then
+          echo "push-verdict-smoke: token in process list" >&2
+          exit 1
+        fi
+        timeout 30 docker wait "$vname" >/dev/null \
+          || { echo "push-verdict-smoke: real run hung" >&2; exit 1; }
+        vlogs=$(timeout 15 docker logs "$vname" 2>&1 || true)
+        if printf '%s' "$vlogs" | grep -qF "$pat"; then
+          echo "push-verdict-smoke: token in logs" >&2
+          exit 1
+        fi
+        if printf '%s' "$vlogs" | grep -E 'https?://'; then
+          echo "push-verdict-smoke: logs leaked URL" >&2
+          exit 1
+        fi
+        vrec_out=$(timeout 15 docker run --rm --mount=type=volume,src="$recvol",dst=/rec \
+          python:3.12-slim cat /rec/last.json) \
+          || { echo "push-verdict-smoke: no recorded request" >&2; exit 1; }
+        printf '%s' "$vrec_out" | jq -e --arg p "$pat" '.auth==("Bearer "+$p)' >/dev/null \
+          || { echo "push-verdict-smoke: token not only in header" >&2; exit 1; }
+        if printf '%s' "$vrec_out" | jq -r .path | grep -q '?'; then
+          echo "push-verdict-smoke: query token in path" >&2
+          exit 1
+        fi
+        printf '%s' "$vrec_out" | jq -e '.path=="/repos/owner/repo/issues/77"' >/dev/null \
+          || { echo "push-verdict-smoke: wrong issue path" >&2; exit 1; }
+        if printf '%s' "$vrec_out" | jq -r '.headers | to_entries[] | select(.key != "Authorization") | .value' \
+          | grep -qF "$pat"; then
+          echo "push-verdict-smoke: token outside Authorization" >&2
+          exit 1
+        fi
+        vbody=$(printf '%s' "$vrec_out" | jq -r .body | jq -r .body)
+        printf '%s' "$vbody" | jq -e --arg c "$cred" '.role=="monitor" and .ok==true and (.verdict | contains($c))' >/dev/null \
+          || { echo "push-verdict-smoke: recorded body wrong" >&2; exit 1; }
+        if printf '%s' "$vbody" | grep -E 'https?://|auth='; then
+          echo "push-verdict-smoke: recorded body leaked URL" >&2
+          exit 1
+        fi
+        if printf '%s' "$vbody" | grep -qF "$pat"; then
+          echo "push-verdict-smoke: recorded body leaked token" >&2
+          exit 1
+        fi
+        timeout 30 docker run --rm --mount=type=volume,src="$recvol",dst=/rec \
+          python:3.12-slim rm -f /rec/last.json \
+          || { echo "push-verdict-smoke: clear recording" >&2; exit 1; }
+        if printf "" | timeout 30 docker run --rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL \
+            --network "$net" "$m_secrets" \
+            -e DOCKER_SOCKET=/nonexistent.sock -e REPORT_REPOSITORY=owner/repo \
+            -e STATUS_ISSUE_NUMBER=78 -e STATUS_TOKEN_FILE=/run/secrets/status-token \
+            -e REPORT_API_BASE=http://fake-gh:8080 \
+            -i "$tag" /app/reporter/push-verdict.sh >/dev/null 2>&1; then
+          echo "push-verdict-smoke: empty verdict unexpectedly sent" >&2
+          exit 1
+        fi
+        if timeout 10 docker run --rm --mount=type=volume,src="$recvol",dst=/rec \
+            python:3.12-slim ls /rec/last.json 2>/dev/null; then
+          echo "push-verdict-smoke: empty verdict patched" >&2
+          exit 1
+        fi
+        echo "push verdict smoke ok"
+      '';
+    };
+
     image-publish = {
       runtimeInputs = [ pkgs.docker pkgs.coreutils pkgs.bash ];
       text = ''
@@ -1037,9 +1323,38 @@ DRIVER_EOF
           mkdir -p "$out"
           DASHBOARD_CACHE="$cache" DASHBOARD_OUT="$out" PROXY_URL=http://127.0.0.1:9/ \
             STATUS_BODY_CMD="cat $TMPDIR/body.json" STATUS_BODY_CMD_AGENT="cat $TMPDIR/abody.json" \
-            STATUS_ISSUE_ORACLE=1 STATUS_ISSUE_AGENT=2 \
+            STATUS_BODY_CMD_MONITOR="cat $TMPDIR/mbody.json" \
+            STATUS_ISSUE_ORACLE=1 STATUS_ISSUE_AGENT=2 STATUS_ISSUE_MONITOR=3 \
             bash collect/collect.sh >"$cache/log" 2>&1 || true
           printf '%s' "$cache"
+        }
+        monitor_ok() {
+          local cache=$1 want_reported=$2 want_verdict=$3 want_ok=$4
+          jq -e '.sources.monitor.status=="ok"' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $5 monitor not ok" >&2; return 1; }
+          [[ $(jq -r .sources.monitor.last_success "$cache/out/data.json") == "$want_reported" ]] \
+            || { echo "schema-reject: $5 monitor last_success is not reported_at" >&2; return 1; }
+          jq -e '.sources.monitor.error==null' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $5 monitor error not null" >&2; return 1; }
+          jq -e --arg v "$want_verdict" --argjson o "$want_ok" '.monitor=={last:$v,ok:$o}' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $5 monitor page shape wrong" >&2; return 1; }
+        }
+        monitor_refused() {
+          local cache=$1
+          [[ $(jq -r .sources.monitor.status "$cache/out/data.json") != "ok" ]] \
+            || { echo "schema-reject: $2 monitor accepted" >&2; return 1; }
+          jq -e '.sources.monitor.error|test("invalid payload")' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $2 monitor wrong error" >&2; return 1; }
+          jq -e '.monitor==null' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $2 monitor not null" >&2; return 1; }
+          if grep -q "$MARKER" "$cache/out/data.json" "$cache/log"; then
+            echo "schema-reject: $2 monitor leaked body text" >&2
+            return 1
+          fi
+        }
+        seed_sources() {
+          jq -n -c --arg t "$NOW" '{role:"oracle",containers:[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.5",status:"Up 5 days"}],reported_at:$t}' >"$TMPDIR/body.json"
+          jq -n -c --arg t "$NOW" '{role:"agent",containers:[{name:"agent-moog-agent-1",image:"moog-agent:v0.5",status:"Up 5 days"}],errors_6h:0,published_24h:0,reported_at:$t}' >"$TMPDIR/abody.json"
         }
         expect_ok() {
           local cache=$1 want_reported=$2
@@ -1152,6 +1467,45 @@ DRIVER_EOF
         jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"agent",containers:[],errors_6h:0,published_24h:0,reported_at:$t,note:$m}' >"$TMPDIR/abody.json"
         c=$(run_collect)
         agent_refused "$c" agent-future-reported-at || exit 1
+        # Monitor source: verdict vocabulary OK|FAIL|STALE with matching ok.
+        seed_sources
+        jq -n -c --arg t "$NOW" '{role:"monitor",verdict:"OK run_id=abc age=100s maximum=200s",ok:true,reported_at:$t}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_ok "$c" "$NOW" "OK run_id=abc age=100s maximum=200s" true monitor-valid-ok || exit 1
+        seed_sources
+        jq -n -c --arg t "$NOW" '{role:"monitor",verdict:"FAIL age 30000s exceeds maximum 20000s",ok:false,reported_at:$t}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_ok "$c" "$NOW" "FAIL age 30000s exceeds maximum 20000s" false monitor-valid-fail || exit 1
+        seed_sources
+        jq -n -c --arg t "$NOW" '{role:"monitor",verdict:"STALE no recent runs",ok:false,reported_at:$t}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_ok "$c" "$NOW" "STALE no recent runs" false monitor-valid-stale || exit 1
+        seed_sources
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:false,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_refused "$c" monitor-ok-mismatch || exit 1
+        seed_sources
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"see https://example.invalid/v",ok:false,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_refused "$c" monitor-url-in-verdict || exit 1
+        seed_sources
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:"true",reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_refused "$c" monitor-string-ok || exit 1
+        seed_sources
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t,zzz:$m}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_ok "$c" "$NOW" "OK x" true monitor-extra-keys || exit 1
+        jq -e '.monitor|keys==["last","ok"]' "$c/out/data.json" >/dev/null \
+          || { echo "schema-reject: monitor extra keys not dropped" >&2; exit 1; }
+        if grep -q "$MARKER" "$c/out/data.json"; then
+          echo "schema-reject: monitor extra keys leaked into data" >&2
+          exit 1
+        fi
+        seed_sources
+        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        c=$(run_collect)
+        monitor_refused "$c" monitor-future-reported-at || exit 1
         echo "schema reject ok"
       '';
     };
@@ -1170,7 +1524,8 @@ DRIVER_EOF
         collect_once() {
           DASHBOARD_CACHE="$cache" DASHBOARD_OUT="$out" PROXY_URL=http://127.0.0.1:9/ \
             STATUS_BODY_CMD="cat $TMPDIR/body.json" STATUS_BODY_CMD_AGENT="cat $TMPDIR/abody.json" \
-            STATUS_ISSUE_ORACLE=1 STATUS_ISSUE_AGENT=2 \
+            STATUS_BODY_CMD_MONITOR="cat $TMPDIR/mbody.json" \
+            STATUS_ISSUE_ORACLE=1 STATUS_ISSUE_AGENT=2 STATUS_ISSUE_MONITOR=3 \
             bash collect/collect.sh >"$cache/log" 2>&1 || true
         }
         T1=$(date -u +%FT%TZ)
@@ -1230,6 +1585,35 @@ DRIVER_EOF
           || { echo "host-stale: agent recovered last_success wrong" >&2; exit 1; }
         jq -e '.hosts.agent==[{name:"agent-moog-agent-1",image:"moog-agent:v0.6",status:"Up 2 min"}] and .hosts.agent_errors_6h==4 and .hosts.agent_published_24h==10' "$out/data.json" >/dev/null \
           || { echo "host-stale: agent recovered hosts wrong" >&2; exit 1; }
+        # Monitor staleness: same contract, last good {last, ok} served.
+        jq -n -c --arg t "$TA3" '{role:"oracle",containers:[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.6",status:"Up 2 min"}],reported_at:$t}' >"$TMPDIR/body.json"
+        jq -n -c --arg t "$TA3" '{role:"agent",containers:[{name:"agent-moog-agent-1",image:"moog-agent:v0.6",status:"Up 2 min"}],errors_6h:4,published_24h:10,reported_at:$t}' >"$TMPDIR/abody.json"
+        TM1=$(date -u +%FT%TZ)
+        jq -n -c --arg t "$TM1" '{role:"monitor",verdict:"OK run_id=abc age=100s maximum=200s",ok:true,reported_at:$t}' >"$TMPDIR/mbody.json"
+        collect_once
+        [[ $(jq -r .sources.monitor.status "$out/data.json") == "ok" ]] \
+          || { echo "host-stale: monitor fresh run not ok" >&2; exit 1; }
+        [[ $(jq -r .sources.monitor.last_success "$out/data.json") == "$TM1" ]] \
+          || { echo "host-stale: monitor last_success is not reported_at" >&2; exit 1; }
+        jq -e '.monitor=={last:"OK run_id=abc age=100s maximum=200s",ok:true}' "$out/data.json" >/dev/null \
+          || { echo "host-stale: monitor shape" >&2; exit 1; }
+        jq -n -c --arg t "$OLD" '{role:"monitor",verdict:"OK run_id=abc age=100s maximum=200s",ok:true,reported_at:$t}' >"$TMPDIR/mbody.json"
+        collect_once
+        [[ $(jq -r .sources.monitor.status "$out/data.json") == "stale" ]] \
+          || { echo "host-stale: monitor stopped fixture not stale" >&2; exit 1; }
+        [[ $(jq -r .sources.monitor.last_success "$out/data.json") == "$TM1" ]] \
+          || { echo "host-stale: monitor stale last_success moved" >&2; exit 1; }
+        jq -e '.monitor=={last:"OK run_id=abc age=100s maximum=200s",ok:true}' "$out/data.json" >/dev/null \
+          || { echo "host-stale: monitor stale not last good" >&2; exit 1; }
+        TM3=$(date -u +%FT%TZ)
+        jq -n -c --arg t "$TM3" '{role:"monitor",verdict:"FAIL age exceeded",ok:false,reported_at:$t}' >"$TMPDIR/mbody.json"
+        collect_once
+        [[ $(jq -r .sources.monitor.status "$out/data.json") == "ok" ]] \
+          || { echo "host-stale: monitor no recovery on next update" >&2; exit 1; }
+        [[ $(jq -r .sources.monitor.last_success "$out/data.json") == "$TM3" ]] \
+          || { echo "host-stale: monitor recovered last_success wrong" >&2; exit 1; }
+        jq -e '.monitor=={last:"FAIL age exceeded",ok:false}' "$out/data.json" >/dev/null \
+          || { echo "host-stale: monitor recovered shape wrong" >&2; exit 1; }
         echo "host stale ok"
       '';
     };
@@ -1323,6 +1707,10 @@ DRIVER_EOF
     }
     grep -q 'reporter-smoke' .github/workflows/ci.yml || {
       echo "image-source-shape: CI does not run reporter-smoke" >&2
+      exit 1
+    }
+    grep -q 'push-verdict-smoke' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not run push-verdict-smoke" >&2
       exit 1
     }
     grep -q 'ghcr.io/' nix/checks.nix || {

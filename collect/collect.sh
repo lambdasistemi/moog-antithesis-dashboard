@@ -9,9 +9,8 @@
 # Secrets arrive as files: the Antithesis key, the GitHub read token and the
 # moog read environment are read from /run/secrets and never appear in argv.
 # Report URLs (they carry auth tokens) are dropped before publication.
-# The oracle and agent sources read their status issues (#11); the monitor
-# stays an interim stub until #12, reporting error so the page shows
-# `error` instead of silently serving stale numbers.
+# The oracle, agent and monitor sources read their status issues (#11,
+# #12); nothing is read from the host journal.
 # The container carries no ssh client and no journal access.
 set -uo pipefail
 
@@ -30,6 +29,7 @@ NIGHTLY_LIMIT=14
 STATUS_REPOSITORY=${STATUS_REPOSITORY:-lambdasistemi/moog-antithesis-dashboard}
 STATUS_ISSUE_ORACLE=${STATUS_ISSUE_ORACLE:-}
 STATUS_ISSUE_AGENT=${STATUS_ISSUE_AGENT:-}
+STATUS_ISSUE_MONITOR=${STATUS_ISSUE_MONITOR:-}
 # Test seams for checks only: STATUS_BODY_CMD_ORACLE (else legacy
 # STATUS_BODY_CMD) and STATUS_BODY_CMD_AGENT supply the issue bodies instead
 # of calling the GitHub API. Production leaves them unset and uses gh_auth.
@@ -182,18 +182,20 @@ src_token() {
     ) | jq '{ pending_requests: (.requests | length) }'
 }
 
-# Oracle and agent status from their GitHub issues (#11). One shared strict
-# jq schema: known keys only (role, containers, reported_at, plus errors_6h
-# and published_24h for the agent), types, every string at most 200
-# characters, at most 50 containers, reported_at UTC ISO 8601 and not more
-# than 2 minutes in the future. Counts are non-negative integers. Unknown
-# keys are dropped; missing keys or wrong types fail. A payload older than
-# 15 minutes fails as stale so the last good value is served. Error
-# messages never include body text.
+# Oracle, agent and monitor status from their GitHub issues (#11, #12).
+# One shared strict jq schema: known keys only (role, containers,
+# reported_at, plus errors_6h and published_24h for the agent, verdict and
+# ok for the monitor), types, every string at most 200 characters, at most
+# 50 containers, reported_at UTC ISO 8601 and not more than 2 minutes in
+# the future. The monitor verdict is a non-empty string with no http(s)
+# URL and ok equals `verdict | startswith("OK")`; counts are non-negative
+# integers. Unknown keys are dropped; missing keys or wrong types fail. A
+# payload older than 15 minutes fails as stale so the last good value is
+# served. Error messages never include body text.
 # Fetch seams for checks only: STATUS_BODY_CMD_ORACLE (else legacy
-# STATUS_BODY_CMD) and STATUS_BODY_CMD_AGENT supply the issue body instead
-# of calling the GitHub API. Production leaves them unset and uses gh_auth;
-# nothing else uses them.
+# STATUS_BODY_CMD), STATUS_BODY_CMD_AGENT and STATUS_BODY_CMD_MONITOR supply
+# the issue bodies instead of calling the GitHub API. Production leaves them
+# unset and uses gh_auth; nothing else uses them.
 status_body_default() {
     local source=$1 issue=$2
     [[ -n $issue ]] || {
@@ -211,12 +213,13 @@ validate_status_payload() {
     local role=$1 now_epoch=$2
     jq -e --arg role "$role" --argjson now "$now_epoch" '
         if type != "object" then error("bad")
-        elif (has("role") and has("containers") and has("reported_at") | not) then error("bad")
+        elif $role == "monitor" and (has("role") and has("verdict") and has("ok") and has("reported_at") | not) then error("bad")
+        elif $role != "monitor" and (has("role") and has("containers") and has("reported_at") | not) then error("bad")
         elif (.role | type) != "string" or .role != $role or (.role | length) > 200 then error("bad")
-        elif (.containers | type) != "array" or (.containers | length) > 50 then error("bad")
+        elif $role != "monitor" and ((.containers | type) != "array" or (.containers | length) > 50) then error("bad")
         elif (.reported_at | type) != "string" or (.reported_at | length) > 200 then error("bad")
         elif (.reported_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") | not) then error("bad")
-        elif ([.containers[] | select(type != "object"
+        elif $role != "monitor" and ([.containers[] | select(type != "object"
             or (has("name") and has("image") and has("status") | not)
             or (.name | type) != "string" or (.image | type) != "string" or (.status | type) != "string"
             or (.name | length) > 200 or (.image | length) > 200 or (.status | length) > 200)] | length) > 0 then error("bad")
@@ -224,10 +227,15 @@ validate_status_payload() {
             or (.errors_6h | type) != "number" or (.published_24h | type) != "number"
             or .errors_6h < 0 or .published_24h < 0
             or (.errors_6h | floor) != .errors_6h or (.published_24h | floor) != .published_24h) then error("bad")
+        elif $role == "monitor" and ((has("verdict") and has("ok") | not)
+            or (.verdict | type) != "string" or (.verdict | length) == 0 or (.verdict | length) > 200
+            or (.verdict | test("https?://"))
+            or (.ok | type) != "boolean" or .ok != (.verdict | startswith("OK"))) then error("bad")
         else
             (.reported_at | fromdateiso8601) as $rep
             | if $rep > ($now + 120) then error("bad")
               elif $role == "agent" then {role, containers: [.containers[] | {name, image, status}], errors_6h, published_24h, reported_at}
+              elif $role == "monitor" then {role, verdict, ok, reported_at}
               else {role, containers: [.containers[] | {name, image, status}], reported_at}
               end
         end
@@ -276,8 +284,9 @@ src_proxy() {
 }
 
 src_monitor() {
-    echo "monitor reporter not yet available (see #12)" >&2
-    return 1
+    local payload
+    payload=$(fetch_status monitor "$STATUS_ISSUE_MONITOR" monitor "${STATUS_BODY_CMD_MONITOR:-}") || return 1
+    jq -c '{last: .verdict, ok, reported_at}' <<<"$payload"
 }
 
 # Nightly runs and their receipts; concluded receipts are cached forever.
@@ -458,7 +467,9 @@ jq -n \
        tenant: "'"$TENANT"'", repository: "'"$CNA_REPO"'",
        sources: $sources,
        runs: $runs[0], chain: $chain[0], token: $token[0], hosts: $hosts[0],
-       proxy: $proxy[0], monitor: $monitor[0], nightly: $nightly[0],
+       proxy: $proxy[0],
+       monitor: ($monitor[0] | if type == "object" then {last, ok} else . end),
+       nightly: $nightly[0],
        nightly_stages: ["head-resolution", "runner-preflight", "day-claim", "resolve-upstream",
          "launch-attempt", "bootstrap-proposal", "bootstrap-checks", "image-resolution",
          "consumer-repin", "consumer-checks", "producer-check", "supervised-integration",

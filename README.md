@@ -33,7 +33,7 @@ flowchart LR
         B[moog facts + token] --> J
         C[oracle + agent status: live since #11] --> J
         D[proxy readyz] --> J
-        E[freshness monitor: error until #12] --> J
+        E[freshness monitor verdict: live since #12] --> J
         F[nightly runs + receipts] --> J
     end
     J --> K[deploy/publish.sh secrets gate]
@@ -44,8 +44,8 @@ flowchart LR
 1. `collect/collect.sh` fetches seven independent sources into one
    `data.json`: Antithesis runs and their properties, on-chain test-run
    facts and pending requests, oracle and agent status (live, via their
-   status issues), proxy readiness, the freshness monitor verdict (interim:
-   `error`), and nightly Amaru integration runs with their receipts. It
+   status issues), proxy readiness, the freshness monitor verdict (live, via
+   its status issue), and nightly Amaru integration runs with their receipts. It
    also writes one detail file per run (`runs/<run_id>.json`), status
    payloads (`status/<reporter>.json`), and the
    shared `property-descriptions.json`.
@@ -97,7 +97,7 @@ A dry `docker run --rm <image> env` shows no credential.
 - Property descriptions repeat verbatim across runs, so they publish once in
   `property-descriptions.json` instead of inside every detail file.
 
-## Status reporters (oracle and agent)
+## Status reporters (oracle, agent, monitor)
 
 One tiny container runs on each of the oracle and agent hosts and edits
 one status issue on this repository every 5 minutes. It lists containers
@@ -129,24 +129,34 @@ REPORTER_ROLE=agent REPORT_DRY_RUN=1 ./reporter/report.sh
 DASHBOARD_DRY_RUN=1 ./deploy/publish.sh
 ```
 
-The reporter needs one fine-grained token (Issues: write on this repo
-only, nothing else) in `/srv/moog-status-reporter/status-token`, mode
-`0400`, and the issue number in `STATUS_ISSUE_NUMBER` (see
-`reporter/compose.yaml` for the socket mount and the Docker group GID).
-When the token expires, that host's card turns stale with its last success
-time; nothing else breaks. Rotate yearly at most (maximum token lifetime).
+The reporter needs one fine-grained token per host (Issues: write on this
+repo only, nothing else): the oracle and agent tokens live in
+`/srv/moog-status-reporter/status-token` on their hosts, and the third one
+belongs to the freshness-monitor host, mode `0400` everywhere, with the
+issue number in `STATUS_ISSUE_NUMBER` (see `reporter/compose.yaml` for the
+socket mount and the Docker group GID). When a token expires, that card
+turns stale with its last success time; nothing else breaks. Rotate yearly
+at most (maximum token lifetime).
+
+The freshness monitor is not a container here: the monitor's own script
+calls the same reporter image one-shot, verdict line on stdin, token file
+bind-mounted read-only:
+
+```sh
+echo "OK run_id=$id age=${age}s maximum=${max}s" | docker run --rm -i \
+  -v /srv/moog-status-reporter/status-token:/run/secrets/status-token:ro \
+  -e STATUS_ISSUE_NUMBER=3 \
+  ghcr.io/lambdasistemi/moog-antithesis-dashboard-reporter:main \
+  /app/reporter/push-verdict.sh
+# Dry run first: prints the payload, needs no token, sends nothing.
+echo "OK run_id=$id age=${age}s maximum=${max}s" | REPORT_DRY_RUN=1 \
+  ./reporter/push-verdict.sh
+```
 
 Rejected: ssh pulls (the collector has no ssh client by design), a
 receiver service (a new always-on endpoint to patch for the same outcome),
 gists (no fine-grained scope), pushing a git branch (the token could write
 gh-pages).
-
-## Interim state
-
-The freshness-monitor (`monitor`) source shows `error`: its push reporter
-lands in #12. Until then the collector has no journal access by design,
-so there is nothing to read that source with — and the page says `error`
-rather than guessing. Nothing else is affected.
 
 ## What never leaves the collector
 

@@ -134,6 +134,8 @@ jobs:
         run: nix run --quiet .#container-smoke
       - name: Smoke test the reporter image
         run: nix run --quiet .#reporter-smoke
+      - name: Smoke test the verdict push step
+        run: nix run --quiet .#push-verdict-smoke
       - name: Build collector image
         run: nix run --quiet .#image-publish
       - name: Publish collector image
