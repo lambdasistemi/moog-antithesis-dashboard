@@ -63,7 +63,6 @@ tr.prop-row[data-prop-index]:hover td { background: var(--run-bg); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
 .kv dt { color: var(--muted); font-size: 12.5px; }
 .kv dd { margin: 0; overflow-wrap: anywhere; }
-.detail-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
 .ce { border-left: 3px solid var(--line); padding: 6px 10px; margin: 8px 0; }
 .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .filters input, .filters select { font: inherit; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
@@ -369,8 +368,7 @@ function detailHtml(d) {
   const nightly = (d.nightly || []).map(n =>
     `<div><a href="${esc(n.url)}">${esc(n.day || "?")}</a> · ${esc(n.stage || n.conclusion || "?")}${n.error ? ` · ${esc(n.error)}` : ""}</div>`).join("")
     || (d.directory === "testnets/cardano_amaru" ? "no nightly runs the same day" : "not a nightly testnet run");
-  return `<div class="detail-head"><div><a href="#">← all runs</a></div><div>${st}</div></div>
-    <h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span></h3>
+  return `<h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span> ${st}</h3>
     <dl class="kv">
       <dt>run id</dt><dd class="mono">${esc(d.run_id)}</dd>
       <dt>created</dt><dd>${esc(d.created_at || "–")}</dd>
