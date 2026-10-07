@@ -54,10 +54,6 @@ th { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap
 tr:last-child td { border-bottom: 0; }
 .failing { color: var(--bad); font-size: 12.5px; }
 .ignored { color: var(--muted); font-size: 12.5px; }
-.stages { display: flex; gap: 2px; }
-.stages span { width: 12px; height: 12px; border-radius: 2px; background: var(--idle-bg); }
-.stages span.passed { background: var(--ok); } .stages span.stopped { background: var(--bad); }
-.stages span.reached { background: var(--run); } .stages span.halted { background: var(--muted); }
 tbody#runs tr[data-run] { cursor: pointer; }
 tbody#runs tr[data-run]:hover td { background: var(--run-bg); }
 tbody#runs tr[data-run].open td { background: var(--run-bg); }
@@ -75,7 +71,6 @@ tr.prop-row[data-prop-index]:hover td { background: var(--run-bg); }
 .count { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 120px; }
 .count b { display: block; font-size: 22px; font-weight: 600; }
 .count small { color: var(--muted); }
-.sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .empty { padding: 16px; color: var(--muted); }
 footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
 @media (max-width: 640px) { .hide-sm { display: none; } th, td { padding: 6px 8px; } }
@@ -88,13 +83,13 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
     <div class="meta"><span id="generated">loading…</span> · <span id="next"></span></div>
   </header>
   <div class="banner" id="banner"></div>
-  <div class="sources" id="sources"></div>
 
   <h2>Pipeline</h2>
   <div class="chain" id="chain"></div>
 
-  <h2>Antithesis runs</h2>
-  <div class="filters" id="run-filters">
+  <h2>Test runs</h2>
+  <div class="counts" id="phases"></div>
+  <div class="filters" id="run-filters" style="margin-top:10px">
     <input id="flt-q" type="search" placeholder="filter: commit, requester, test…" aria-label="filter runs by text">
     <select id="flt-status" aria-label="filter by status">
       <option value="">any status</option>
@@ -107,32 +102,27 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
       <option value="failing">has failures</option>
       <option value="passing">passing</option>
     </select>
+    <select id="flt-phase" aria-label="filter by on-chain phase">
+      <option value="">any phase</option>
+      <option value="pending">pending</option>
+      <option value="accepted">accepted</option>
+      <option value="finished">finished</option>
+      <option value="rejected">rejected</option>
+    </select>
     <select id="flt-testnet" aria-label="filter by testnet"><option value="">all testnets</option></select>
     <span class="meta" id="runs-count"></span>
   </div>
   <div class="panel"><table>
-    <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Status</th><th>Properties</th></tr></thead>
+    <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Antithesis</th><th>On chain</th></tr></thead>
     <tbody id="runs"></tbody>
-  </table></div>
-
-  <h2>On-chain test runs</h2>
-  <div class="counts" id="phases"></div>
-  <div class="panel" style="margin-top:10px"><table>
-    <thead><tr><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Phase</th><th>Outcome</th><th class="hide-sm">Slot</th></tr></thead>
-    <tbody id="facts"></tbody>
-  </table></div>
-
-  <h2>Nightly Amaru integration</h2>
-  <div class="panel"><table>
-    <thead><tr><th>Day</th><th>Result</th><th>Stopped at</th><th class="hide-sm">Stages</th><th>Reason</th><th class="hide-sm">Upstream</th></tr></thead>
-    <tbody id="nightly"></tbody>
   </table></div>
 
   <footer>
     Collected every 10 minutes from the Antithesis API, the moog on-chain facts, the oracle and agent hosts, the
     Antithesis proxy, the run freshness monitor and GitHub Actions. Each source keeps its last good value when it fails.
+    One table of test runs joins Antithesis runs with their on-chain record.
     Click a run to expand it in place; click a failing property for its counterexamples.
-    Filter the runs by text, status, result, or testnet.
+    Filter by text, status, result, on-chain phase, or testnet.
     The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
   </footer>
 </main>
@@ -162,17 +152,21 @@ function renderHeader(d) {
   $("generated").textContent = `updated ${ago(d.generated_at)}`;
   $("generated").title = d.generated_at;
   const age = (Date.now() - Date.parse(d.generated_at)) / 1000;
+  const bad = Object.entries(d.sources || {}).filter(([, s]) => s.status !== "ok");
+  const staleList = bad.map(([n, s]) =>
+    `${n} (${s.status}${s.last_success ? ", last success " + ago(s.last_success) : ""})`).join(", ");
   const b = $("banner");
+  b.title = bad.map(([n, s]) => s.error ? `${n}: ${s.error}` : "").filter(Boolean).join("\n");
   if (age > STALE_AFTER_S) {
-    b.textContent = `This snapshot is ${ago(d.generated_at).replace(" ago", "")} old; the collector may be stopped.`;
+    b.textContent = `This snapshot is ${ago(d.generated_at).replace(" ago", "")} old; the collector may be stopped.` +
+      (bad.length ? ` Sources not fresh: ${staleList}.` : "");
+    b.classList.add("show");
+  } else if (bad.length) {
+    b.textContent = `Stale sources showing last good values: ${staleList}.`;
     b.classList.add("show");
   } else b.classList.remove("show");
   const next = Math.max(0, d.refresh_seconds - age);
   $("next").textContent = next > 0 ? `next collection in about ${Math.ceil(next / 60)} min` : "next collection due";
-  $("sources").innerHTML = Object.entries(d.sources).map(([n, s]) =>
-    `<span title="${esc(s.error || "")}${s.last_success ? " · last success " + esc(s.last_success) : ""}">${chip(
-      s.status === "ok" ? "ok" : s.status === "stale" ? "warn" : "bad",
-      `${n}${s.status === "ok" ? "" : ": " + s.status}`)}</span>`).join("");
 }
 
 function monitorDetail(m) {
@@ -205,7 +199,7 @@ function renderChain(d) {
      state: d.monitor ? (d.monitor.ok ? ["ok", "ok"] : ["bad", "alerting"]) : ["bad", "unknown"]},
   ];
   $("chain").innerHTML = nodes.map(n =>
-    `<div class="node"><div class="name">${esc(n.name)}</div><div class="detail">${esc(n.detail)}</div>${chip(...n.state)}</div>`).join("");
+    `<div class="node"><div class="name">${esc(n.name)} ${chip(...n.state)}</div><div class="detail">${esc(n.detail)}</div></div>`).join("");
 }
 
 function propsCell(p, status) {
@@ -219,54 +213,88 @@ function propsCell(p, status) {
   return html;
 }
 
-let runsData = [];
+let testRows = []; // {run, fact}, either side may be missing
 
 function realFailures(p) {
   if (!p) return [];
   return (p.failing || []).filter(n => !IGNORED.has(n));
 }
 
-function runMatches(r) {
+// One table on the test-run grain: Antithesis runs joined with their
+// on-chain record, plus on-chain records with no run in the window.
+function buildTestRows(d) {
+  const byKey = new Map();
+  const k = (dir, c, t) => `${dir}|${c}|${t}`;
+  for (const f of ((d.chain && d.chain.recent) || []))
+    byKey.set(k(f.directory, f.commit, f.try), {run: null, fact: f});
+  for (const r of (d.runs || [])) {
+    const e = byKey.get(k(r.directory, r.commit, r.try));
+    if (e && !e.run) e.run = r;
+    else if (!e) byKey.set(k(r.directory, r.commit, r.try), {run: r, fact: null});
+    else byKey.set(r.run_id, {run: r, fact: null});
+  }
+  const withRun = [...byKey.values()].filter(x => x.run)
+    .sort((a, b) => String(b.run.created_at || "").localeCompare(String(a.run.created_at || "")));
+  const factOnly = [...byKey.values()].filter(x => !x.run)
+    .sort((a, b) => (b.fact.slot || 0) - (a.fact.slot || 0));
+  return withRun.concat(factOnly);
+}
+
+function rowMatches(x) {
+  const r = x.run, f = x.fact;
   const q = ($("flt-q").value || "").toLowerCase().trim();
   if (q) {
-    const hay = `${r.run_id} ${r.commit || ""} ${r.requester || ""} ${r.test_name || ""} ${r.directory || ""}`.toLowerCase();
+    const hay = `${r ? `${r.run_id} ${r.commit || ""} ${r.requester || ""} ${r.test_name || ""}` : ""} ${f ? `${f.commit || ""} ${f.slot ?? ""} ${f.outcome || ""}` : ""} ${r ? r.directory : f.directory || ""}`.toLowerCase();
     if (!hay.includes(q)) return false;
   }
   const st = $("flt-status").value;
-  if (st && r.status !== st) return false;
+  if (st && (!r || r.status !== st)) return false;
   const res = $("flt-result").value;
-  if (res === "failing" && realFailures(r.properties).length === 0) return false;
-  if (res === "passing" && !(r.status === "completed" && realFailures(r.properties).length === 0)) return false;
+  if (res === "failing" && !(r && realFailures(r.properties).length > 0)) return false;
+  if (res === "passing" && !(r && r.status === "completed" && realFailures(r.properties).length === 0)) return false;
+  const ph = $("flt-phase").value;
+  if (ph && (!f || f.phase !== ph)) return false;
   const tn = $("flt-testnet").value;
-  if (tn && r.directory !== tn) return false;
+  if (tn && (r ? r.directory : f.directory) !== tn) return false;
   return true;
 }
 
 function renderRuns(d) {
-  runsData = d.runs || [];
+  testRows = buildTestRows(d);
   const sel = $("flt-testnet");
   const keep = sel.value;
-  const nets = [...new Set(runsData.map(r => r.directory).filter(Boolean))].sort();
+  const nets = [...new Set(testRows.map(x => x.run ? x.run.directory : x.fact.directory).filter(Boolean))].sort();
   sel.innerHTML = `<option value="">all testnets</option>` + nets.map(n =>
     `<option value="${esc(n)}">${esc(testnet(n))}</option>`).join("");
   if (nets.includes(keep)) sel.value = keep;
   renderRunRows();
 }
 
-function renderRunRows() {
-  if (!runsData.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
-  const runs = runsData.filter(runMatches);
-  $("runs-count").textContent = `showing ${runs.length} of ${runsData.length}`;
-  if (!runs.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs match the filters.</td></tr>`; return; }
+function testRowHtml(x, repo) {
+  const r = x.run, f = x.fact;
+  const dir = r ? r.directory : f.directory, cm = r ? r.commit : f.commit, t = r ? r.try : f.try;
+  const started = r ? `<td title="${esc(r.created_at)}">${when(r.created_at)}</td>` : `<td>–</td>`;
+  const hours = r && r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–";
   const st = s => s === "completed" ? chip("ok", "completed") : s === "in_progress" ? chip("run", "running")
     : s === "incomplete" ? chip("warn", "incomplete") : chip("idle", s);
-  $("runs").innerHTML = runs.map(r => `<tr data-run="${esc(r.run_id)}" tabindex="0">
-    <td title="${esc(r.created_at)}">${when(r.created_at)}</td>
-    <td>${esc(testnet(r.directory))}</td>
-    <td class="hide-sm">${commitLink(r.repository, r.commit)} · ${esc(r.try ?? "–")}</td>
-    <td>${r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–"}</td>
-    <td>${st(r.status)}</td>
-    <td>${propsCell(r.properties, r.status)}</td></tr>`).join("");
+  const anti = r ? `${st(r.status)}<br>${propsCell(r.properties, r.status)}` : `<span class="ignored">–</span>`;
+  const chain = f ? `<span title="slot ${esc(f.slot)}">${phaseChip(f.phase)} ${outcomeChip(f)}</span>` : `<span class="ignored">–</span>`;
+  const open = r ? ` data-run="${esc(r.run_id)}" tabindex="0"` : "";
+  return `<tr${open}>
+    ${started}
+    <td>${esc(testnet(dir))}</td>
+    <td class="hide-sm">${commitLink(repo, cm)} · ${esc(t ?? "–")}</td>
+    <td>${hours}</td>
+    <td>${anti}</td>
+    <td>${chain}</td></tr>`;
+}
+
+function renderRunRows() {
+  if (!testRows.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
+  const rows = testRows.filter(rowMatches);
+  $("runs-count").textContent = `showing ${rows.length} of ${testRows.length} test runs`;
+  if (!rows.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs match the filters.</td></tr>`; return; }
+  $("runs").innerHTML = rows.map(x => testRowHtml(x, last.repository)).join("");
 }
 
 function restoreExpansion() {
@@ -274,40 +302,16 @@ function restoreExpansion() {
   if (rid) expandRow(rid, rprop, false);
 }
 
-function renderFacts(d) {
+const phaseChip = p => p === "finished" ? chip("idle", p) : p === "rejected" ? chip("warn", p) : chip("run", p);
+const outcomeChip = f => f.phase !== "finished" ? "" : f.outcome === "success" ? chip("ok", "success") : f.outcome ? chip("bad", f.outcome) : "";
+
+function renderPhaseCounts(d) {
   const c = d.chain;
-  if (!c) { $("phases").innerHTML = ""; $("facts").innerHTML = `<tr><td colspan="5" class="empty">No data.</td></tr>`; return; }
+  if (!c) { $("phases").innerHTML = ""; return; }
   $("phases").innerHTML = ["pending", "accepted", "finished", "rejected"].map(p =>
     `<div class="count"><b>${c.phases[p] ?? 0}</b><small>${p}</small></div>`).join("");
-  const out = f => f.phase !== "finished" ? "" : f.outcome === "success" ? chip("ok", "success") : f.outcome ? chip("bad", f.outcome) : "";
-  const phase = p => p === "finished" ? chip("idle", p) : p === "rejected" ? chip("warn", p) : chip("run", p);
-  $("facts").innerHTML = c.recent.slice(0, 15).map(f => `<tr>
-    <td>${esc(testnet(f.directory))}</td>
-    <td class="hide-sm">${commitLink(d.repository, f.commit)} · ${esc(f.try)}</td>
-    <td>${phase(f.phase)}</td><td>${out(f)}</td>
-    <td class="hide-sm mono">${esc(f.slot)}</td></tr>`).join("");
 }
 
-function renderNightly(d) {
-  const ns = d.nightly || [], stages = d.nightly_stages || [];
-  if (!ns.length) { $("nightly").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
-  $("nightly").innerHTML = ns.map(n => {
-    const r = n.receipt || {};
-    const i = stages.indexOf(r.stage);
-    const ok = n.conclusion === "success";
-    const res = n.status !== "completed" ? chip("run", "running") : ok ? chip("ok", "launched")
-      : r.error === "unchanged-head" ? chip("idle", "no change") : chip("bad", n.conclusion || "failed");
-    const bar = stages.map((s, k) => `<span title="${esc(s)}" class="${
-      i < 0 ? "" : k < i ? "passed" : k === i ? (ok ? "passed" : n.status !== "completed" ? "reached" : r.error === "unchanged-head" ? "halted" : "stopped") : ""}"></span>`).join("");
-    return `<tr>
-      <td><a href="${esc(n.url)}">${esc(r.day || when(n.createdAt))}</a>${n.event === "schedule" ? "" : ` <span class="ignored">${esc(n.event)}</span>`}</td>
-      <td>${res}</td>
-      <td>${esc(r.stage || "–")}</td>
-      <td class="hide-sm"><div class="stages">${bar}</div></td>
-      <td>${esc(r.error || "")}</td>
-      <td class="hide-sm">${r.upstream_sha ? `<a class="mono" href="https://github.com/pragma-org/amaru/commit/${esc(r.upstream_sha)}">${short(r.upstream_sha)}</a>` : "–"}</td></tr>`;
-  }).join("");
-}
 
 const detailCache = {};
 
@@ -454,7 +458,7 @@ window.addEventListener("hashchange", routeFromHash);
 let last = null;
 function render(d) {
   last = d;
-  for (const f of [renderHeader, renderChain, renderRuns, renderFacts, renderNightly]) {
+  for (const f of [renderHeader, renderChain, renderRuns, renderPhaseCounts]) {
     try { f(d); } catch (e) { console.error(f.name, e); }
   }
 }
@@ -492,7 +496,7 @@ $("runs").addEventListener("click", e => {
     else location.hash = `run=${encodeURIComponent(runTr.dataset.run)}`;
   }
 });
-["flt-q", "flt-status", "flt-result", "flt-testnet"].forEach(id =>
+["flt-q", "flt-status", "flt-result", "flt-phase", "flt-testnet"].forEach(id =>
   $(id).addEventListener("input", () => { renderRunRows(); restoreExpansion(); }));
 $("runs").addEventListener("keydown", e => {
   if (e.key !== "Enter" && e.key !== " ") return;

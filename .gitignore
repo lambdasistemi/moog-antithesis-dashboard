@@ -8,3 +8,6 @@ result-*
 # Dashboard collector outputs (host-local cache and staged data)
 out/
 *.new
+
+# Assembled PR preview site
+preview-site/

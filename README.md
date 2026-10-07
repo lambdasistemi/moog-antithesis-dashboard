@@ -14,8 +14,8 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   `stale` instead of blanking the page, and a snapshot older than 25 minutes
   raises a banner that the collector may be stopped.
 - **The operator running the collector** installs the systemd timer below,
-  then checks the same page. When something turns red, the per-source chips
-  at the top say which of the seven sources failed and when it last worked.
+  then checks the same page. When a source stops refreshing, a banner names
+  it and its last success instead of silently showing old numbers.
 
 ## How it works
 

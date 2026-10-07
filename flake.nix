@@ -12,11 +12,12 @@
       src = ./.;
       checksFull = import ./nix/checks.nix { inherit pkgs src; };
       checkApps = import ./nix/apps.nix { inherit pkgs; checks = checksFull; };
+      previewApps = import ./nix/preview-apps.nix { inherit pkgs; };
       checks = builtins.removeAttrs checksFull [ "apps" ];
     in
     {
       checks.${system} = checks;
-      apps.${system} = checkApps // {
+      apps.${system} = checkApps // previewApps // {
         default = checkApps.shellcheck;
       };
       devShells.${system}.default = pkgs.mkShell {
