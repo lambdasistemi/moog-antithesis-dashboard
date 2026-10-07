@@ -6,21 +6,23 @@
 # are cached forever: properties of completed Antithesis runs, per-run detail
 # files, and receipts of concluded nightly runs.
 #
-# Nothing secret leaves this script: report URLs (they carry auth tokens) are
-# dropped, agent logs are reduced to counts on the host.
+# Secrets arrive as files: the Antithesis key, the GitHub read token and the
+# moog read environment are read from /run/secrets and never appear in argv.
+# Report URLs (they carry auth tokens) are dropped before publication.
+# Host and monitor sources are interim stubs until the push reporters in
+# #11 and #12 land; until then they report error.
 set -uo pipefail
 
 CACHE=${DASHBOARD_CACHE:-$HOME/.cache/moog-antithesis-dashboard}
 OUT_DIR=${DASHBOARD_OUT:-$CACHE/out}
-MOOG_DIR=${MOOG_DIR:-/code/moog}
-ANTI_KEY_FILE=${ANTITHESIS_API_KEY_FILE:-$HOME/.secrets/antithesis-api-key}
+MOOG_DIR=${MOOG_DIR:-/opt/moog}
+ANTI_KEY_FILE=${ANTITHESIS_API_KEY_FILE:-/run/secrets/antithesis-key}
+GH_READ_TOKEN_FILE=${GH_READ_TOKEN_FILE:-/run/secrets/gh-read}
+MOOG_ENV_FILE=${MOOG_READ_ENV_FILE:-/run/secrets/moog-read-env}
 TENANT=${ANTITHESIS_TENANT:-amaru-cardano}
 CNA_REPO=cardano-foundation/cardano-node-antithesis
 REQUESTER=${MOOG_REQUESTER:-cfhal}
-AGENT_HOST=${AGENT_HOST:-agent}
-ORACLE_HOST=${ORACLE_HOST:-oracle}
 PROXY_URL=${PROXY_URL:-https://antithesis-proxy.plutimus.com/readyz}
-MONITOR_UNIT=${MONITOR_UNIT:-antithesis-run-freshness-monitor.service}
 RUNS_LIMIT=25
 NIGHTLY_LIMIT=14
 
@@ -108,9 +110,39 @@ props_for() {
 }
 
 moog_env() {
-    export PATH="$MOOG_DIR/tmp:$PATH"
-    # shellcheck disable=SC1091
-    source "$MOOG_DIR/tmp/prod-setup.sh" >/dev/null 2>&1
+    export PATH="$MOOG_DIR:$PATH"
+    [[ -r $MOOG_ENV_FILE ]] || {
+        echo "no moog read environment file in $MOOG_ENV_FILE" >&2
+        return 1
+    }
+    local line name value
+    while IFS= read -r line; do
+        if [[ $line == export\ * ]]; then
+            line=${line#export }
+        fi
+        [[ $line == *=* ]] || continue
+        name=${line%%=*}
+        value=${line#*=}
+        if [[ ${#value} -ge 2 ]]; then
+            if [[ ${value:0:1} == '"' && ${value: -1} == '"' ]]; then
+                value=${value:1:-1}
+            elif [[ ${value:0:1} == "'" && ${value: -1} == "'" ]]; then
+                value=${value:1:-1}
+            fi
+        fi
+        [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+        export "$name=$value"
+    done <"$MOOG_ENV_FILE"
+}
+
+# GitHub reads with a file-mounted token: GH_TOKEN lives only in the
+# environment of that single gh process, never exported, never in argv.
+gh_auth() {
+    [[ -r $GH_READ_TOKEN_FILE ]] || {
+        echo "no GitHub read token file in $GH_READ_TOKEN_FILE" >&2
+        return 1
+    }
+    GH_TOKEN=$(cat "$GH_READ_TOKEN_FILE") gh "$@"
 }
 
 # On-chain test-run facts. The url field carries a report auth token: dropped.
@@ -133,26 +165,13 @@ src_token() {
     ) | jq '{ pending_requests: (.requests | length) }'
 }
 
-# Containers and agent log counts. Agent logs embed credentials, so only
-# counts are computed on the host and leave it.
+# Interim: host and monitor status arrive via push reporters (#11, #12),
+# which do not exist yet. Until then these sources fail so the page shows
+# `error` instead of silently serving stale numbers. The container carries
+# no ssh client and no journal access.
 src_hosts() {
-    local oracle agent counts
-    oracle=$(ssh -o BatchMode=yes -o ConnectTimeout=10 "$ORACLE_HOST" \
-        'docker ps --format "{{.Names}}|{{.Image}}|{{.Status}}"') || return 1
-    agent=$(ssh -o BatchMode=yes -o ConnectTimeout=10 "$AGENT_HOST" \
-        'docker ps --format "{{.Names}}|{{.Image}}|{{.Status}}"') || return 1
-    counts=$(ssh -o BatchMode=yes -o ConnectTimeout=10 "$AGENT_HOST" '
-        c=$(docker ps --format "{{.Names}}" | grep moog-agent | head -1)
-        e=$(docker logs --since 6h "$c" 2>&1 | grep -ciE "exception|error" || true)
-        p=$(docker logs --since 24h "$c" 2>&1 | grep -c "Published result" || true)
-        echo "$e $p"') || return 1
-    jq -n --arg o "$oracle" --arg a "$agent" --arg c "$counts" '
-      def parse: split("\n") | map(select(length > 0) | split("|")
-        | { name: .[0], image: (.[1] | sub("^.*/"; "")), status: .[2] })
-        | map(select(.name | test("moog")));
-      { oracle: ($o | parse), agent: ($a | parse),
-        agent_errors_6h: ($c | split(" ")[0] | tonumber),
-        agent_published_24h: ($c | split(" ")[1] | tonumber) }'
+    echo "host reporters not yet available (see #11)" >&2
+    return 1
 }
 
 src_proxy() {
@@ -162,14 +181,8 @@ src_proxy() {
 }
 
 src_monitor() {
-    local line
-    line=$(journalctl -u "$MONITOR_UNIT" -n 200 --no-pager -o cat 2>/dev/null |
-        grep -E '^(OK|FAIL|STALE)' | tail -1 | sed 's/https\?:[^ ]*//g')
-    [[ -n $line ]] || {
-        echo "no verdict in journal" >&2
-        return 1
-    }
-    jq -n --arg l "$line" '{ last: $l, ok: ($l | startswith("OK")) }'
+    echo "monitor reporter not yet available (see #12)" >&2
+    return 1
 }
 
 # Nightly runs and their receipts; concluded receipts are cached forever.
@@ -181,7 +194,7 @@ receipt_for() {
         return 0
     fi
     local url dir
-    url=$(gh api "repos/$CNA_REPO/actions/runs/$id/artifacts" \
+    url=$(gh_auth api "repos/$CNA_REPO/actions/runs/$id/artifacts" \
         --jq '.artifacts[] | select(.name | startswith("daily-amaru-receipt")) | .archive_download_url' \
         2>/dev/null | head -1)
     [[ -n $url ]] || {
@@ -189,7 +202,7 @@ receipt_for() {
         return 0
     }
     dir=$(mktemp -d -p "$WORK")
-    if ! gh api "$url" >"$dir/r.zip" 2>/dev/null; then
+    if ! gh_auth api "$url" >"$dir/r.zip" 2>/dev/null; then
         echo null
         return 0
     fi
@@ -283,7 +296,7 @@ detail_for() {
 
 src_nightly() {
     local runs
-    runs=$(gh run list -R "$CNA_REPO" -w daily-amaru.yaml -e schedule -L "$NIGHTLY_LIMIT" \
+    runs=$(gh_auth run list -R "$CNA_REPO" -w daily-amaru.yaml -e schedule -L "$NIGHTLY_LIMIT" \
         --json databaseId,conclusion,status,event,createdAt,url) || return 1
     printf '%s' "$runs" | jq -c '.[]' | while read -r r; do
         local id conclusion
