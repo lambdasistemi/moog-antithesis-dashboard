@@ -156,7 +156,7 @@ echo "OK run_id=$id age=${age}s maximum=${max}s" | REPORT_DRY_RUN=1 \
 Rejected: ssh pulls (the collector has no ssh client by design), a
 receiver service (a new always-on endpoint to patch for the same outcome),
 gists (no fine-grained scope), pushing a git branch (the token could write
-gh-pages).
+gh-pages), on-chain facts (barred: the dashboard never writes chain data).
 
 ## What never leaves the collector
 

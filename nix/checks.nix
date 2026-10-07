@@ -4,14 +4,14 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh
+        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh
+        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
       '';
     };
 
@@ -22,9 +22,11 @@ let
         bash -n deploy/cycle.sh
         bash -n deploy/publish.sh
         bash -n deploy/loop.sh
+        bash -n deploy/compare-live.sh
         bash -n reporter/report.sh
         bash -n reporter/loop.sh
         bash -n reporter/push-verdict.sh
+        bash -n verify/reproduce.sh
         echo "syntax ok"
       '';
     };
@@ -1090,6 +1092,18 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
       '';
     };
 
+    reproduce = {
+      runtimeInputs = [ pkgs.nix pkgs.docker pkgs.git pkgs.jq pkgs.python3 pkgs.coreutils pkgs.gnugrep pkgs.findutils pkgs.bash ];
+      text = ''
+        # Wrapper for verify/reproduce.sh: default artifact location under
+        # TMPDIR unless REPRODUCE_OUT is set. Runs in the caller's checkout.
+        set -euo pipefail
+        export TMPDIR="''${TMPDIR:-/tmp}"
+        export REPRODUCE_OUT="''${REPRODUCE_OUT:-$TMPDIR/reproduce-evidence.txt}"
+        exec ./verify/reproduce.sh "$@"
+      '';
+    };
+
     image-publish = {
       runtimeInputs = [ pkgs.docker pkgs.coreutils pkgs.bash ];
       text = ''
@@ -1711,6 +1725,10 @@ DRIVER_EOF
     }
     grep -q 'push-verdict-smoke' .github/workflows/ci.yml || {
       echo "image-source-shape: CI does not run push-verdict-smoke" >&2
+      exit 1
+    }
+    grep -q 'reproduce' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not run reproduce" >&2
       exit 1
     }
     grep -q 'ghcr.io/' nix/checks.nix || {
