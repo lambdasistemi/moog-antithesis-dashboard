@@ -1,13 +1,13 @@
 # Tasks
 ## oracle-end-to-end
-- [ ] write-reporter-script-docker-api-only-with-dry-run
-- [ ] build-and-push-reporter-image-in-ci
-- [ ] add-reporter-compose-and-smoke-check
-- [ ] read-oracle-status-issue-through-strict-schema
-- [ ] last-success-from-reported-at
-- [ ] mark-oracle-section-stale-on-the-page
-- [ ] add-publish-dry-run-mode
-- [ ] add-schema-reject-and-host-stale-checks
+- [x] write-reporter-script-docker-api-only-with-dry-run
+- [x] build-and-push-reporter-image-in-ci
+- [x] add-reporter-compose-and-smoke-check
+- [x] read-oracle-status-issue-through-strict-schema
+- [x] last-success-from-reported-at
+- [x] mark-oracle-section-stale-on-the-page
+- [x] add-publish-dry-run-mode
+- [x] add-schema-reject-and-host-stale-checks
 ## agent-end-to-end
 - [ ] report-agent-log-counts-through-docker-api
 - [ ] read-agent-status-issue
