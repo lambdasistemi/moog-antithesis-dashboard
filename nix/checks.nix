@@ -54,31 +54,94 @@ let
     };
 
     publish-gate = {
-      runtimeInputs = [ pkgs.bash pkgs.git pkgs.jq pkgs.coreutils pkgs.gnugrep ];
+      runtimeInputs = [ pkgs.bash pkgs.git pkgs.jq pkgs.coreutils pkgs.gnugrep pkgs.findutils ];
       text = ''
-        # Behavioural test of deploy/publish.sh against a local bare remote:
-        # a report link in a detail file must refuse the whole publication,
-        # and a clean tree must publish data.json with the detail files.
+        # Behavioural test of deploy/publish.sh against a local bare remote.
+        # Every mounted secret must refuse the whole publication from each
+        # staged location, without pushing; a clean tree (even with blank
+        # lines and short values in the secret inputs) must publish.
         set -euo pipefail
         fixture="$TMPDIR/publish-fixture"
         remote="$TMPDIR/publish-remote.git"
         rm -rf "$fixture" "$remote"
-        mkdir -p "$fixture/runs"
+        mkdir -p "$fixture/runs" "$fixture/status"
         git init -q --bare "$remote"
-        printf '{"generated_at":"2026-01-01T00:00:00Z","runs":[]}' >"$fixture/data.json"
-        printf '{"run_id":"probe","status":"completed","properties":[]}' >"$fixture/runs/probe.json"
-        printf 'gate-fixture-key' >"$TMPDIR/fixture.key"
-        export DASHBOARD_OUT="$fixture" DASHBOARD_REMOTE="$remote" ANTITHESIS_API_KEY_FILE="$TMPDIR/fixture.key"
-        printf '{"run_id":"evil","link":"https://x.antithesis.com/report/a.html?auth=v2.public_probe"}' \
-          >"$fixture/runs/evil.json"
-        if bash deploy/publish.sh; then
-          echo "publish gate let a report link through" >&2
-          exit 1
-        fi
-        rm "$fixture/runs/evil.json"
+        key_value='fixture-antithesis-key-K1x'
+        push_value='fixture-push-token-P1x'
+        moog_value='fixture-moog-value-M1x'
+        moog_qd='fixture-moog-quoted-D1x'
+        moog_qs='fixture-moog-quoted-S1x'
+        printf '%s' "$key_value" >"$TMPDIR/fixture.key"
+        mkdir -p "$TMPDIR/fixture.secrets"
+        printf '%s' "$push_value" >"$TMPDIR/fixture.secrets/pages-push"
+        printf '\n\nqq7x\n\n' >"$TMPDIR/fixture.secrets/extra"
+        printf 'PROVIDER_URL=https://moog-read-fixture.invalid/unit\nEMPTY=\nSHORT=ab\nREAD_NAME=%s\n' \
+          "$moog_value" >"$TMPDIR/fixture.moogenv"
+        printf '%s\n' "QUOTED_DQ=\"$moog_qd\"" >>"$TMPDIR/fixture.moogenv"
+        printf '%s\n' "export QUOTED_SQ='$moog_qs'" >>"$TMPDIR/fixture.moogenv"
+        export DASHBOARD_OUT="$fixture" DASHBOARD_REMOTE="$remote" \
+          ANTITHESIS_API_KEY_FILE="$TMPDIR/fixture.key" \
+          PAGES_PUSH_TOKEN_FILE="$TMPDIR/fixture.secrets/pages-push" \
+          MOOG_READ_ENV_FILE="$TMPDIR/fixture.moogenv" \
+          DASHBOARD_SECRETS_DIR="$TMPDIR/fixture.secrets"
+        write_clean() {
+          printf '{"generated_at":"2026-01-01T00:00:00Z","runs":[],"note":"crab sample"}' \
+            >"$fixture/data.json"
+          printf '{"run_id":"probe","status":"completed","properties":[]}' \
+            >"$fixture/runs/probe.json"
+          printf '{"reporter":"probe","verdict":"ok"}' \
+            >"$fixture/status/probe.json"
+          rm -f "$fixture/runs/case.json" "$fixture/runs/evil.json" "$fixture/status/case.json"
+        }
+        pushed_ref() {
+          git --git-dir="$remote" rev-parse gh-pages 2>/dev/null || echo none
+        }
+        try_refuse() {
+          write_clean
+          printf '%s' "$2" >>"$fixture/$3"
+          ref_before=$(pushed_ref)
+          if bash deploy/publish.sh; then
+            echo "publish gate let $1 through ($3)" >&2
+            exit 1
+          else
+            code=$?
+            if [[ $code -ne 2 ]]; then
+              echo "publish gate exit $code, want 2 ($1 in $3)" >&2
+              exit 1
+            fi
+          fi
+          if [[ $(pushed_ref) != "$ref_before" ]]; then
+            echo "publish gate pushed $1 ($3)" >&2
+            exit 1
+          fi
+        }
+        try_refuse 'planted push-token literal' "$push_value" data.json
+        try_refuse 'planted push-token literal' "$push_value" runs/case.json
+        try_refuse 'planted push-token literal' "$push_value" status/case.json
+        try_refuse 'planted moog-env value' "$moog_value" data.json
+        try_refuse 'planted moog-env value' "$moog_value" runs/case.json
+        try_refuse 'planted moog-env value' "$moog_value" status/case.json
+        try_refuse 'planted double-quoted moog-env value' "$moog_qd" data.json
+        try_refuse 'planted single-quoted moog-env value' "$moog_qs" data.json
+        try_refuse 'planted key literal' "$key_value" data.json
+        try_refuse 'planted key literal' "$key_value" runs/case.json
+        try_refuse 'planted key literal' "$key_value" status/case.json
+        try_refuse 'planted report link' \
+          'https://x.antithesis.com/report/a.html?auth=v2.public_probe' runs/evil.json
+        write_clean
         bash deploy/publish.sh
         git --git-dir="$remote" show gh-pages:data.json | grep -q generated_at
         git --git-dir="$remote" show gh-pages:runs/probe.json | grep -q probe
+        git --git-dir="$remote" show gh-pages:status/probe.json | grep -q probe
+        ref_before=$(pushed_ref)
+        if PAGES_PUSH_TOKEN_FILE="$TMPDIR/fixture.missing" bash deploy/publish.sh; then
+          echo "publish gate pushed without a token file" >&2
+          exit 1
+        fi
+        if [[ $(pushed_ref) != "$ref_before" ]]; then
+          echo "publish gate pushed without a token file" >&2
+          exit 1
+        fi
         echo "publish gate ok"
       '';
     };
