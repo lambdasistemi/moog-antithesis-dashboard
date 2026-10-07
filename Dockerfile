@@ -21,10 +21,14 @@ COPY collect /app/collect
 COPY deploy /app/deploy
 COPY site /app/site
 
-# Script modes belong to the image, not the build context: a checkout or
-# daemon that does not preserve executable bits must still yield runnable
-# scripts. Root-owned, never writable by the runtime user.
-RUN find /app/collect /app/deploy -name '*.sh' -exec chmod 0755 {} +
+# File modes belong to the image, not the build context: checkouts and
+# daemons that strip modes must still yield a runnable, readable tree.
+# Directories 0755, regular files 0644, scripts 0755, all root-owned and
+# never writable by the runtime user.
+RUN find /app -type d -exec chmod 0755 {} + \
+    && find /app -type f -exec chmod 0644 {} + \
+    && find /app/collect /app/deploy -name '*.sh' -exec chmod 0755 {} + \
+    && chown -R root:root /app
 
 # Non-root runtime user. /cache is owned by it so a fresh named volume
 # mounted there inherits the ownership; HOME comes from the passwd entry

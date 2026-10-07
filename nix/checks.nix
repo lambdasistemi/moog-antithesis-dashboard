@@ -216,6 +216,9 @@ let
         # publish with none of the fake secret literals in the pushed tree,
         # the logs, or the run env; a planted literal must refuse without
         # pushing. Only paths and counts are reported, never values.
+        # A second build from a throwaway context copy with all group/other
+        # permission bits stripped proves mode normalisation is independent
+        # of the build context.
         #
         # No host bind mount anywhere: some daemons cannot see the
         # invoker's filesystem, so every fixture lives in named volumes,
@@ -236,20 +239,39 @@ let
         fi
         tag="moog-collector:container-smoke"
         docker build -q -t "$tag" .
-        missing=$(docker run --rm --user 1000:1000 "$tag" \
-          find /app/collect /app/deploy -name '*.sh' ! -executable -print)
-        if [[ -n "$missing" ]]; then
-          echo "smoke: scripts not executable by uid 1000:" >&2
-          printf '%s\n' "$missing" >&2
-          exit 1
-        fi
+        assert_modes() {
+          local t bad
+          t=$1
+          bad=$(docker run --rm --user 1000:1000 "$t" find /app ! -readable -print)
+          if [[ -n $bad ]]; then
+            echo "smoke: not readable by uid 1000 in $t:" >&2
+            printf '%s\n' "$bad" >&2
+            return 1
+          fi
+          bad=$(docker run --rm --user 1000:1000 "$t" find /app -type d ! -executable -print)
+          if [[ -n $bad ]]; then
+            echo "smoke: directory not traversable by uid 1000 in $t:" >&2
+            printf '%s\n' "$bad" >&2
+            return 1
+          fi
+          bad=$(docker run --rm --user 1000:1000 "$t" \
+            find /app/collect /app/deploy -name '*.sh' ! -executable -print)
+          if [[ -n $bad ]]; then
+            echo "smoke: scripts not executable by uid 1000 in $t:" >&2
+            printf '%s\n' "$bad" >&2
+            return 1
+          fi
+        }
+        assert_modes "$tag" || exit 1
         secvol="smoke-secrets-$$-$RANDOM"
         vol="smoke-cache-$$-$RANDOM"
         remvol="smoke-remote-$$-$RANDOM"
         cyc="smoke-cycle-$$-$RANDOM"
+        ctx=""
         cleanup() {
           docker rm -f "$cyc" "$cyc-plant" "$cyc-env" >/dev/null 2>&1 || true
           docker volume rm "$secvol" "$vol" "$remvol" >/dev/null 2>&1 || true
+          [[ -n $ctx ]] && rm -rf "$ctx"
         }
         trap cleanup EXIT
         m_sec="--mount=type=volume,src=$secvol,dst=/s"
@@ -357,6 +379,13 @@ let
           diag_cycle "planted cycle pushed" "$cyc-plant" "$out2"
           exit 1
         fi
+        ctx=$(mktemp -d)
+        mkdir -p "$ctx/collect" "$ctx/deploy" "$ctx/site"
+        cp -r collect deploy site Dockerfile "$ctx/"
+        chmod -R go-rwx "$ctx"
+        tag2="moog-collector:container-smoke-modes"
+        docker build -q -t "$tag2" "$ctx"
+        assert_modes "$tag2" || exit 1
         echo "container smoke ok"
       '';
     };
