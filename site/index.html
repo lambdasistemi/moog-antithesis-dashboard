@@ -177,17 +177,31 @@ function monitorDetail(m) {
 
 function renderChain(d) {
   const runs = d.runs || [], h = d.hosts || {}, ph = (d.chain && d.chain.phases) || {};
+  const src = d.sources || {};
   const running = runs.filter(r => r.status === "in_progress").length;
   const lastDone = runs.find(r => r.status === "completed");
   const img = xs => (xs && xs[0]) ? xs[0].image.replace(/^moog-(oracle|agent):/, "") : "–";
   const up = xs => xs && xs.length && /^Up/.test(xs[0].status);
+  // Hosts cards go stale when their source is not ok, showing the
+  // source's last-success time with the existing warn (stale) styling.
+  // Source chips in the banner already come from `sources`.
+  const oracleSrc = src.oracle;
+  const oracleStale = !oracleSrc || oracleSrc.status !== "ok";
+  const oracleDetail = oracleStale
+    ? `${img(h.oracle)} · ${h.oracle?.[0]?.status ?? "–"} · stale, last success ${oracleSrc?.last_success ? ago(oracleSrc.last_success) : "never"}`
+    : `${img(h.oracle)} · ${h.oracle?.[0]?.status ?? "–"}`;
+  const oracleState = oracleStale ? ["warn", "stale"] : up(h.oracle) ? ["ok", "up"] : ["bad", "down"];
+  const agentSrc = src.agent;
+  const agentStale = !agentSrc || agentSrc.status !== "ok";
+  const agentDetail = agentStale
+    ? `${img(h.agent)} · ${h.agent_published_24h ?? "?"} results published in 24 h · ${h.agent_errors_6h ?? "?"} errors in 6 h · stale, last success ${agentSrc?.last_success ? ago(agentSrc.last_success) : "never"}`
+    : `${img(h.agent)} · ${h.agent_published_24h ?? "?"} results published in 24 h · ${h.agent_errors_6h ?? "?"} errors in 6 h`;
+  const agentState = agentStale ? ["warn", "stale"] : !up(h.agent) ? ["bad", "down"] : h.agent_errors_6h > 0 ? ["warn", "errors"] : ["ok", "up"];
   const nodes = [
     {name: "Requests", detail: `${d.token?.pending_requests ?? "?"} pending on the token`,
      state: d.token ? (d.token.pending_requests > 0 ? ["run", "queued"] : ["ok", "drained"]) : ["bad", "unknown"]},
-    {name: "Oracle", detail: `${img(h.oracle)} · ${h.oracle?.[0]?.status ?? "–"}`,
-     state: up(h.oracle) ? ["ok", "up"] : ["bad", "down"]},
-    {name: "Agent", detail: `${img(h.agent)} · ${h.agent_published_24h ?? "?"} results published in 24 h · ${h.agent_errors_6h ?? "?"} errors in 6 h`,
-     state: !up(h.agent) ? ["bad", "down"] : h.agent_errors_6h > 0 ? ["warn", "errors"] : ["ok", "up"]},
+    {name: "Oracle", detail: oracleDetail, state: oracleState},
+    {name: "Agent", detail: agentDetail, state: agentState},
     {name: "Antithesis", detail: `${running} running · last completed ${lastDone ? ago(lastDone.created_at) : "–"}`,
      state: running ? ["run", "running"] : ["idle", "idle"]},
     {name: "On chain", detail: `${ph.accepted ?? 0} accepted · ${ph.pending ?? 0} pending`,
