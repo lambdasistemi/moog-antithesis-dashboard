@@ -7,6 +7,6 @@
 - [x] switch-publish-to-https-credential-helper
 - [x] extend-publish-gate-to-every-secret-with-empty-line-control
 ## loop-runtime
-- [ ] add-loop-entrypoint-and-cache-volume
-- [ ] delete-systemd-and-its-check
-- [ ] update-readme-and-docs
+- [x] add-loop-entrypoint-and-cache-volume
+- [x] delete-systemd-and-its-check
+- [x] update-readme-and-docs
