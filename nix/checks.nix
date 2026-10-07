@@ -208,7 +208,7 @@ let
     };
 
     container-smoke = {
-      runtimeInputs = [ pkgs.docker pkgs.git pkgs.coreutils pkgs.gnugrep pkgs.bash ];
+      runtimeInputs = [ pkgs.docker pkgs.gnugrep pkgs.bash ];
       text = ''
         # End-to-end run of the collector image under the compose
         # restrictions (uid 1000, read-only rootfs, tmpfs /tmp, cap_drop
@@ -216,92 +216,115 @@ let
         # publish with none of the fake secret literals in the pushed tree,
         # the logs, or the run env; a planted literal must refuse without
         # pushing. Only paths and counts are reported, never values.
+        #
+        # No host bind mount anywhere: some daemons cannot see the
+        # invoker's filesystem, so every fixture lives in named volumes,
+        # written by helper containers of this same image (fake values are
+        # generated inside the setup helper, never in host argv), and
+        # results are read back the same way. The guard below fails the
+        # run if a bind mount ever reappears in this script.
         set -euo pipefail
+        self="$0"
+        bind_start='-v "'
+        bind_end='$'
+        mount_start='--mount'
+        mount_end=' type=bind'
+        if grep -qF -e "$bind_start$bind_end" "$self" \
+          || grep -qF -e "$mount_start$mount_end" "$self"; then
+          echo "container-smoke: host bind mount in smoke script" >&2
+          exit 1
+        fi
         tag="moog-collector:container-smoke"
         docker build -q -t "$tag" .
-        work=$(mktemp -d)
+        secvol="smoke-secrets-$$"
         vol="smoke-cache-$$"
+        remvol="smoke-remote-$$"
         cyc="smoke-cycle-$$"
         cleanup() {
           docker rm -f "$cyc" "$cyc-plant" "$cyc-env" >/dev/null 2>&1 || true
-          docker volume rm "$vol" >/dev/null 2>&1 || true
-          rm -rf "$work"
+          docker volume rm "$secvol" "$vol" "$remvol" >/dev/null 2>&1 || true
         }
         trap cleanup EXIT
-        anti="smoke-antithesis-$RANDOM"
-        ghread="smoke-ghread-$RANDOM"
-        push="smoke-push-$RANDOM"
-        moogurl="https://moog-smoke-fixture.invalid/unit-$RANDOM"
-        mkdir -p "$work/secrets" "$work/plant"
-        printf '%s' "$anti" >"$work/secrets/antithesis-key"
-        printf '%s' "$ghread" >"$work/secrets/gh-read"
-        printf '%s' "$push" >"$work/secrets/pages-push"
-        printf 'PROVIDER_URL=%s\n' "$moogurl" >"$work/secrets/moog-read-env"
-        git init -q --bare "$work/remote.git"
-        # Prod realism whatever the invoking uid is: secrets 0400 owned by
-        # the runtime uid, remote and plant dirs writable by it.
-        docker run --rm --user 0:0 -v "$work:/work" "$tag" bash -c '
-          chown -R 1000:1000 /work/secrets /work/remote.git /work/plant
-          chmod 400 /work/secrets/antithesis-key /work/secrets/gh-read \
-            /work/secrets/pages-push /work/secrets/moog-read-env
+        m_sec="--mount=type=volume,src=$secvol,dst=/s"
+        m_secrets="--mount=type=volume,src=$secvol,dst=/run/secrets,readonly"
+        m_cache="--mount=type=volume,src=$vol,dst=/cache"
+        m_cachec="--mount=type=volume,src=$vol,dst=/c"
+        m_remote="--mount=type=volume,src=$remvol,dst=/remote.git"
+        m_remroot="--mount=type=volume,src=$remvol,dst=/r"
+        docker run --rm --user 0:0 "$m_sec" "$m_remroot" "$m_cachec" "$tag" bash -c '
+          set -euo pipefail
+          r=$RANDOM$RANDOM
+          printf "%s" "smoke-antithesis-$r" >/s/antithesis-key
+          printf "%s" "smoke-ghread-$r" >/s/gh-read
+          printf "%s" "smoke-push-$r" >/s/pages-push
+          printf "PROVIDER_URL=https://moog-smoke-fixture.invalid/unit-%s\n" "$r" >/s/moog-read-env
+          printf "%s\n" "smoke-antithesis-$r" "smoke-ghread-$r" "smoke-push-$r" \
+            "https://moog-smoke-fixture.invalid/unit-$r" >/s/patterns
+          chmod 400 /s/antithesis-key /s/gh-read /s/pages-push /s/moog-read-env /s/patterns
+          chown 1000:1000 /s /s/antithesis-key /s/gh-read /s/pages-push /s/moog-read-env /s/patterns /r /c
+          git init -q --bare /r
+          chown -R 1000:1000 /r
         '
-        run_flags=(--rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
-          -v "$vol:/cache"
-          -v "$work/secrets/antithesis-key:/run/secrets/antithesis-key:ro"
-          -v "$work/secrets/gh-read:/run/secrets/gh-read:ro"
-          -v "$work/secrets/pages-push:/run/secrets/pages-push:ro"
-          -v "$work/secrets/moog-read-env:/run/secrets/moog-read-env:ro"
-          -v "$work/remote.git:/remote.git"
+        mapfile -t lits < <(docker run --rm "$m_sec" "$tag" cat /s/patterns)
+        lits_text=$(printf '%s\n' "''${lits[@]}")
+        base=(--rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
+          "$m_secrets" "$m_cache" "$m_remote"
           -e DASHBOARD_CACHE=/cache
           -e DASHBOARD_REMOTE=file:///remote.git
           -e DASHBOARD_MAX_CYCLES=1)
+        gitr() {
+          docker run --rm "$m_remroot" "$m_sec" "$tag" git --git-dir=/r "$@"
+        }
         absent_from() {
           printf '%s\n' "$1" | grep -qF -e "$2" && return 1
           return 0
         }
-        if ! out=$(docker run --name "$cyc" "''${run_flags[@]}" "$tag" 2>&1); then
+        if ! out=$(docker run --name "$cyc" "''${base[@]}" "$tag" 2>&1); then
           echo "smoke: clean cycle failed" >&2
-          printf '%s\n' "$out" >&2
           exit 1
         fi
-        git --git-dir="$work/remote.git" show gh-pages:data.json | grep -q generated_at || {
+        gitr show gh-pages:data.json | grep -q generated_at || {
           echo "smoke: clean cycle published nothing" >&2
           exit 1
         }
-        for lit in "$anti" "$ghread" "$push" "$moogurl"; do
-          hits=$(git --git-dir="$work/remote.git" grep -F -l -e "$lit" gh-pages -- 2>/dev/null || true)
-          if [[ -n "$hits" ]]; then
-            echo "smoke: secret literal published in:" >&2
-            printf '%s\n' "$hits" >&2
-            exit 1
-          fi
+        hits=$(gitr grep -F -l -f /s/patterns gh-pages -- 2>/dev/null || true)
+        if [[ -n "$hits" ]]; then
+          echo "smoke: secret literal published in:" >&2
+          printf '%s\n' "$hits" >&2
+          exit 1
+        fi
+        while IFS= read -r lit; do
           absent_from "$out" "$lit" || {
             echo "smoke: secret literal in cycle logs" >&2
             exit 1
           }
-        done
-        env_out=$(docker run --name "$cyc-env" "''${run_flags[@]}" "$tag" env)
-        for lit in "$anti" "$ghread" "$push" "$moogurl"; do
+        done <<<"$lits_text"
+        env_out=$(docker run --name "$cyc-env" "''${base[@]}" "$tag" env)
+        while IFS= read -r lit; do
           absent_from "$env_out" "$lit" || {
             echo "smoke: secret literal in run env" >&2
             exit 1
           }
-        done
-        printf '{"reporter":"evil","note":"%s"}' "$anti" >"$work/plant/evil.json"
-        ref_before=$(git --git-dir="$work/remote.git" rev-parse gh-pages)
-        out2=$(docker run --name "$cyc-plant" "''${run_flags[@]}" \
-          -v "$work/plant/evil.json:/cache/out/runs/evil.json:ro" "$tag" 2>&1)
+        done <<<"$lits_text"
+        docker run --rm --user 0:0 "$m_sec" "$m_cachec" "$tag" bash -c '
+          set -euo pipefail
+          printf "{\"reporter\":\"evil\",\"note\":\"%s\"}" "$(cat /s/antithesis-key)" \
+            >/c/out/runs/evil.json
+          chown 1000:1000 /c/out/runs/evil.json
+        '
+        ref_before=$(gitr rev-parse gh-pages)
+        out2=$(docker run --name "$cyc-plant" "''${base[@]}" "$tag" 2>&1)
         printf '%s\n' "$out2" | grep -q 'evil.json' || {
           echo "smoke: plant refusal names no file" >&2
           exit 1
         }
-        for lit in "$anti" "$ghread" "$push" "$moogurl"; do
+        while IFS= read -r lit; do
           absent_from "$out2" "$lit" || {
             echo "smoke: secret literal in refusal logs" >&2
             exit 1
           }
-        done
-        if [[ $(git --git-dir="$work/remote.git" rev-parse gh-pages) != "$ref_before" ]]; then
+        done <<<"$lits_text"
+        if [[ $(gitr rev-parse gh-pages) != "$ref_before" ]]; then
           echo "smoke: planted cycle pushed" >&2
           exit 1
         fi
