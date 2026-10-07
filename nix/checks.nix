@@ -4,14 +4,14 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh
+        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh
+        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh reporter/report.sh reporter/loop.sh
       '';
     };
 
@@ -22,6 +22,8 @@ let
         bash -n deploy/cycle.sh
         bash -n deploy/publish.sh
         bash -n deploy/loop.sh
+        bash -n reporter/report.sh
+        bash -n reporter/loop.sh
         echo "syntax ok"
       '';
     };
@@ -130,6 +132,36 @@ let
           echo "publish gate pushed without a token file" >&2
           exit 1
         fi
+        # Dry run: same staging and full gate, commit locally, no push,
+        # no token needed. A clean tree prints the file count and list;
+        # a planted secret still refuses with exit 2 and never pushes.
+        write_clean
+        ref_before=$(pushed_ref)
+        dry_out=$(DASHBOARD_DRY_RUN=1 PAGES_PUSH_TOKEN_FILE="$TMPDIR/fixture.missing" bash deploy/publish.sh)
+        echo "$dry_out" | grep -q '^dry run: would publish .* files, generated_at '
+        echo "$dry_out" | grep -q data.json
+        echo "$dry_out" | grep -q runs/probe.json
+        if [[ $(pushed_ref) != "$ref_before" ]]; then
+          echo "publish gate dry run pushed" >&2
+          exit 1
+        fi
+        write_clean
+        printf '%s' "$push_value" >>"$fixture/data.json"
+        ref_before=$(pushed_ref)
+        if DASHBOARD_DRY_RUN=1 PAGES_PUSH_TOKEN_FILE="$TMPDIR/fixture.missing" bash deploy/publish.sh; then
+          echo "publish gate dry run let planted secret through" >&2
+          exit 1
+        else
+          code=$?
+          if [[ $code -ne 2 ]]; then
+            echo "publish gate dry run exit $code, want 2" >&2
+            exit 1
+          fi
+        fi
+        if [[ $(pushed_ref) != "$ref_before" ]]; then
+          echo "publish gate dry run pushed a secret" >&2
+          exit 1
+        fi
         echo "publish gate ok"
       '';
     };
@@ -137,7 +169,7 @@ let
     image-clean = {
       runtimeInputs = [ pkgs.docker pkgs.gnutar pkgs.gnugrep pkgs.coreutils pkgs.bash ];
       text = ''
-        # The collector image must carry no secret: build it, export its
+        # Both images must carry no secret: build each, export its
         # filesystem and grep for key/token/bearer shapes, then check that a
         # dry run exposes no credential-shaped variable. Only match counts
         # and file paths are reported, never matched values.
@@ -152,57 +184,61 @@ let
         #
         # The ARG/ENV ban lives in the image-source-shape check, not here.
         set -euo pipefail
-        tag="moog-collector:image-clean"
         canary="''${IMAGE_CLEAN_CANARY:-}"
-        docker build -q -t "$tag" .
-        cid=$(docker create "$tag")
-        work=$(mktemp -d)
-        cleanup() {
-          docker rm -f "$cid" >/dev/null
-          rm -rf "$work"
-        }
-        trap cleanup EXIT
-        fail=0
-        docker export "$cid" | tar -x -C "$work"
-        leak_paths=$(grep -a -r -l -E -e 'v2\.public' -e 'github_pat_' "$work" || true)
-        if [[ -n "$leak_paths" ]]; then
-          echo "image-clean: key-shaped strings in these image paths:" >&2
-          printf '%s\n' "$leak_paths" >&2
-          fail=1
-        fi
-        if [[ -n "$canary" ]]; then
-          canary_paths=$(grep -a -r -l -F -e "$canary" "$work" || true)
-          if [[ -n "$canary_paths" ]]; then
-            echo "image-clean: canary found in these image paths:" >&2
-            printf '%s\n' "$canary_paths" >&2
+        check_one() {
+          local tag=$1 dockerfile=$2
+          local cid work fail leak_paths canary_paths app_files env_out env_hits
+          if [[ "$dockerfile" == "Dockerfile" ]]; then
+            docker build -q -t "$tag" .
+          else
+            docker build -q -f "$dockerfile" -t "$tag" .
+          fi
+          cid=$(docker create "$tag")
+          work=$(mktemp -d)
+          fail=0
+          docker export "$cid" | tar -x -C "$work"
+          leak_paths=$(grep -a -r -l -E -e 'v2\.public' -e 'github_pat_' "$work" || true)
+          if [[ -n "$leak_paths" ]]; then
+            echo "image-clean ($tag): key-shaped strings in these image paths:" >&2
+            printf '%s\n' "$leak_paths" >&2
             fail=1
           fi
-        fi
-        app_files=$(grep -a -r -l -E -e 'Bearer ' -e 'auth=' -e 'ghp_' "$work/app" || true)
-        if [[ -n "$app_files" ]]; then
-          while IFS= read -r f; do
-            rest=$(grep -a -E -e 'Bearer ' -e 'auth=' -e 'ghp_' "$f" | grep -v -c -F \
-              -e 'auth=|v2\.public|Bearer |Authorization|-u [^ ]+:[^ ]+|password' \
-              -e 'Authorization: Bearer %s' || true)
-            if [[ "$rest" -ne 0 ]]; then
-              echo "image-clean: unexpected key-shaped line(s) under /app in ''${f#"$work"/}" >&2
+          if [[ -n "$canary" ]]; then
+            canary_paths=$(grep -a -r -l -F -e "$canary" "$work" || true)
+            if [[ -n "$canary_paths" ]]; then
+              echo "image-clean ($tag): canary found in these image paths:" >&2
+              printf '%s\n' "$canary_paths" >&2
               fail=1
             fi
-          done <<< "$app_files"
-        fi
-        env_out=$(docker run --rm "$tag" env)
-        env_hits=$(printf '%s\n' "$env_out" | grep -E -c -e '^(.*_)?(KEY|TOKEN|SECRET|PASSWORD|BEARER)(_.*)?=[^[:space:]]' -e 'ghp_' -e 'github_pat_' -e 'Bearer ' -e 'v2\.public' -e 'auth=' || true)
-        if [[ "$env_hits" -ne 0 ]]; then
-          echo "image-clean: credential-shaped variable in 'docker run env'" >&2
-          fail=1
-        fi
-        if [[ -n "$canary" ]] && printf '%s\n' "$env_out" | grep -q -F -e "$canary"; then
-          echo "image-clean: canary found in 'docker run env'" >&2
-          fail=1
-        fi
-        if [[ "$fail" -ne 0 ]]; then
-          exit 1
-        fi
+          fi
+          app_files=$(grep -a -r -l -E -e 'Bearer ' -e 'auth=' -e 'ghp_' "$work/app" || true)
+          if [[ -n "$app_files" ]]; then
+            while IFS= read -r f; do
+              rest=$(grep -a -E -e 'Bearer ' -e 'auth=' -e 'ghp_' "$f" | grep -v -c -F \
+                -e 'auth=|v2\.public|Bearer |Authorization|-u [^ ]+:[^ ]+|password' \
+                -e 'Authorization: Bearer %s' || true)
+              if [[ "$rest" -ne 0 ]]; then
+                echo "image-clean ($tag): unexpected key-shaped line(s) under /app in ''${f#"$work"/}" >&2
+                fail=1
+              fi
+            done <<< "$app_files"
+          fi
+          env_out=$(docker run --rm "$tag" env)
+          env_hits=$(printf '%s\n' "$env_out" | grep -E -c -e '^(.*_)?(KEY|TOKEN|SECRET|PASSWORD|BEARER)(_.*)?=[^[:space:]]' -e 'ghp_' -e 'github_pat_' -e 'Bearer ' -e 'v2\.public' -e 'auth=' || true)
+          if [[ "$env_hits" -ne 0 ]]; then
+            echo "image-clean ($tag): credential-shaped variable in 'docker run env'" >&2
+            fail=1
+          fi
+          if [[ -n "$canary" ]] && printf '%s\n' "$env_out" | grep -q -F -e "$canary"; then
+            echo "image-clean ($tag): canary found in 'docker run env'" >&2
+            fail=1
+          fi
+          docker rm -f "$cid" >/dev/null
+          rm -rf "$work"
+          [[ "$fail" -eq 0 ]]
+        }
+        check_one "moog-collector:image-clean" "Dockerfile"
+        check_one "moog-reporter:image-clean" "Dockerfile.reporter"
         echo "image clean ok"
       '';
     };
@@ -390,6 +426,241 @@ let
       '';
     };
 
+    reporter-smoke = {
+      runtimeInputs = [ pkgs.docker pkgs.jq pkgs.gnugrep pkgs.coreutils pkgs.bash ];
+      text = ''
+        # End-to-end run of the reporter image under the compose
+        # restrictions (uid 1000, read-only rootfs, tmpfs /tmp, cap_drop
+        # ALL): the dry run must print exactly the schema (role, filtered
+        # moog containers with registry prefixes dropped, reported_at) and
+        # make no outward request; a real run against a fake GitHub endpoint
+        # must send the body with the token only in the Authorization header
+        # read from the file, never in the process list or logs. Only paths
+        # and counts are reported, never token values. A second build from a
+        # throwaway context copy with all group/other permission bits
+        # stripped proves mode normalisation is independent of the build
+        # context.
+        #
+        # No host bind mount anywhere: some daemons cannot see the
+        # invoker's filesystem, so the fake Docker API (unix socket) and the
+        # fake GitHub endpoint both live in helper containers, fixtures in
+        # named volumes, and results are read back the same way. The guard
+        # below fails the run if a bind mount ever reappears in this script.
+        # Every docker step is bounded with timeout (30s) and every fake has
+        # a readiness probe; nothing waits forever.
+        set -euo pipefail
+        self="$0"
+        bind_start='-v "'
+        bind_end='$'
+        mount_start='--mount'
+        mount_end=' type=bind'
+        if grep -qF -e "$bind_start$bind_end" "$self" \
+          || grep -qF -e "$mount_start$mount_end" "$self"; then
+          echo "reporter-smoke: host bind mount in smoke script" >&2
+          exit 1
+        fi
+        tag="moog-reporter:reporter-smoke"
+        timeout 120 docker build -q -f Dockerfile.reporter -t "$tag" . >/dev/null \
+          || { echo "reporter-smoke: build timed out or failed" >&2; exit 1; }
+        assert_modes() {
+          local t bad
+          t=$1
+          bad=$(timeout 30 docker run --rm --user 1000:1000 "$t" find /app ! -readable -print) \
+            || { echo "reporter-smoke: find timed out ($t)" >&2; return 1; }
+          if [[ -n $bad ]]; then
+            echo "reporter-smoke: not readable by uid 1000 in $t:" >&2
+            printf '%s\n' "$bad" >&2
+            return 1
+          fi
+          bad=$(timeout 30 docker run --rm --user 1000:1000 "$t" find /app -type d ! -executable -print) \
+            || { echo "reporter-smoke: find timed out ($t)" >&2; return 1; }
+          if [[ -n $bad ]]; then
+            echo "reporter-smoke: directory not traversable by uid 1000 in $t:" >&2
+            printf '%s\n' "$bad" >&2
+            return 1
+          fi
+          bad=$(timeout 30 docker run --rm --user 1000:1000 "$t" \
+            find /app/reporter -name '*.sh' ! -executable -print) \
+            || { echo "reporter-smoke: find timed out ($t)" >&2; return 1; }
+          if [[ -n $bad ]]; then
+            echo "reporter-smoke: scripts not executable by uid 1000 in $t:" >&2
+            printf '%s\n' "$bad" >&2
+            return 1
+          fi
+        }
+        assert_modes "$tag" || exit 1
+        sockvol="reporter-smoke-sock-$$-$RANDOM"
+        secvol="reporter-smoke-sec-$$-$RANDOM"
+        recvol="reporter-smoke-rec-$$-$RANDOM"
+        net="reporter-smoke-net-$$-$RANDOM"
+        dock="reporter-smoke-dock-$$-$RANDOM"
+        gh="reporter-smoke-gh-$$-$RANDOM"
+        rname="reporter-smoke-rep-$$-$RANDOM"
+        ctx=""
+        cleanup() {
+          timeout 20 docker rm -f "$dock" "$gh" "$rname" >/dev/null 2>&1 || true
+          timeout 20 docker volume rm "$sockvol" "$secvol" "$recvol" >/dev/null 2>&1 || true
+          timeout 20 docker network rm "$net" >/dev/null 2>&1 || true
+          [[ -n $ctx ]] && rm -rf "$ctx"
+        }
+        trap cleanup EXIT
+        m_sock="--mount=type=volume,src=$sockvol,dst=/sock"
+        m_sec="--mount=type=volume,src=$secvol,dst=/s"
+        m_secrets="--mount=type=volume,src=$secvol,dst=/run/secrets,readonly"
+        timeout 30 docker volume create "$sockvol" >/dev/null \
+          || { echo "reporter-smoke: sock volume" >&2; exit 1; }
+        timeout 30 docker volume create "$secvol" >/dev/null \
+          || { echo "reporter-smoke: sec volume" >&2; exit 1; }
+        timeout 30 docker volume create "$recvol" >/dev/null \
+          || { echo "reporter-smoke: rec volume" >&2; exit 1; }
+        timeout 30 docker network create "$net" >/dev/null \
+          || { echo "reporter-smoke: network" >&2; exit 1; }
+        # The single-quoted helper below must keep $RANDOM expanding
+        # inside the container, never in host argv.
+        # shellcheck disable=SC2016
+        timeout 30 docker run --rm --user 0:0 "$m_sec" "$tag" bash -c '
+          # $RANDOM expands inside the helper: the token never reaches host argv.
+          set -euo pipefail
+          r=$RANDOM$RANDOM
+          printf "%s" "smoke-reporter-$r" >/s/status-token
+          printf "%s\n" "smoke-reporter-$r" >/s/pattern
+          chmod 400 /s/status-token /s/pattern
+          chown 1000:1000 /s /s/status-token /s/pattern
+        ' || { echo "reporter-smoke: token setup" >&2; exit 1; }
+        timeout 30 docker run -d --name "$dock" "$m_sock" python:3.12-slim python3 -c '
+import json, os, socket
+p="/sock/docker.sock"
+try: os.unlink(p)
+except: pass
+os.makedirs("/sock", exist_ok=True)
+payload=[
+  {"Names": ["/oracle-moog-oracle-1"], "Image": "ghcr.io/lambdasistemi/moog-oracle:v0.5.1.5", "Status": "Up 5 days"},
+  {"Names": ["/some-nginx"], "Image": "nginx:latest", "Status": "Up 2 hours"},
+  {"Names": ["/agent-moog-agent-1"], "Image": "moog-agent:v0.5.1.5", "Status": "Exited (0) 1 hour ago"},
+]
+s=socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.bind(p)
+os.chmod(p, 0o777)
+s.listen(5)
+print("docker fake ready", flush=True)
+while True:
+  c,_=s.accept()
+  try:
+    c.recv(8192)
+    b=json.dumps(payload)
+    c.sendall(("HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nContent-Length: "+str(len(b))+"\r\n\r\n"+b).encode())
+  finally: c.close()
+' >/dev/null || { echo "reporter-smoke: fake dock start" >&2; exit 1; }
+        timeout 30 docker run -d --name "$gh" --network "$net" --network-alias fake-gh \
+          --mount=type=volume,src="$recvol",dst=/rec python:3.12-slim python3 -c '
+import json, time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+class H(BaseHTTPRequestHandler):
+  def do_GET(self):
+    r=b"ok"
+    self.send_response(200)
+    self.send_header("Content-Length",str(len(r)))
+    self.end_headers()
+    self.wfile.write(r)
+  def do_PATCH(self):
+    n=int(self.headers.get("Content-Length",0))
+    body=self.rfile.read(n).decode()
+    auth=self.headers.get("Authorization","")
+    open("/rec/last.json","w").write(json.dumps({"auth":auth,"body":body,"path":self.path}))
+    time.sleep(3)
+    r=b"{}"
+    self.send_response(200)
+    self.send_header("Content-Type","application/json")
+    self.send_header("Content-Length",str(len(r)))
+    self.end_headers()
+    self.wfile.write(r)
+  def log_message(self,*a): pass
+print("gh fake ready", flush=True)
+HTTPServer(("0.0.0.0",8080),H).serve_forever()
+' >/dev/null || { echo "reporter-smoke: fake github start" >&2; exit 1; }
+        ready=0
+        for _ in $(seq 1 30); do
+          if timeout 10 docker run --rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL \
+              --mount=type=volume,src="$sockvol",dst=/sock \
+              "$tag" curl -sS --max-time 5 --unix-socket /sock/docker.sock http://localhost/containers/json 2>/dev/null \
+              | grep -q oracle-moog-oracle-1; then ready=1; break; fi
+          sleep 1
+        done
+        [[ $ready -eq 1 ]] || { echo "reporter-smoke: fake dock never ready" >&2; exit 1; }
+        ready=0
+        for _ in $(seq 1 30); do
+          if timeout 10 docker run --rm --network "$net" python:3.12-slim \
+              python3 -c 'import urllib.request; urllib.request.urlopen("http://fake-gh:8080/", timeout=5).read()' 2>/dev/null; then
+            ready=1; break; fi
+          sleep 1
+        done
+        [[ $ready -eq 1 ]] || { echo "reporter-smoke: fake github never ready" >&2; exit 1; }
+        dry_out=$(timeout 30 docker run --rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL \
+          --mount=type=volume,src="$sockvol",dst=/sock \
+          -e DOCKER_SOCKET=/sock/docker.sock -e REPORTER_ROLE=oracle -e REPORT_DRY_RUN=1 \
+          "$tag" /app/reporter/report.sh) || { echo "reporter-smoke: dry run" >&2; exit 1; }
+        printf '%s' "$dry_out" | jq -e '.role=="oracle" and (.containers|length==2) and (.reported_at|test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"))' >/dev/null \
+          || { echo "reporter-smoke: dry-run payload is not exactly the schema" >&2; exit 1; }
+        if printf '%s' "$dry_out" | grep -q nginx; then
+          echo "reporter-smoke: dry run did not filter non-moog" >&2
+          exit 1
+        fi
+        printf '%s' "$dry_out" \
+          | jq -e '.containers[]|select(.name=="oracle-moog-oracle-1")|.image=="lambdasistemi/moog-oracle:v0.5.1.5"' >/dev/null \
+          || { echo "reporter-smoke: dry run did not drop the registry prefix" >&2; exit 1; }
+        if timeout 10 docker run --rm --mount=type=volume,src="$recvol",dst=/rec \
+            python:3.12-slim ls /rec/last.json 2>/dev/null; then
+          echo "reporter-smoke: dry run made an outward request" >&2
+          exit 1
+        fi
+        timeout 30 docker run -d --name "$rname" --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL \
+          --network "$net" --mount=type=volume,src="$sockvol",dst=/sock "$m_secrets" \
+          -e DOCKER_SOCKET=/sock/docker.sock -e REPORTER_ROLE=oracle -e REPORT_REPOSITORY=owner/repo \
+          -e STATUS_ISSUE_NUMBER=123 -e STATUS_TOKEN_FILE=/run/secrets/status-token \
+          -e REPORT_API_BASE=http://fake-gh:8080 \
+          "$tag" /app/reporter/report.sh >/dev/null \
+          || { echo "reporter-smoke: real run start" >&2; exit 1; }
+        sleep 1
+        top_out=$(timeout 15 docker top "$rname" 2>/dev/null || true)
+        pat=$(timeout 15 docker run --rm "$m_sec" "$tag" cat /s/pattern) \
+          || { echo "reporter-smoke: read pattern" >&2; exit 1; }
+        if printf '%s' "$top_out" | grep -qF "$pat"; then
+          echo "reporter-smoke: token in process list" >&2
+          exit 1
+        fi
+        timeout 30 docker wait "$rname" >/dev/null \
+          || { echo "reporter-smoke: real run hung" >&2; exit 1; }
+        logs=$(timeout 15 docker logs "$rname" 2>&1 || true)
+        if printf '%s' "$logs" | grep -qF "$pat"; then
+          echo "reporter-smoke: token in logs" >&2
+          exit 1
+        fi
+        rec_out=$(timeout 15 docker run --rm --mount=type=volume,src="$recvol",dst=/rec \
+          python:3.12-slim cat /rec/last.json) \
+          || { echo "reporter-smoke: no recorded request" >&2; exit 1; }
+        printf '%s' "$rec_out" | jq -e --arg p "$pat" '.auth==("Bearer "+$p)' >/dev/null \
+          || { echo "reporter-smoke: token not only in header" >&2; exit 1; }
+        if printf '%s' "$rec_out" | jq -r .body | grep -qF "$pat"; then
+          echo "reporter-smoke: token in body" >&2
+          exit 1
+        fi
+        printf '%s' "$rec_out" | jq -e '.path=="/repos/owner/repo/issues/123"' >/dev/null \
+          || { echo "reporter-smoke: wrong issue path" >&2; exit 1; }
+        printf '%s' "$rec_out" | jq -r .body | jq -r .body \
+          | jq -e '.role=="oracle" and (.containers|length==2)' >/dev/null \
+          || { echo "reporter-smoke: recorded body is not the payload" >&2; exit 1; }
+        ctx=$(mktemp -d)
+        mkdir -p "$ctx/reporter"
+        cp -r reporter Dockerfile.reporter "$ctx/"
+        chmod -R go-rwx "$ctx"
+        tag2="moog-reporter:reporter-smoke-modes"
+        timeout 120 docker build -q -f "$ctx/Dockerfile.reporter" -t "$tag2" "$ctx" >/dev/null \
+          || { echo "reporter-smoke: stripped build" >&2; exit 1; }
+        assert_modes "$tag2" || exit 1
+        echo "reporter smoke ok"
+      '';
+    };
+
     image-publish = {
       runtimeInputs = [ pkgs.docker pkgs.coreutils pkgs.bash ];
       text = ''
@@ -411,6 +682,30 @@ let
           docker push "$main_tag"
         fi
         echo "image publish ok ($sha_tag)"
+      '';
+    };
+
+    reporter-publish = {
+      runtimeInputs = [ pkgs.docker pkgs.coreutils pkgs.bash ];
+      text = ''
+        # Build the reporter image (Dockerfile.reporter) tagged with the
+        # commit SHA and `main` as ghcr.io/<repo>-reporter, and push both
+        # tags only when PUBLISH=1. Same shape as image-publish: repository
+        # and SHA from the environment, token via --password-stdin.
+        set -euo pipefail
+        repo="''${GITHUB_REPOSITORY:?GITHUB_REPOSITORY must be set}"
+        sha="''${GITHUB_SHA:?GITHUB_SHA must be set}"
+        sha_tag="ghcr.io/$repo-reporter:$sha"
+        main_tag="ghcr.io/$repo-reporter:main"
+        docker build -q -f Dockerfile.reporter -t "$sha_tag" -t "$main_tag" .
+        if [[ "''${PUBLISH:-0}" == "1" ]]; then
+          actor="''${GH_ACTOR:?GH_ACTOR must be set for PUBLISH=1}"
+          printf '%s\n' "''${GH_TOKEN:?GH_TOKEN must be set for PUBLISH=1}" \
+            | docker login ghcr.io -u "$actor" --password-stdin
+          docker push "$sha_tag"
+          docker push "$main_tag"
+        fi
+        echo "reporter publish ok ($sha_tag)"
       '';
     };
 
@@ -524,6 +819,140 @@ print('site ok')
 "
       '';
     };
+
+    schema-reject = {
+      runtimeInputs = [ pkgs.bash pkgs.jq pkgs.curl pkgs.coreutils pkgs.gnugrep pkgs.findutils ];
+      text = ''
+        # Strict oracle schema: extra keys are dropped (still ok); wrong
+        # types, missing keys, future reported_at, oversize lists and
+        # overlong strings are refused. Refusal errors never include body
+        # text (each bad fixture plants a marker that must not leak).
+        set -euo pipefail
+        TMPDIR="''${TMPDIR:-/tmp}"
+        MARKER='REJECTMARK_7h3q9z'
+        run_collect() {
+          local cache out
+          cache=$(mktemp -d -p "$TMPDIR")
+          out="$cache/out"
+          mkdir -p "$out"
+          DASHBOARD_CACHE="$cache" DASHBOARD_OUT="$out" PROXY_URL=http://127.0.0.1:9/ \
+            STATUS_BODY_CMD="cat $TMPDIR/body.json" STATUS_ISSUE_ORACLE=1 \
+            bash collect/collect.sh >"$cache/log" 2>&1 || true
+          printf '%s' "$cache"
+        }
+        expect_ok() {
+          local cache=$1 want_reported=$2
+          jq -e '.sources.oracle.status=="ok"' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $3 not ok" >&2; return 1; }
+          [[ $(jq -r .sources.oracle.last_success "$cache/out/data.json") == "$want_reported" ]] \
+            || { echo "schema-reject: $3 last_success is not reported_at" >&2; return 1; }
+          jq -e '.sources.oracle.error==null' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $3 error not null" >&2; return 1; }
+        }
+        expect_refused() {
+          local cache=$1
+          [[ $(jq -r .sources.oracle.status "$cache/out/data.json") != "ok" ]] \
+            || { echo "schema-reject: $2 accepted" >&2; return 1; }
+          jq -e '.sources.oracle.error|test("invalid payload")' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $2 wrong error" >&2; return 1; }
+          jq -e '.hosts.oracle==[]' "$cache/out/data.json" >/dev/null \
+            || { echo "schema-reject: $2 hosts not empty" >&2; return 1; }
+          if grep -q "$MARKER" "$cache/out/data.json" "$cache/log"; then
+            echo "schema-reject: $2 leaked body text" >&2
+            return 1
+          fi
+        }
+        NOW=$(date -u +%FT%TZ)
+        jq -n -c --arg t "$NOW" '{role:"oracle",containers:[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.5",status:"Up 5 days"}],reported_at:$t}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_ok "$c" "$NOW" valid || exit 1
+        jq -e '.hosts.oracle==[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.5",status:"Up 5 days"}]' "$c/out/data.json" >/dev/null \
+          || { echo "schema-reject: valid hosts shape" >&2; exit 1; }
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:[{name:"a",image:"b",status:"c",zzz:$m}],reported_at:$t,aaa:$m}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_ok "$c" "$NOW" extra-keys || exit 1
+        jq -e '.hosts.oracle[0]|keys==["image","name","status"]' "$c/out/data.json" >/dev/null \
+          || { echo "schema-reject: extra keys not dropped" >&2; exit 1; }
+        if grep -q "$MARKER" "$c/out/data.json"; then
+          echo "schema-reject: extra keys leaked into data" >&2
+          exit 1
+        fi
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:$m,reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_refused "$c" wrong-types || exit 1
+        jq -n -c --arg m "$MARKER" '{role:"oracle",containers:[],note:$m}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_refused "$c" missing-keys || exit 1
+        FUT=$(date -u -d "+10 minutes" +%FT%TZ)
+        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"oracle",containers:[],reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_refused "$c" future-reported-at || exit 1
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:[range(51)|{name:"c",image:"i",status:"s"}],reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_refused "$c" oversize-list || exit 1
+        LONG=$(printf 'x%.0s' $(seq 1 201))
+        jq -n -c --arg t "$NOW" --arg n "$LONG" --arg m "$MARKER" '{role:"oracle",containers:[{name:$n,image:"i",status:"s"}],reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_refused "$c" overlong-string || exit 1
+        jq -n -c --arg m "$MARKER" '{role:"oracle",containers:[],reported_at:$m}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_refused "$c" bad-date-format || exit 1
+        echo "schema reject ok"
+      '';
+    };
+
+    host-stale = {
+      runtimeInputs = [ pkgs.bash pkgs.jq pkgs.curl pkgs.coreutils pkgs.gnugrep pkgs.findutils ];
+      text = ''
+        # Oracle staleness: a fixture that stops updating turns the source
+        # stale with the payload's reported_at as last_success (last good
+        # served); the next fresh fixture recovers to ok with no manual step.
+        set -euo pipefail
+        TMPDIR="''${TMPDIR:-/tmp}"
+        cache=$(mktemp -d -p "$TMPDIR")
+        out="$cache/out"
+        mkdir -p "$out"
+        collect_once() {
+          DASHBOARD_CACHE="$cache" DASHBOARD_OUT="$out" PROXY_URL=http://127.0.0.1:9/ \
+            STATUS_BODY_CMD="cat $TMPDIR/body.json" STATUS_ISSUE_ORACLE=1 \
+            bash collect/collect.sh >"$cache/log" 2>&1 || true
+        }
+        T1=$(date -u +%FT%TZ)
+        jq -n -c --arg t "$T1" '{role:"oracle",containers:[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.5",status:"Up 1 min"}],reported_at:$t}' >"$TMPDIR/body.json"
+        collect_once
+        [[ $(jq -r .sources.oracle.status "$out/data.json") == "ok" ]] \
+          || { echo "host-stale: fresh run not ok" >&2; exit 1; }
+        [[ $(jq -r .sources.oracle.last_success "$out/data.json") == "$T1" ]] \
+          || { echo "host-stale: last_success is not reported_at" >&2; exit 1; }
+        jq -e '.hosts.oracle==[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.5",status:"Up 1 min"}]' "$out/data.json" >/dev/null \
+          || { echo "host-stale: hosts.oracle shape" >&2; exit 1; }
+        OLD=$(date -u -d "-20 minutes" +%FT%TZ)
+        jq -n -c --arg t "$OLD" '{role:"oracle",containers:[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.5",status:"Up 1 min"}],reported_at:$t}' >"$TMPDIR/body.json"
+        collect_once
+        [[ $(jq -r .sources.oracle.status "$out/data.json") == "stale" ]] \
+          || { echo "host-stale: stopped fixture not stale" >&2; exit 1; }
+        [[ $(jq -r .sources.oracle.last_success "$out/data.json") == "$T1" ]] \
+          || { echo "host-stale: stale last_success moved" >&2; exit 1; }
+        jq -e '.hosts.oracle==[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.5",status:"Up 1 min"}]' "$out/data.json" >/dev/null \
+          || { echo "host-stale: stale hosts not last good" >&2; exit 1; }
+        T3=$(date -u +%FT%TZ)
+        jq -n -c --arg t "$T3" '{role:"oracle",containers:[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.6",status:"Up 2 min"}],reported_at:$t}' >"$TMPDIR/body.json"
+        collect_once
+        [[ $(jq -r .sources.oracle.status "$out/data.json") == "ok" ]] \
+          || { echo "host-stale: no recovery on next update" >&2; exit 1; }
+        [[ $(jq -r .sources.oracle.last_success "$out/data.json") == "$T3" ]] \
+          || { echo "host-stale: recovered last_success wrong" >&2; exit 1; }
+        jq -e '.hosts.oracle==[{name:"oracle-moog-oracle-1",image:"moog-oracle:v0.6",status:"Up 2 min"}]' "$out/data.json" >/dev/null \
+          || { echo "host-stale: recovered hosts wrong" >&2; exit 1; }
+        jq -e '(.sources|has("oracle") and has("agent") and (has("hosts")|not))' "$out/data.json" >/dev/null \
+          || { echo "host-stale: sources still has hosts" >&2; exit 1; }
+        [[ $(jq -r .sources.agent.status "$out/data.json") == "error" ]] \
+          || { echo "host-stale: agent not interim error" >&2; exit 1; }
+        jq -e '.hosts.agent==[] and .hosts.agent_errors_6h==null and .hosts.agent_published_24h==null' "$out/data.json" >/dev/null \
+          || { echo "host-stale: agent interim shape" >&2; exit 1; }
+        echo "host stale ok"
+      '';
+    };
   };
 
   mkApp = name: { runtimeInputs, text }:
@@ -559,12 +988,13 @@ print('site ok')
     set -euo pipefail
     cd ${src}
     [[ -f Dockerfile ]] || { echo "image-source-shape: Dockerfile missing" >&2; exit 1; }
-    if grep -E '^ADD[[:space:]]' Dockerfile; then
-      echo "image-source-shape: Dockerfile must not use ADD" >&2
+    [[ -f Dockerfile.reporter ]] || { echo "image-source-shape: Dockerfile.reporter missing" >&2; exit 1; }
+    if grep -E '^ADD[[:space:]]' Dockerfile Dockerfile.reporter; then
+      echo "image-source-shape: image must not use ADD" >&2
       exit 1
     fi
-    if grep -E '^(ARG|ENV)[[:space:]]' Dockerfile; then
-      echo "image-source-shape: Dockerfile must not use ARG or ENV" >&2
+    if grep -E '^(ARG|ENV)[[:space:]]' Dockerfile Dockerfile.reporter; then
+      echo "image-source-shape: image must not use ARG or ENV" >&2
       exit 1
     fi
     [[ $(grep -cE '^COPY[[:space:]]' Dockerfile) -eq 3 ]] || {
@@ -577,6 +1007,14 @@ print('site ok')
         exit 1
       }
     done
+    [[ $(grep -cE '^COPY[[:space:]]' Dockerfile.reporter) -eq 1 ]] || {
+      echo "image-source-shape: Dockerfile.reporter must copy exactly one source" >&2
+      exit 1
+    }
+    grep -qE '^COPY[[:space:]]+reporter[[:space:]]' Dockerfile.reporter || {
+      echo "image-source-shape: Dockerfile.reporter does not copy only reporter/" >&2
+      exit 1
+    }
     # The publish pipeline is split: the workflow gates and authenticates,
     # the image-publish app (in this file) owns the registry and tag shape.
     grep -q 'packages: write' .github/workflows/ci.yml || {
@@ -599,6 +1037,14 @@ print('site ok')
       echo "image-source-shape: CI does not call image-publish" >&2
       exit 1
     }
+    grep -q 'reporter-publish' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not call reporter-publish" >&2
+      exit 1
+    }
+    grep -q 'reporter-smoke' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not run reporter-smoke" >&2
+      exit 1
+    }
     grep -q 'ghcr.io/' nix/checks.nix || {
       echo "image-source-shape: image-publish does not target GHCR" >&2
       exit 1
@@ -619,6 +1065,14 @@ print('site ok')
       echo "image-source-shape: image-publish does not use password-stdin" >&2
       exit 1
     }
+    grep -q 'Dockerfile.reporter' nix/checks.nix || {
+      echo "image-source-shape: reporter-publish does not use Dockerfile.reporter" >&2
+      exit 1
+    }
+    grep -q '\-reporter:' nix/checks.nix || {
+      echo "image-source-shape: reporter image has no -reporter tag" >&2
+      exit 1
+    }
     touch $out
   '';
 in
@@ -630,6 +1084,8 @@ in
   publish-gate = mkCheck "publish-gate" scripts.publish-gate;
   site-check = mkCheck "site-check" scripts.site-check;
   loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
+  schema-reject = mkCheck "schema-reject" scripts.schema-reject;
+  host-stale = mkCheck "host-stale" scripts.host-stale;
   image-source-shape = image-source-shape;
 
   inherit apps;

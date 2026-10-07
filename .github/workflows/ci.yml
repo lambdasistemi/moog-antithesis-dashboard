@@ -30,6 +30,8 @@ jobs:
           .#checks.x86_64-linux.publish-gate
           .#checks.x86_64-linux.site-check
           .#checks.x86_64-linux.loop-runtime
+          .#checks.x86_64-linux.schema-reject
+          .#checks.x86_64-linux.host-stale
           .#checks.x86_64-linux.image-source-shape
           .#devShells.x86_64-linux.default.inputDerivation
 
@@ -130,6 +132,8 @@ jobs:
         run: nix run --quiet .#image-clean
       - name: Smoke test the collector image
         run: nix run --quiet .#container-smoke
+      - name: Smoke test the reporter image
+        run: nix run --quiet .#reporter-smoke
       - name: Build collector image
         run: nix run --quiet .#image-publish
       - name: Publish collector image
@@ -139,6 +143,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_ACTOR: ${{ github.actor }}
         run: nix run --quiet .#image-publish
+      - name: Build reporter image
+        run: nix run --quiet .#reporter-publish
+      - name: Publish reporter image
+        if: github.event_name == 'push'
+        env:
+          PUBLISH: '1'
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTOR: ${{ github.actor }}
+        run: nix run --quiet .#reporter-publish
 
   pr-preview:
     name: CI PR preview

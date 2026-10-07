@@ -9,8 +9,10 @@
 # Secrets arrive as files: the Antithesis key, the GitHub read token and the
 # moog read environment are read from /run/secrets and never appear in argv.
 # Report URLs (they carry auth tokens) are dropped before publication.
-# Host and monitor sources are interim stubs until the push reporters in
-# #11 and #12 land; until then they report error.
+# The oracle source reads its status issue (#11 slice 1); the agent source
+# stays an interim stub until slice 2 and the monitor until #12, reporting
+# error so the page shows `error` instead of silently serving stale numbers.
+# The container carries no ssh client and no journal access.
 set -uo pipefail
 
 CACHE=${DASHBOARD_CACHE:-$HOME/.cache/moog-antithesis-dashboard}
@@ -25,6 +27,12 @@ REQUESTER=${MOOG_REQUESTER:-cfhal}
 PROXY_URL=${PROXY_URL:-https://antithesis-proxy.plutimus.com/readyz}
 RUNS_LIMIT=25
 NIGHTLY_LIMIT=14
+STATUS_REPOSITORY=${STATUS_REPOSITORY:-lambdasistemi/moog-antithesis-dashboard}
+STATUS_ISSUE_ORACLE=${STATUS_ISSUE_ORACLE:-}
+STATUS_ISSUE_AGENT=${STATUS_ISSUE_AGENT:-}
+# Test seam for checks only: when set, the oracle reader runs this command
+# to obtain the issue body instead of calling the GitHub API. Production
+# leaves it unset and uses gh_auth. Nothing else uses it.
 
 mkdir -p "$CACHE"/{props,details,nightly,last} "$OUT_DIR" "$OUT_DIR/runs"
 WORK=$(mktemp -d)
@@ -39,12 +47,20 @@ declare -A SRC_STATUS SRC_ERR SRC_LAST
 #   ok    → output saved as last good
 #   fail  → last good served, marked stale
 #   never → null, marked error
+# A source that emits a top-level .reported_at (status reporters) supplies
+# its own last-success time; every other source falls back to now, so an
+# unchanged old payload can never look fresh.
 run_source() {
     local name=$1 fn=$2
     local out="$WORK/$name.json" err="$WORK/$name.err"
     if "$fn" >"$out" 2>"$err" && jq -e . "$out" >/dev/null 2>&1; then
         cp "$out" "$CACHE/last/$name.json"
-        now >"$CACHE/last/$name.at"
+        reported=$(jq -r '.reported_at // empty' "$out" 2>/dev/null || true)
+        if [[ -n $reported ]]; then
+            printf '%s\n' "$reported" >"$CACHE/last/$name.at"
+        else
+            now >"$CACHE/last/$name.at"
+        fi
         SRC_STATUS[$name]=ok
         SRC_ERR[$name]=""
     elif [[ -s "$CACHE/last/$name.json" ]]; then
@@ -165,12 +181,80 @@ src_token() {
     ) | jq '{ pending_requests: (.requests | length) }'
 }
 
-# Interim: host and monitor status arrive via push reporters (#11, #12),
-# which do not exist yet. Until then these sources fail so the page shows
-# `error` instead of silently serving stale numbers. The container carries
-# no ssh client and no journal access.
-src_hosts() {
-    echo "host reporters not yet available (see #11)" >&2
+# Oracle status from its GitHub issue (#11 slice 1). One strict jq schema:
+# known keys only (role, containers, reported_at), types, every string at
+# most 200 characters, at most 50 containers, reported_at UTC ISO 8601 and
+# not more than 2 minutes in the future. Unknown keys are dropped; missing
+# keys or wrong types fail. A payload older than 15 minutes fails as stale
+# so the last good value is served. Error messages never include body text.
+# Fetch seam: STATUS_BODY_CMD supplies the body in checks; production uses
+# gh_auth and nothing else uses the seam.
+status_body_default() {
+    local issue=$1
+    [[ -n $issue ]] || {
+        echo "oracle status: no issue number" >&2
+        return 1
+    }
+    [[ -r $GH_READ_TOKEN_FILE ]] || {
+        echo "oracle status: no GitHub read token file" >&2
+        return 1
+    }
+    gh_auth api "repos/$STATUS_REPOSITORY/issues/$issue" --jq .body
+}
+
+validate_oracle_payload() {
+    local now_epoch=$1
+    jq -e --argjson now "$now_epoch" '
+        if type != "object" then error("bad")
+        elif (has("role") and has("containers") and has("reported_at") | not) then error("bad")
+        elif (.role | type) != "string" or .role != "oracle" or (.role | length) > 200 then error("bad")
+        elif (.containers | type) != "array" or (.containers | length) > 50 then error("bad")
+        elif (.reported_at | type) != "string" or (.reported_at | length) > 200 then error("bad")
+        elif (.reported_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") | not) then error("bad")
+        elif ([.containers[] | select(type != "object"
+            or (has("name") and has("image") and has("status") | not)
+            or (.name | type) != "string" or (.image | type) != "string" or (.status | type) != "string"
+            or (.name | length) > 200 or (.image | length) > 200 or (.status | length) > 200)] | length) > 0 then error("bad")
+        else
+            (.reported_at | fromdateiso8601) as $rep
+            | if $rep > ($now + 120) then error("bad")
+              else {role, containers: [.containers[] | {name, image, status}], reported_at}
+              end
+        end
+    '
+}
+
+src_oracle() {
+    local body cleaned now_epoch rep_epoch
+    if [[ -n ${STATUS_BODY_CMD:-} ]]; then
+        body=$(bash -c "$STATUS_BODY_CMD") || {
+            echo "oracle status: fetch failed" >&2
+            return 1
+        }
+    else
+        body=$(status_body_default "$STATUS_ISSUE_ORACLE") || return 1
+    fi
+    now_epoch=$(date -u +%s)
+    cleaned=$(printf "%s" "$body" | validate_oracle_payload "$now_epoch" 2>/dev/null) || {
+        echo "oracle status: invalid payload" >&2
+        return 1
+    }
+    rep_epoch=$(jq -r '.reported_at | fromdateiso8601' <<<"$cleaned") || {
+        echo "oracle status: invalid payload" >&2
+        return 1
+    }
+    if [[ $rep_epoch -lt $((now_epoch - 900)) ]]; then
+        echo "oracle status: stale payload" >&2
+        return 1
+    fi
+    printf "%s\n" "$cleaned"
+}
+
+# Interim until slice 2: the agent reporter does not exist yet, so this
+# source fails and the page shows `error` instead of silently serving
+# stale numbers.
+src_agent() {
+    echo "agent reporter not yet available (see #11 slice 2)" >&2
     return 1
 }
 
@@ -306,9 +390,18 @@ src_nightly() {
     done | jq -s .
 }
 
-for s in runs chain token hosts proxy monitor nightly; do
+for s in runs chain token oracle agent proxy monitor nightly; do
     run_source "$s" "src_$s"
 done
+
+# data.json.hosts keeps today's shape, assembled from each side's last good.
+# Slice 1: oracle is real, agent stays interim (empty list, null counts)
+# until slice 2. WORK/oracle.json holds the last good payload (or null);
+# WORK/agent.json is null while the source fails.
+jq -n --slurpfile oracle "$WORK/oracle.json" --slurpfile agent "$WORK/agent.json" '
+    ($oracle[0] | try .containers catch [] // []) as $oc
+    | {oracle: ($oc // []), agent: [], agent_errors_6h: null, agent_published_24h: null}
+' >"$WORK/hosts.json"
 
 # Attach property summaries to runs.
 if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
@@ -335,7 +428,7 @@ if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
     fi
 fi
 
-sources=$(for s in runs chain token hosts proxy monitor nightly; do
+sources=$(for s in runs chain token oracle agent proxy monitor nightly; do
     jq -n --arg n "$s" --arg st "${SRC_STATUS[$s]}" --arg e "${SRC_ERR[$s]}" --arg at "${SRC_LAST[$s]}" \
         '{ ($n): { status: $st, error: (if $e == "" then null else $e end),
                    last_success: (if $at == "" then null else $at end) } }'
@@ -359,4 +452,4 @@ jq -n \
          "launch-cap", "launch"] }' >"$OUT_DIR/data.json.new" &&
     mv "$OUT_DIR/data.json.new" "$OUT_DIR/data.json"
 
-echo "collected: $(for s in runs chain token hosts proxy monitor nightly; do printf '%s=%s ' "$s" "${SRC_STATUS[$s]}"; done)"
+echo "collected: $(for s in runs chain token oracle agent proxy monitor nightly; do printf '%s=%s ' "$s" "${SRC_STATUS[$s]}"; done)"

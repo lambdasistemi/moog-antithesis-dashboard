@@ -2,6 +2,12 @@
 
 Revision 2: no systemd anywhere in the design; the freshness monitor pushes its own verdict like the hosts.
 
+Slice 1 (oracle) implemented: the oracle reporter (`reporter/report.sh` +
+`reporter/loop.sh`, `Dockerfile.reporter`, `reporter/compose.yaml`) follows
+design A below; the collector reads the oracle issue with the strict schema
+and 15-minute window from sections 4 and 6; the agent side stays interim
+until slice 2.
+
 ## Findings in the current code that shape the design
 
 1. `src_monitor` reads the host journal (`journalctl -u antithesis-run-freshness-monitor`). A container cannot see it, and mounting `/var/log/journal` would hand the collector every host log (which embed credentials). It breaks silently in a container, so the monitor pushes instead (section 5).
@@ -36,6 +42,10 @@ Rules: no `-e SECRET=…`, no `ARG`, no `--env-file`; secrets are files. Dry-run
 **Design A (recommended): each reporter edits its own GitHub issue.**
 - Three reporters: oracle, agent, freshness monitor. Each host runs one reporter container (`restart: unless-stopped`, read-only filesystem, no inbound port) looping every 5 minutes over a ~20-line script. Oracle and agent: `docker ps` filtered to `moog`; on the agent, `docker logs --since` counts; output is today's JSON (`oracle`, `agent`, `agent_errors_6h`, `agent_published_24h`) plus `reported_at`. It `PATCH`es the body of issue "status: oracle" / "status: agent" on this repository over HTTPS. The Docker socket is mounted directly.
 - Credential: one fine-grained PAT **per reporter** (three), repository = this repo only, permission = Issues: write, nothing else. It cannot touch code or `gh-pages`. Created by the repository owner at github.com → Settings → Developer settings; the owner rotates; maximum lifetime one year. While expired: that reporter's section goes stale (section 6), nothing else breaks.
+- Slice 1 ships the oracle reporter only: `REPORTER_ROLE=oracle` (the agent
+  role is accepted but refused with a clear message until slice 2),
+  `REPORT_DRY_RUN=1` prints the payload with no token and no outward
+  request, and `DASHBOARD_DRY_RUN=1` does the same for the publish step.
 - The collector reads the issues over the API with the read token and validates each body with a strict `jq` schema (known keys, types, string length caps, `reported_at` not in the future) before using any of it. Anything written into an issue outside that shape is dropped.
 - Direction of bytes: reporter → api.github.com → collector. No inbound port anywhere.
 - Limits, named: the reporter container has root-equivalent access to its host's Docker (mitigation: the token can only edit one issue; the container is a tiny script with a read-only filesystem and no inbound port). Any two Issues-write tokens can overwrite each other's issue (the scope cannot be narrowed to one issue). Anyone with issue-edit rights can edit a body (mitigated by schema validation and the publish gate). Issue edit history keeps old payloads (public data already).
@@ -56,6 +66,9 @@ The freshness monitor pushes its own verdict. A push step in the monitor's scrip
 - Source split: `hosts` becomes `oracle` and `agent`, each its own `run_source` with its own `last/*.json` and `last/*.at`; `monitor` is read from its issue. `data.json.hosts` keeps today's shape, assembled from each side's last good value. The page's source chips are generated from `sources`, so the only page change is two more chips; `site/index.html` lines 113 and 165 need confirming.
 - A reporter is `ok` only if its issue parses, matches the schema and `reported_at` is within 15 minutes (three missed pushes). `last_success` = the payload's `reported_at`, not the fetch time, so an unchanged old payload cannot look fresh.
 - Per source, when a piece stops:
+- Slice 1 implements this table for the oracle source (`oracle`/`agent` in
+  `sources` instead of `hosts`; `last_success` is the payload's
+  `reported_at`; the page marks a hosts card stale with that time).
 
 | stops | result |
 |---|---|
@@ -75,7 +88,7 @@ The freshness monitor pushes its own verdict. A push step in the monitor's scrip
 | build log / layer | no build arg; check exports the filesystem and greps | same | not copied |
 | image env | dry-run `env` compared to empty | same | same |
 | published file | gate matches the literal of every secret file plus patterns | same | gate scans the value of every exported variable from the env file |
-| process list | check runs the fetch with a sniffer on `/proc/*/cmdline` | same | n/a |
+| process list | check runs the fetch with a sniffer on `/proc/*/cmdline` | same (`reporter-smoke` asserts the token is absent from `docker top` and logs; the token travels via curl stdin config) | n/a |
 | error message | check forces curl/gh failure and greps stderr and `data.json` `error` fields | same | same |
 
 ## Verification (each a Nix check of the existing shape, each shown red first)
