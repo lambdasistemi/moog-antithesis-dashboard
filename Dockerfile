@@ -21,6 +21,11 @@ COPY collect /app/collect
 COPY deploy /app/deploy
 COPY site /app/site
 
+# Script modes belong to the image, not the build context: a checkout or
+# daemon that does not preserve executable bits must still yield runnable
+# scripts. Root-owned, never writable by the runtime user.
+RUN find /app/collect /app/deploy -name '*.sh' -exec chmod 0755 {} +
+
 # Non-root runtime user. /cache is owned by it so a fresh named volume
 # mounted there inherits the ownership; HOME comes from the passwd entry
 # (Docker sets it for USER), so no ENV is needed for any of this.

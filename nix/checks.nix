@@ -236,6 +236,13 @@ let
         fi
         tag="moog-collector:container-smoke"
         docker build -q -t "$tag" .
+        missing=$(docker run --rm --user 1000:1000 "$tag" \
+          find /app/collect /app/deploy -name '*.sh' ! -executable -print)
+        if [[ -n "$missing" ]]; then
+          echo "smoke: scripts not executable by uid 1000:" >&2
+          printf '%s\n' "$missing" >&2
+          exit 1
+        fi
         secvol="smoke-secrets-$$-$RANDOM"
         vol="smoke-cache-$$-$RANDOM"
         remvol="smoke-remote-$$-$RANDOM"
@@ -291,6 +298,7 @@ let
           printf '%s\n' "$3" | tail -n 40 | redact >&2
           echo "smoke: container-side probe (id, mounts, uid):" >&2
           docker run "''${probe_flags[@]}" "$tag" bash -c 'id; ls -ld /cache /run/secrets /tmp; id -u' 2>&1 | redact >&2 || true
+          docker run --rm --entrypoint ls "$tag" -l /app /app/deploy /app/collect 2>&1 | redact >&2 || true
         }
         gitr() {
           docker run --rm "$m_remroot" "$m_sec" "$tag" git --git-dir=/r "$@"
