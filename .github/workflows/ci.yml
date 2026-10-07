@@ -141,6 +141,7 @@ jobs:
           mkdir -p preview-site/runs
           cp site/index.html preview-site/
           cp preview-sample/data.json preview-site/
+          cp preview-sample/property-descriptions.json preview-site/
           cp preview-sample/runs/*.json preview-site/runs/
       - name: Smoke test preview on localhost
         run: nix run --quiet .#preview-smoke

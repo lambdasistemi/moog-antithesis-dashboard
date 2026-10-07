@@ -56,7 +56,9 @@ older than 25 minutes.
 - A source that fails keeps its last good value, marked `stale` on the page.
 - Properties of completed Antithesis runs, per-run detail files, and receipts
   of concluded nightly runs never change, so they are fetched once and kept
-  in `~/.cache/moog-antithesis-dashboard`.
+  in `~/.cache/moog-antithesis-dashboard`. Property descriptions repeat
+  verbatim across runs, so they publish once in
+  `property-descriptions.json` instead of inside every detail file.
 
 ## What never leaves the host
 

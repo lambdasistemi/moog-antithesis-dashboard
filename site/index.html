@@ -313,6 +313,7 @@ function renderPhaseCounts(d) {
 
 
 const detailCache = {};
+let sharedDescriptions = null;
 
 function parseHash() {
   const m = location.hash.match(/^#run=([^&]+)(?:&prop=(.+))?$/);
@@ -358,9 +359,10 @@ function detailHtml(d) {
     const pst = p.status === "Passing" ? chip("ok", "passing") : oc ? chip("idle", "outside pipeline control") : chip("bad", "failing");
     const kind = p.is_group ? "group" : p.is_event ? "event" : "assertion";
     const expandable = (p.counterexamples || []).length > 0;
+    const desc = p.description || (sharedDescriptions || {})[p.name] || "";
     return `<tr${expandable ? ` class="prop-row" data-prop-index="${i}" tabindex="0" title="show counterexamples"` : ""}><td>${esc(p.name)}</td><td>${pst}</td><td>${kind}</td>
       <td>${p.example_count ?? "–"} / ${p.counterexample_count ?? "–"}</td>
-      <td class="ignored">${esc(p.description || "")}</td></tr>`;
+      <td class="ignored">${esc(desc)}</td></tr>`;
   }).join("");
   const chain = d.chain
     ? `${esc(d.chain.phase)} · ${esc(d.chain.outcome || "–")} · slot <span class="mono">${esc(d.chain.slot)}</span>`
@@ -415,6 +417,14 @@ async function expandRow(id, propName, scroll = true) {
       detailCache[id] = d;
     }
     if (!tr.classList.contains("open")) return;
+    if (sharedDescriptions === null) {
+      try {
+        const dr = await fetch(`property-descriptions.json?t=${Date.now()}`, {cache: "no-store"});
+        sharedDescriptions = dr.ok ? await dr.json() : {};
+      } catch (e) {
+        sharedDescriptions = {};
+      }
+    }
     detailTr.firstChild.innerHTML = detailHtml(d);
     if (scroll) tr.scrollIntoView({block: "nearest"});
     if (propName) expandProp(detailTr, d, propName);
