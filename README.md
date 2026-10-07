@@ -75,6 +75,11 @@ just shellcheck  # lint the shell scripts
 just format      # format the shell scripts with shfmt
 ```
 
+Pull-request previews: every PR publishes `site/` with the frozen sample in
+`preview-sample/` to the shared preview host and posts the link on the PR,
+then checks the served files. The sample is stale by design; the staleness
+banner on a preview is expected.
+
 Requirements on the collector host: `jq`, `curl`, `gh` (authenticated), ssh
 access to the `oracle` and `agent` hosts, the moog checkout at `/code/moog`,
 and the Antithesis key at `~/.secrets/antithesis-api-key`. Paths are

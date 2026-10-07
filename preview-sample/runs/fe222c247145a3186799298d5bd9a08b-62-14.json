@@ -1,0 +1,565 @@
+{
+  "run_id": "fe222c247145a3186799298d5bd9a08b-62-14",
+  "status": "completed",
+  "created_at": "2026-10-05T02:59:06Z",
+  "started_at": "2026-10-05T02:59:06Z",
+  "completed_at": "2026-10-05T07:44:03Z",
+  "test_name": "amaru-v2",
+  "duration_minutes": 180,
+  "directory": "testnets/cardano_node_head",
+  "commit": "ae43745ed5e59d688830d2207649907c5d1a69c9",
+  "try": 1,
+  "requester": "cfhal",
+  "repository": "cardano-foundation/cardano-node-antithesis",
+  "parameters": {
+    "antithesis.config_image": "us-central1-docker.pkg.dev/molten-verve-216720/pragma-repository/cardano-moog-config:70d6aee462",
+    "antithesis.description": "{\"testRun\":{\"commitId\":\"ae43745ed5e59d688830d2207649907c5d1a69c9\",\"directory\":\"testnets/cardano_node_head\",\"platform\":\"github\",\"repository\":{\"organization\":\"cardano-foundation\",\"repo\":\"cardano-node-antithesis\"},\"requester\":\"cfhal\",\"try\":1,\"type\":\"test-run\"},\"testRunId\":\"70d6aee4629d9f3845d943205837dc09756b690c23713710f00de9b4604fdf6b\"}",
+    "antithesis.duration": "180",
+    "antithesis.integrations.type": "none",
+    "antithesis.is_ephemeral": "false",
+    "antithesis.is_setup": "false",
+    "antithesis.performance_tier": "standard",
+    "antithesis.report.recipients": "antithesis@cardanofoundation.org",
+    "antithesis.source": "cardano-foundation/cardano-node-antithesis",
+    "antithesis.test_name": "amaru-v2",
+    "custom.container_faults_kill_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.container_faults_pause_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.container_faults_stop_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.faults_enabled": "true",
+    "custom.instrumented": "true",
+    "custom.network_fault_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator"
+  },
+  "properties": [
+    {
+      "name": "No Antithesis errors",
+      "description": "This property aggregates all errors from Antithesis system components and Antithesis SDKs that run within your test environment. Failures of this property could represent misconfiguration of your system, an error reported by an Antithesis SDK in your code, or a bug in Antithesis itself!",
+      "status": "Failing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 4,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-239640357407718219",
+            "vtime": "7003.217531525064"
+          },
+          "output_hash": "frzvTcF8eoc=",
+          "is_examplar": false,
+          "guest_stopped": true,
+          "antithesis_error": "state_cant_be_materialized (guest timed out)",
+          "exit_code": -11000
+        }
+      ]
+    },
+    {
+      "name": "Software images match expected platform",
+      "description": "This property verifies that all images in the environment are built for the expected platform, 'amd64'. You can verify images locally by running `docker inspect [IMAGE] --format {{.Architecture}}`.",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 9,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build errors",
+      "description": "This property aggregates all errors from the Antithesis build step. Failures of this property could be due to misconfiguration of your test, or could reflect a bug in Antithesis itself!",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build warnings",
+      "description": "This property aggregates all warnings from the Antithesis build step. Failures of this property could be due to misconfiguration of your test, or could reflect a bug in Antithesis itself!",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Virtual time per wall time",
+      "description": "\nVirtual time per wall time is an important metric of test performance. It tracks the average number of seconds that pass in the simulation for each second of real world time used to run it. This metric is normalized as if we were running on a single-core machine.\n\nOften this number will be lower than 1, because you're running a large number of services inside Antithesis. We are using a single computer to simulate an interacting cluster of computers, so the more \"virtual\" computers there are, the more work there is for the \"real\" computer to do, and the slower the tests will run in relative terms.\n\nBut a highly-optimized test can actually run faster than realtime! This is because Antithesis technology allows us to \"fast-forward\" the simulation whenever the software we're testing is idle. For especially well-optimized tests, this effect can cause this metric to go above 1.\n\nIf the value of this metric, multiplied by the total number of containers/services you are running, is under 1, then you are likely experiencing a performance problem. Sudden jumps in this metric, either upwards or downwards, can also indicate test misconfiguration (for example a service is not starting up correctly, or going into a busy loop).\n\nSee our [optimization guide](http://www.antithesis.com/docs/best_practices/optimizing/#monitor-simulation-efficiency) for more information on improving your simulation efficiency.\n",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Test ran with full parallelism",
+      "description": "\nAntithesis uses many VMs running in parallel to efficiently explore a large number of system states. These VMs share physical resources (such as memory) whenever possible.\n\nSometimes conditions in the system under test cause so much memory pressure that it is impossible to maintain active simultaneous simulation across all of the available VMs. In such situations, Antithesis incrementally reduces parallelism to match its resource constraints. Reducing active VM parallelism is both a last resort and a sign that the workload may be using far more memory than intended (e.g. by generating repeated core dumps).\n\nSee the [Antithesis optimization guide](https://antithesis.com/docs/best_practices/optimizing/) for information on how to improve your test efficiency.\n        ",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Containers joined the Antithesis network",
+      "description": "\nThis property reports the unique containers that sent traffic over the Antithesis platform's network bridge. Each example lists a container name for which we saw traffic at some point. This represents a union aggregation across all branches of history, so if a container was seen only in some test paths, it will still be listed here.\n\nYou should make sure that all of the containers listed in your Docker Compose or Kubernetes configuration appear here. Containers missing from this list could indicate a misconfigured network, or a container that is failing to start up.\n",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 13,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "The Antithesis Fault Injector was started",
+      "description": "\nThis property confirms that the Antithesis fault injector was started.\n",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Peak memory usage",
+      "description": "\nThis metric tracks the peak memory usage of your software over each test run. The memory used by your software goes up and down as the tests run, and may be different in the different possible histories that were explored by Antithesis, but this metric just tracks the high-water mark across all of those situations.\n\nThe value of this metric is a number between 0.0 and 1.0 representing what fraction of the total memory available to the system was being used by your program at the moment of peak usage. If that number goes above 0.95, this property will be marked as 'Failed', because it likely indicates that Antithesis discovered a memory leak or a way to make your application use unbounded memory. This could cause crashes or instability in production, or could be used in a DDOS attack by malicious actors.\n\nThe details section for each example will contain information about which processes were using the most memory in the system. The format of this information may change in the future.\n",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 256780,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "systemd-journald",
+      "description": null,
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 9,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-8654131616267763079",
+            "vtime": "2208.508426518645"
+          },
+          "source": {
+            "name": "processes_terminated_with_signal",
+            "stream": "info"
+          },
+          "event_group": "systemd-journald",
+          "output_text": "{ \"executable\": \"systemd-journald\", \"signal\": 6, \"pid\": 408 }"
+        }
+      ]
+    },
+    {
+      "name": "No unexpected container exits",
+      "description": "\nThis property tracks containers that exited with codes indicating an error. Containers that exit normally (exit code 0) will not trip this property. Nor will containers exiting with codes 137 and 143, which correspond to SIGKILL and SIGTERM on the container process. This is because attempts to shut down containers with standard tools may generate these codes.\n\nTo avoid false positives, please ensure that the main process running within each of your containers exits with code 0 when terminating without error.\n",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis session errors",
+      "description": "This property aggregates all errors from the Antithesis SaaS service. Failures of this property could be due to misconfiguration of your test, or could reflect a bug in Antithesis itself!",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_admin_singleton",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 65798,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "no critical logs",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "cluster fork depth < k",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p1 log",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p2 log",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p3 log",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p4 log",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "PeerStatusChanged",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "TraceAddBlockEvent.SwitchedToAFork",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 232,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_already_deployed",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 40242,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_asteria_created",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 15,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_create_asteria_deferred",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 576,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_deferred",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 2896,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game eventually_alive holds",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 183,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game heartbeat ticked",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 40239,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_asteria_observed_1",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 14839,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_asteria_observed_2",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 15080,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_asteria_observed_3",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 15415,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_move_planned_1",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 14839,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_move_planned_2",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 15080,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_move_planned_3",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 15415,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_ship_spawned_1",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 4776,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_state_consistent",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 19,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "cluster fork observed",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 899,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "find log files",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_population_grew",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 33,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game eventually_alive entered",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 183,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game heartbeat entered",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 40239,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_eventually_no_tx_yet",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 134,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_eventually_started",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 157,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_pressure_summary",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 172,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_refill_daemon_unreachable",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 55740,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_refill_driver_started",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 57368,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_refill_not_applicable",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1321,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_transact_daemon_unreachable",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 8797,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_transact_driver_started",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 61356,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_transact_not_applicable",
+      "description": null,
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 52427,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Unreachable",
+      "description": "This group collects test properties defined with the [Antithesis SDK's](https://antithesis.com/docs/using_antithesis/sdk/) assert.Unreachable method. An unreachability assertion must never be hit on a test run, and will report a failure if it is ever reached. It's semantically equivalent to assert.Always(false), to mark cases that you believe should be impossible to reach.",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    }
+  ],
+  "chain": {
+    "phase": "finished",
+    "outcome": "failure",
+    "slot": 135503176
+  },
+  "nightly": []
+}

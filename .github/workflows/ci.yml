@@ -124,3 +124,61 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Check site
         run: nix run --quiet .#site-check
+
+  pr-preview:
+    name: CI PR preview
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: nixos
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Assemble preview site
+        run: |
+          rm -rf preview-site
+          mkdir -p preview-site/runs
+          cp site/index.html preview-site/
+          cp preview-sample/data.json preview-site/
+          cp preview-sample/runs/*.json preview-site/runs/
+      - name: Smoke test preview on localhost
+        run: |
+          nix --quiet shell nixpkgs#python3 nixpkgs#curl nixpkgs#jq -c bash -euo pipefail <<'SCRIPT'
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory preview-site &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ | grep -q 'Moog.*Antithesis pipeline'
+          curl -fsS http://127.0.0.1:4173/data.json | jq -e '.runs | length > 0' >/dev/null
+          for rid in $(jq -r '.runs[].run_id' preview-site/data.json); do
+            curl -fsS "http://127.0.0.1:4173/runs/$rid.json" | jq -e --arg r "$rid" '.run_id == $r' >/dev/null
+          done
+          SCRIPT
+      - id: preview
+        uses: paolino/dev-assets/static-preview@main
+        with:
+          path: preview-site
+      - name: Verify served preview files
+        run: |
+          nix --quiet shell nixpkgs#curl nixpkgs#jq -c bash -euo pipefail <<'SCRIPT'
+          base="${{ steps.preview.outputs.preview-url }}"
+          [ -n "$base" ]
+          curl -fsS "$base/data.json" | jq -e '.runs | length > 0' >/dev/null
+          rid=$(jq -r '.runs[0].run_id' preview-site/data.json)
+          curl -fsS "$base/runs/$rid.json" | jq -e --arg r "$rid" '.run_id == $r' >/dev/null
+          SCRIPT
+
+  pr-preview-cleanup:
+    name: CI PR preview cleanup
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: nixos
+    steps:
+      - uses: paolino/dev-assets/static-preview@main
+        with:
+          mode: cleanup
