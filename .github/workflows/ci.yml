@@ -135,29 +135,23 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
-      # No cachix here on purpose: the publish path below authenticates to
-      # GHCR with GITHUB_TOKEN only.
+      # No cachix here on purpose: every docker call below runs through the
+      # flake's pinned docker client, and the publish step authenticates to
+      # GHCR with GITHUB_TOKEN only. GITHUB_REPOSITORY and GITHUB_SHA come
+      # from the runner's default environment.
       # One-time setup, outside this file: flip the pushed package to public
       # in GHCR so the collector host pulls without a credential.
       - name: Check the image is clean
         run: nix run --quiet .#image-clean
       - name: Build collector image
-        run: >-
-          docker build
-          -t ghcr.io/${{ github.repository }}:${{ github.sha }}
-          -t ghcr.io/${{ github.repository }}:main
-          .
-      - name: Log in to GHCR
+        run: nix run --quiet .#image-publish
+      - name: Publish collector image
         if: github.event_name == 'push'
         env:
+          PUBLISH: '1'
           GH_TOKEN: ${{ github.token }}
           GH_ACTOR: ${{ github.actor }}
-        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
-      - name: Push collector image
-        if: github.event_name == 'push'
-        run: |
-          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}:main
+        run: nix run --quiet .#image-publish
 
   pr-preview:
     name: CI PR preview

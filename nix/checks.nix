@@ -156,6 +156,30 @@ let
       '';
     };
 
+    image-publish = {
+      runtimeInputs = [ pkgs.docker pkgs.coreutils pkgs.bash ];
+      text = ''
+        # Build the collector image tagged with the commit SHA and `main`,
+        # and push both tags only when PUBLISH=1. Repository and SHA come
+        # from the environment with failing defaults; the push token travels
+        # via GH_TOKEN through --password-stdin, never argv or script text.
+        set -euo pipefail
+        repo="''${GITHUB_REPOSITORY:?GITHUB_REPOSITORY must be set}"
+        sha="''${GITHUB_SHA:?GITHUB_SHA must be set}"
+        sha_tag="ghcr.io/$repo:$sha"
+        main_tag="ghcr.io/$repo:main"
+        docker build -q -t "$sha_tag" -t "$main_tag" .
+        if [[ "''${PUBLISH:-0}" == "1" ]]; then
+          actor="''${GH_ACTOR:?GH_ACTOR must be set for PUBLISH=1}"
+          printf '%s\n' "''${GH_TOKEN:?GH_TOKEN must be set for PUBLISH=1}" \
+            | docker login ghcr.io -u "$actor" --password-stdin
+          docker push "$sha_tag"
+          docker push "$main_tag"
+        fi
+        echo "image publish ok ($sha_tag)"
+      '';
+    };
+
     site-check = {
       runtimeInputs = [ pkgs.python3 pkgs.nodejs ];
       text = ''
@@ -253,24 +277,46 @@ print('site ok')
         exit 1
       }
     done
-    grep -q 'ghcr.io/' .github/workflows/ci.yml || {
-      echo "image-source-shape: CI does not publish to GHCR" >&2
-      exit 1
-    }
+    # The publish pipeline is split: the workflow gates and authenticates,
+    # the image-publish app (in this file) owns the registry and tag shape.
     grep -q 'packages: write' .github/workflows/ci.yml || {
       echo "image-source-shape: CI lacks packages: write" >&2
+      exit 1
+    }
+    grep -q 'GH_TOKEN' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not pass the token via env" >&2
       exit 1
     }
     grep -q 'github.token' .github/workflows/ci.yml || {
       echo "image-source-shape: CI does not authenticate with GITHUB_TOKEN" >&2
       exit 1
     }
-    grep -q 'github.sha' .github/workflows/ci.yml || {
-      echo "image-source-shape: CI does not tag the commit SHA" >&2
+    grep -q 'PUBLISH' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not gate the push on PUBLISH" >&2
       exit 1
     }
-    grep -q ':main' .github/workflows/ci.yml || {
-      echo "image-source-shape: CI does not tag main" >&2
+    grep -q 'image-publish' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not call image-publish" >&2
+      exit 1
+    }
+    grep -q 'ghcr.io/' nix/checks.nix || {
+      echo "image-source-shape: image-publish does not target GHCR" >&2
+      exit 1
+    }
+    grep -q 'GITHUB_SHA' nix/checks.nix || {
+      echo "image-source-shape: image-publish does not tag the commit SHA" >&2
+      exit 1
+    }
+    grep -q 'GITHUB_REPOSITORY' nix/checks.nix || {
+      echo "image-source-shape: image-publish does not read the repository" >&2
+      exit 1
+    }
+    grep -q ':main' nix/checks.nix || {
+      echo "image-source-shape: image-publish does not tag main" >&2
+      exit 1
+    }
+    grep -q -- '--password-stdin' nix/checks.nix || {
+      echo "image-source-shape: image-publish does not use password-stdin" >&2
       exit 1
     }
     touch $out
