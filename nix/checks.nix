@@ -4,14 +4,14 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh
+        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh
+        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh
       '';
     };
 
@@ -21,6 +21,7 @@ let
         bash -n collect/collect.sh
         bash -n deploy/cycle.sh
         bash -n deploy/publish.sh
+        bash -n deploy/loop.sh
         echo "syntax ok"
       '';
     };
@@ -32,24 +33,11 @@ let
         # collected data. CI has no data.json, so gate the static artifact.
         # Gate definitions in deploy/ and nix/ legitimately name these
         # patterns, so they are out of scope here.
-        if rg -n 'auth=|v2\.public|Bearer |Authorization|-u [^ ]+:[^ ]+|password' site preview-sample README.md systemd justfile flake.nix; then
+        if rg -n 'auth=|v2\.public|Bearer |Authorization|-u [^ ]+:[^ ]+|password' site preview-sample README.md justfile flake.nix compose.yaml; then
           echo "secrets gate: match found" >&2
           exit 1
         fi
         echo "secrets gate ok"
-      '';
-    };
-
-    systemd-check = {
-      runtimeInputs = [ pkgs.ripgrep ];
-      text = ''
-        # Static unit validation. Full `systemd-analyze verify` needs host
-        # state unavailable in the sandbox, so CI runs it as a job step.
-        rg -q '^ExecStart=/code/moog-antithesis-dashboard/deploy/cycle.sh' systemd/moog-antithesis-dashboard.service
-        rg -q '^Type=oneshot' systemd/moog-antithesis-dashboard.service
-        rg -q '^OnUnitActiveSec=10min' systemd/moog-antithesis-dashboard.timer
-        rg -q '^WantedBy=timers.target' systemd/moog-antithesis-dashboard.timer
-        echo "systemd ok"
       '';
     };
 
@@ -219,6 +207,108 @@ let
       '';
     };
 
+    container-smoke = {
+      runtimeInputs = [ pkgs.docker pkgs.git pkgs.coreutils pkgs.gnugrep pkgs.bash ];
+      text = ''
+        # End-to-end run of the collector image under the compose
+        # restrictions (uid 1000, read-only rootfs, tmpfs /tmp, cap_drop
+        # ALL, named cache volume, 0400 secret files): one clean cycle must
+        # publish with none of the fake secret literals in the pushed tree,
+        # the logs, or the run env; a planted literal must refuse without
+        # pushing. Only paths and counts are reported, never values.
+        set -euo pipefail
+        tag="moog-collector:container-smoke"
+        docker build -q -t "$tag" .
+        work=$(mktemp -d)
+        vol="smoke-cache-$$"
+        cyc="smoke-cycle-$$"
+        cleanup() {
+          docker rm -f "$cyc" "$cyc-plant" "$cyc-env" >/dev/null 2>&1 || true
+          docker volume rm "$vol" >/dev/null 2>&1 || true
+          rm -rf "$work"
+        }
+        trap cleanup EXIT
+        anti="smoke-antithesis-$RANDOM"
+        ghread="smoke-ghread-$RANDOM"
+        push="smoke-push-$RANDOM"
+        moogurl="https://moog-smoke-fixture.invalid/unit-$RANDOM"
+        mkdir -p "$work/secrets" "$work/plant"
+        printf '%s' "$anti" >"$work/secrets/antithesis-key"
+        printf '%s' "$ghread" >"$work/secrets/gh-read"
+        printf '%s' "$push" >"$work/secrets/pages-push"
+        printf 'PROVIDER_URL=%s\n' "$moogurl" >"$work/secrets/moog-read-env"
+        git init -q --bare "$work/remote.git"
+        # Prod realism whatever the invoking uid is: secrets 0400 owned by
+        # the runtime uid, remote and plant dirs writable by it.
+        docker run --rm --user 0:0 -v "$work:/work" "$tag" bash -c '
+          chown -R 1000:1000 /work/secrets /work/remote.git /work/plant
+          chmod 400 /work/secrets/antithesis-key /work/secrets/gh-read \
+            /work/secrets/pages-push /work/secrets/moog-read-env
+        '
+        run_flags=(--rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
+          -v "$vol:/cache"
+          -v "$work/secrets/antithesis-key:/run/secrets/antithesis-key:ro"
+          -v "$work/secrets/gh-read:/run/secrets/gh-read:ro"
+          -v "$work/secrets/pages-push:/run/secrets/pages-push:ro"
+          -v "$work/secrets/moog-read-env:/run/secrets/moog-read-env:ro"
+          -v "$work/remote.git:/remote.git"
+          -e DASHBOARD_CACHE=/cache
+          -e DASHBOARD_REMOTE=file:///remote.git
+          -e DASHBOARD_MAX_CYCLES=1)
+        absent_from() {
+          printf '%s\n' "$1" | grep -qF -e "$2" && return 1
+          return 0
+        }
+        if ! out=$(docker run --name "$cyc" "''${run_flags[@]}" "$tag" 2>&1); then
+          echo "smoke: clean cycle failed" >&2
+          printf '%s\n' "$out" >&2
+          exit 1
+        fi
+        git --git-dir="$work/remote.git" show gh-pages:data.json | grep -q generated_at || {
+          echo "smoke: clean cycle published nothing" >&2
+          exit 1
+        }
+        for lit in "$anti" "$ghread" "$push" "$moogurl"; do
+          hits=$(git --git-dir="$work/remote.git" grep -F -l -e "$lit" gh-pages -- 2>/dev/null || true)
+          if [[ -n "$hits" ]]; then
+            echo "smoke: secret literal published in:" >&2
+            printf '%s\n' "$hits" >&2
+            exit 1
+          fi
+          absent_from "$out" "$lit" || {
+            echo "smoke: secret literal in cycle logs" >&2
+            exit 1
+          }
+        done
+        env_out=$(docker run --name "$cyc-env" "''${run_flags[@]}" "$tag" env)
+        for lit in "$anti" "$ghread" "$push" "$moogurl"; do
+          absent_from "$env_out" "$lit" || {
+            echo "smoke: secret literal in run env" >&2
+            exit 1
+          }
+        done
+        printf '{"reporter":"evil","note":"%s"}' "$anti" >"$work/plant/evil.json"
+        ref_before=$(git --git-dir="$work/remote.git" rev-parse gh-pages)
+        out2=$(docker run --name "$cyc-plant" "''${run_flags[@]}" \
+          -v "$work/plant/evil.json:/cache/out/runs/evil.json:ro" "$tag" 2>&1)
+        printf '%s\n' "$out2" | grep -q 'evil.json' || {
+          echo "smoke: plant refusal names no file" >&2
+          exit 1
+        }
+        for lit in "$anti" "$ghread" "$push" "$moogurl"; do
+          absent_from "$out2" "$lit" || {
+            echo "smoke: secret literal in refusal logs" >&2
+            exit 1
+          }
+        done
+        if [[ $(git --git-dir="$work/remote.git" rev-parse gh-pages) != "$ref_before" ]]; then
+          echo "smoke: planted cycle pushed" >&2
+          exit 1
+        fi
+        echo "container smoke ok"
+      '';
+    };
+
     image-publish = {
       runtimeInputs = [ pkgs.docker pkgs.coreutils pkgs.bash ];
       text = ''
@@ -240,6 +330,72 @@ let
           docker push "$main_tag"
         fi
         echo "image publish ok ($sha_tag)"
+      '';
+    };
+
+    loop-runtime = {
+      runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.gnugrep ];
+      text = ''
+        # Behavioural test of deploy/loop.sh with a stub cycle: three runs
+        # with the middle one failing must all happen in order with one log
+        # line for the failure, and SIGTERM during a long sleep must end the
+        # loop promptly with exit 0.
+        set -euo pipefail
+        count="$TMPDIR/loop-count"
+        events="$TMPDIR/loop-events"
+        : >"$count"
+        : >"$events"
+        export LOOP_COUNT="$count" LOOP_EVENTS="$events"
+        cat >"$TMPDIR/loop-cycle.sh" <<'EOF'
+#!/bin/sh
+# Quoted heredoc: nothing expands at creation; the stub reads LOOP_COUNT
+# and LOOP_EVENTS from its environment at run time.
+echo run >>"$LOOP_COUNT"
+if [ "$(wc -l <"$LOOP_COUNT")" -eq 2 ]; then
+  echo failed >>"$LOOP_EVENTS"
+  exit 3
+fi
+echo ok >>"$LOOP_EVENTS"
+exit 0
+EOF
+        chmod +x "$TMPDIR/loop-cycle.sh"
+        log="$TMPDIR/loop.log"
+        DASHBOARD_INTERVAL=0 DASHBOARD_MAX_CYCLES=3 CYCLE_CMD="$TMPDIR/loop-cycle.sh" \
+          bash deploy/loop.sh >"$log" 2>&1
+        [[ $(wc -l <"$count") -eq 3 ]] || {
+          echo "loop ran $(wc -l <"$count"), want 3" >&2
+          exit 1
+        }
+        [[ $(cat "$events") == $'ok\nfailed\nok' ]] || {
+          echo "bad run order" >&2
+          exit 1
+        }
+        [[ $(grep -c 'cycle failed' "$log") -eq 1 ]] || {
+          echo "want one failure line" >&2
+          exit 1
+        }
+        DASHBOARD_INTERVAL=600 DASHBOARD_MAX_CYCLES=1000000 CYCLE_CMD=true \
+          bash deploy/loop.sh >"$TMPDIR/loop-term.log" 2>&1 &
+        loop_pid=$!
+        sleep 2
+        ( sleep 30; kill -KILL "$loop_pid" 2>/dev/null ) &
+        watchdog_pid=$!
+        kill -TERM "$loop_pid"
+        start=$SECONDS
+        code=0
+        wait "$loop_pid" || code=$?
+        elapsed=$((SECONDS - start))
+        kill "$watchdog_pid" 2>/dev/null || true
+        wait "$watchdog_pid" 2>/dev/null || true
+        [[ $code -eq 0 ]] || {
+          echo "loop exit $code after TERM, want 0" >&2
+          exit 1
+        }
+        [[ $elapsed -lt 30 ]] || {
+          echo "loop took ''${elapsed}s after TERM" >&2
+          exit 1
+        }
+        echo "loop runtime ok"
       '';
     };
 
@@ -391,8 +547,8 @@ in
   syntax = mkCheck "syntax" scripts.syntax;
   secrets-gate = mkCheck "secrets-gate" scripts.secrets-gate;
   publish-gate = mkCheck "publish-gate" scripts.publish-gate;
-  systemd-check = mkCheck "systemd-check" scripts.systemd-check;
   site-check = mkCheck "site-check" scripts.site-check;
+  loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
   image-source-shape = image-source-shape;
 
   inherit apps;

@@ -28,8 +28,8 @@ jobs:
           .#checks.x86_64-linux.syntax
           .#checks.x86_64-linux.secrets-gate
           .#checks.x86_64-linux.publish-gate
-          .#checks.x86_64-linux.systemd-check
           .#checks.x86_64-linux.site-check
+          .#checks.x86_64-linux.loop-runtime
           .#checks.x86_64-linux.image-source-shape
           .#devShells.x86_64-linux.default.inputDerivation
 
@@ -98,21 +98,6 @@ jobs:
       - name: Test publish gate
         run: nix run --quiet .#publish-gate
 
-  systemd:
-    name: CI systemd
-    needs: build-gate
-    runs-on: nixos
-    steps:
-      - uses: actions/checkout@v6
-      - uses: cachix/cachix-action@v17
-        with:
-          name: paolino
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      - name: Verify units
-        run: nix run --quiet .#systemd-check
-      - name: systemd-analyze verify (host, outside the sandbox)
-        run: systemd-analyze verify systemd/moog-antithesis-dashboard.service
-
   site:
     name: CI site
     needs: build-gate
@@ -143,6 +128,8 @@ jobs:
       # in GHCR so the collector host pulls without a credential.
       - name: Check the image is clean
         run: nix run --quiet .#image-clean
+      - name: Smoke test the collector image
+        run: nix run --quiet .#container-smoke
       - name: Build collector image
         run: nix run --quiet .#image-publish
       - name: Publish collector image

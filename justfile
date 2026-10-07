@@ -13,7 +13,7 @@ format-check:
     nix run --quiet .#format-check
 
 format:
-    shfmt -i 4 -w collect/collect.sh deploy/cycle.sh deploy/publish.sh
+    shfmt -i 4 -w collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh
 
 syntax:
     nix run --quiet .#syntax
@@ -30,11 +30,11 @@ preview-smoke:
 preview-verify url:
     nix run --quiet .#preview-verify -- "{{url}}"
 
-systemd-check:
-    nix run --quiet .#systemd-check
-
 site-check:
     nix run --quiet .#site-check
+
+loop-runtime:
+    nix run --quiet .#loop-runtime
 
 image-clean:
     nix run --quiet .#image-clean

@@ -13,7 +13,7 @@ set -euo pipefail
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 CACHE=${DASHBOARD_CACHE:-$HOME/.cache/moog-antithesis-dashboard}
 OUT_DIR=${DASHBOARD_OUT:-$CACHE/out}
-ANTI_KEY_FILE=${ANTITHESIS_API_KEY_FILE:-$HOME/.secrets/antithesis-api-key}
+ANTI_KEY_FILE=${ANTITHESIS_API_KEY_FILE:-/run/secrets/antithesis-key}
 SECRETS_DIR=${DASHBOARD_SECRETS_DIR:-/run/secrets}
 MOOG_ENV_FILE=${MOOG_READ_ENV_FILE:-/run/secrets/moog-read-env}
 PAGES_PUSH_TOKEN_FILE=${PAGES_PUSH_TOKEN_FILE:-/run/secrets/pages-push}
