@@ -31,7 +31,7 @@ flowchart LR
     subgraph collect [collect/collect.sh]
         A[Antithesis API] --> J[data.json]
         B[moog facts + token] --> J
-        C[oracle status: live since #11 slice 1; agent: error until slice 2] --> J
+        C[oracle + agent status: live since #11] --> J
         D[proxy readyz] --> J
         E[freshness monitor: error until #12] --> J
         F[nightly runs + receipts] --> J
@@ -43,11 +43,11 @@ flowchart LR
 
 1. `collect/collect.sh` fetches seven independent sources into one
    `data.json`: Antithesis runs and their properties, on-chain test-run
-   facts and pending requests, oracle status (live, via its status issue)
-   and agent status (interim: `error`, see below), proxy readiness, the freshness monitor verdict (interim:
+   facts and pending requests, oracle and agent status (live, via their
+   status issues), proxy readiness, the freshness monitor verdict (interim:
    `error`), and nightly Amaru integration runs with their receipts. It
    also writes one detail file per run (`runs/<run_id>.json`), status
-   payloads (`status/<reporter>.json`, once the reporters exist), and the
+   payloads (`status/<reporter>.json`), and the
    shared `property-descriptions.json`.
 2. `deploy/publish.sh` runs a secrets gate and force-pushes `site/` plus
    `data.json` and the detail files as a single orphan commit to `gh-pages`
@@ -97,20 +97,34 @@ A dry `docker run --rm <image> env` shows no credential.
 - Property descriptions repeat verbatim across runs, so they publish once in
   `property-descriptions.json` instead of inside every detail file.
 
-## Status reporter (oracle)
+## Status reporters (oracle and agent)
 
-One tiny container runs on the oracle host and edits one status issue on
-this repository every 5 minutes. It lists containers through the Docker
-socket with curl, keeps names matching `moog` (name, image without the
-registry prefix, status), and PATCHes `{role, containers, reported_at}`
-(UTC, ISO 8601) as the issue body over HTTPS. The token lives in a file
-and reaches curl through its stdin config, never argv; on failure the old
-body stays and the reporter logs one line and retries. The agent reporter
-lands in slice 2; until then the agent card shows the interim error.
+One tiny container runs on each of the oracle and agent hosts and edits
+one status issue on this repository every 5 minutes. It lists containers
+through the Docker socket with curl, keeps names matching `moog` (name,
+image without the registry prefix, status), and PATCHes the payload as the
+issue body over HTTPS. The oracle sends `{role, containers, reported_at}`
+(UTC, ISO 8601); the agent adds `errors_6h` and `published_24h`. The token
+lives in a file and reaches curl through its stdin config, never argv; on
+failure the old body stays and the reporter logs one line and retries.
+
+On the agent, the two counts come from the first container whose name
+matches `moog-agent`, read through `GET /containers/<id>/logs` over the
+same socket: lines matching `exception|error` (case-insensitive) over the
+last 6 hours, and lines matching `Published result` over the last 24
+hours. The log stream is demultiplexed in memory and counted line by
+line; no raw log ever leaves the host — only the two integers travel in
+the payload. If no moog-agent container exists or the logs call fails,
+the reporter exits non-zero and the previous body stays.
+
+A host clock more than 15 minutes behind shows stale even while reporting:
+`last_success` is the payload's `reported_at`, and anything older than 15
+minutes counts as failed. (More than 2 minutes ahead is refused outright.)
+Keep host clocks in sync.
 
 ```sh
-# On the oracle host: check the payload without sending anything.
-REPORTER_ROLE=oracle REPORT_DRY_RUN=1 ./reporter/report.sh
+# On either host: check the payload without sending anything.
+REPORTER_ROLE=agent REPORT_DRY_RUN=1 ./reporter/report.sh
 # Collector side: check what would publish without pushing or needing a token.
 DASHBOARD_DRY_RUN=1 ./deploy/publish.sh
 ```
@@ -129,12 +143,10 @@ gh-pages).
 
 ## Interim state
 
-The agent (`agent`) and freshness-monitor (`monitor`) sources show
-`error`: their push reporters land in #11 slice 2 and #12. The oracle
-source is live since slice 1. Until the remaining reporters land, the
-collector has no ssh client and no journal access by design, so there is
-nothing to read those sources with — and the page says `error` rather
-than guessing. Nothing else is affected.
+The freshness-monitor (`monitor`) source shows `error`: its push reporter
+lands in #12. Until then the collector has no journal access by design,
+so there is nothing to read that source with — and the page says `error`
+rather than guessing. Nothing else is affected.
 
 ## What never leaves the collector
 

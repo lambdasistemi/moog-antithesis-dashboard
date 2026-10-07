@@ -9,9 +9,9 @@
 # Secrets arrive as files: the Antithesis key, the GitHub read token and the
 # moog read environment are read from /run/secrets and never appear in argv.
 # Report URLs (they carry auth tokens) are dropped before publication.
-# The oracle source reads its status issue (#11 slice 1); the agent source
-# stays an interim stub until slice 2 and the monitor until #12, reporting
-# error so the page shows `error` instead of silently serving stale numbers.
+# The oracle and agent sources read their status issues (#11); the monitor
+# stays an interim stub until #12, reporting error so the page shows
+# `error` instead of silently serving stale numbers.
 # The container carries no ssh client and no journal access.
 set -uo pipefail
 
@@ -30,9 +30,10 @@ NIGHTLY_LIMIT=14
 STATUS_REPOSITORY=${STATUS_REPOSITORY:-lambdasistemi/moog-antithesis-dashboard}
 STATUS_ISSUE_ORACLE=${STATUS_ISSUE_ORACLE:-}
 STATUS_ISSUE_AGENT=${STATUS_ISSUE_AGENT:-}
-# Test seam for checks only: when set, the oracle reader runs this command
-# to obtain the issue body instead of calling the GitHub API. Production
-# leaves it unset and uses gh_auth. Nothing else uses it.
+# Test seams for checks only: STATUS_BODY_CMD_ORACLE (else legacy
+# STATUS_BODY_CMD) and STATUS_BODY_CMD_AGENT supply the issue bodies instead
+# of calling the GitHub API. Production leaves them unset and uses gh_auth.
+# Nothing else uses them.
 
 mkdir -p "$CACHE"/{props,details,nightly,last} "$OUT_DIR" "$OUT_DIR/runs"
 WORK=$(mktemp -d)
@@ -181,33 +182,37 @@ src_token() {
     ) | jq '{ pending_requests: (.requests | length) }'
 }
 
-# Oracle status from its GitHub issue (#11 slice 1). One strict jq schema:
-# known keys only (role, containers, reported_at), types, every string at
-# most 200 characters, at most 50 containers, reported_at UTC ISO 8601 and
-# not more than 2 minutes in the future. Unknown keys are dropped; missing
-# keys or wrong types fail. A payload older than 15 minutes fails as stale
-# so the last good value is served. Error messages never include body text.
-# Fetch seam: STATUS_BODY_CMD supplies the body in checks; production uses
-# gh_auth and nothing else uses the seam.
+# Oracle and agent status from their GitHub issues (#11). One shared strict
+# jq schema: known keys only (role, containers, reported_at, plus errors_6h
+# and published_24h for the agent), types, every string at most 200
+# characters, at most 50 containers, reported_at UTC ISO 8601 and not more
+# than 2 minutes in the future. Counts are non-negative integers. Unknown
+# keys are dropped; missing keys or wrong types fail. A payload older than
+# 15 minutes fails as stale so the last good value is served. Error
+# messages never include body text.
+# Fetch seams for checks only: STATUS_BODY_CMD_ORACLE (else legacy
+# STATUS_BODY_CMD) and STATUS_BODY_CMD_AGENT supply the issue body instead
+# of calling the GitHub API. Production leaves them unset and uses gh_auth;
+# nothing else uses them.
 status_body_default() {
-    local issue=$1
+    local source=$1 issue=$2
     [[ -n $issue ]] || {
-        echo "oracle status: no issue number" >&2
+        echo "$source status: no issue number" >&2
         return 1
     }
     [[ -r $GH_READ_TOKEN_FILE ]] || {
-        echo "oracle status: no GitHub read token file" >&2
+        echo "$source status: no GitHub read token file" >&2
         return 1
     }
     gh_auth api "repos/$STATUS_REPOSITORY/issues/$issue" --jq .body
 }
 
-validate_oracle_payload() {
-    local now_epoch=$1
-    jq -e --argjson now "$now_epoch" '
+validate_status_payload() {
+    local role=$1 now_epoch=$2
+    jq -e --arg role "$role" --argjson now "$now_epoch" '
         if type != "object" then error("bad")
         elif (has("role") and has("containers") and has("reported_at") | not) then error("bad")
-        elif (.role | type) != "string" or .role != "oracle" or (.role | length) > 200 then error("bad")
+        elif (.role | type) != "string" or .role != $role or (.role | length) > 200 then error("bad")
         elif (.containers | type) != "array" or (.containers | length) > 50 then error("bad")
         elif (.reported_at | type) != "string" or (.reported_at | length) > 200 then error("bad")
         elif (.reported_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") | not) then error("bad")
@@ -215,47 +220,53 @@ validate_oracle_payload() {
             or (has("name") and has("image") and has("status") | not)
             or (.name | type) != "string" or (.image | type) != "string" or (.status | type) != "string"
             or (.name | length) > 200 or (.image | length) > 200 or (.status | length) > 200)] | length) > 0 then error("bad")
+        elif $role == "agent" and ((has("errors_6h") and has("published_24h") | not)
+            or (.errors_6h | type) != "number" or (.published_24h | type) != "number"
+            or .errors_6h < 0 or .published_24h < 0
+            or (.errors_6h | floor) != .errors_6h or (.published_24h | floor) != .published_24h) then error("bad")
         else
             (.reported_at | fromdateiso8601) as $rep
             | if $rep > ($now + 120) then error("bad")
+              elif $role == "agent" then {role, containers: [.containers[] | {name, image, status}], errors_6h, published_24h, reported_at}
               else {role, containers: [.containers[] | {name, image, status}], reported_at}
               end
         end
     '
 }
 
-src_oracle() {
+fetch_status() {
+    local source=$1 issue=$2 role=$3 seam_cmd=$4
     local body cleaned now_epoch rep_epoch
-    if [[ -n ${STATUS_BODY_CMD:-} ]]; then
-        body=$(bash -c "$STATUS_BODY_CMD") || {
-            echo "oracle status: fetch failed" >&2
+    if [[ -n $seam_cmd ]]; then
+        body=$(bash -c "$seam_cmd") || {
+            echo "$source status: fetch failed" >&2
             return 1
         }
     else
-        body=$(status_body_default "$STATUS_ISSUE_ORACLE") || return 1
+        body=$(status_body_default "$source" "$issue") || return 1
     fi
     now_epoch=$(date -u +%s)
-    cleaned=$(printf "%s" "$body" | validate_oracle_payload "$now_epoch" 2>/dev/null) || {
-        echo "oracle status: invalid payload" >&2
+    cleaned=$(printf "%s" "$body" | validate_status_payload "$role" "$now_epoch" 2>/dev/null) || {
+        echo "$source status: invalid payload" >&2
         return 1
     }
     rep_epoch=$(jq -r '.reported_at | fromdateiso8601' <<<"$cleaned") || {
-        echo "oracle status: invalid payload" >&2
+        echo "$source status: invalid payload" >&2
         return 1
     }
     if [[ $rep_epoch -lt $((now_epoch - 900)) ]]; then
-        echo "oracle status: stale payload" >&2
+        echo "$source status: stale payload" >&2
         return 1
     fi
     printf "%s\n" "$cleaned"
 }
 
-# Interim until slice 2: the agent reporter does not exist yet, so this
-# source fails and the page shows `error` instead of silently serving
-# stale numbers.
+src_oracle() {
+    fetch_status oracle "$STATUS_ISSUE_ORACLE" oracle "${STATUS_BODY_CMD_ORACLE:-${STATUS_BODY_CMD:-}}"
+}
+
 src_agent() {
-    echo "agent reporter not yet available (see #11 slice 2)" >&2
-    return 1
+    fetch_status agent "$STATUS_ISSUE_AGENT" agent "${STATUS_BODY_CMD_AGENT:-}"
 }
 
 src_proxy() {
@@ -395,12 +406,14 @@ for s in runs chain token oracle agent proxy monitor nightly; do
 done
 
 # data.json.hosts keeps today's shape, assembled from each side's last good.
-# Slice 1: oracle is real, agent stays interim (empty list, null counts)
-# until slice 2. WORK/oracle.json holds the last good payload (or null);
-# WORK/agent.json is null while the source fails.
+# WORK/oracle.json and WORK/agent.json hold the last good payloads (or null).
 jq -n --slurpfile oracle "$WORK/oracle.json" --slurpfile agent "$WORK/agent.json" '
     ($oracle[0] | try .containers catch [] // []) as $oc
-    | {oracle: ($oc // []), agent: [], agent_errors_6h: null, agent_published_24h: null}
+    | ($agent[0] | if type == "object"
+        then {c: (.containers // []), e: .errors_6h, p: .published_24h}
+        else {c: [], e: null, p: null} end) as $a
+    | {oracle: ($oc // []), agent: ($a.c // []),
+       agent_errors_6h: $a.e, agent_published_24h: $a.p}
 ' >"$WORK/hosts.json"
 
 # Attach property summaries to runs.
