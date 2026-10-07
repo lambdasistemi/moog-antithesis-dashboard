@@ -83,6 +83,79 @@ let
       '';
     };
 
+    image-clean = {
+      runtimeInputs = [ pkgs.docker pkgs.gnutar pkgs.gnugrep pkgs.coreutils pkgs.bash ];
+      text = ''
+        # The collector image must carry no secret: build it, export its
+        # filesystem and grep for key/token/bearer shapes, then check that a
+        # dry run exposes no credential-shaped variable. Only match counts
+        # and file paths are reported, never matched values.
+        #
+        # Scoping, measured 2026-10-07 against the pinned base plus our
+        # packages: `v2.public`, `github_pat_` and the canary occur nowhere
+        # benign, so they are scanned across the whole exported filesystem.
+        # `Bearer `, `auth=` and `ghp_` occur in tool help text and binaries
+        # (curl, gh, libcurl) outside our control, so they are scanned only
+        # under /app -- the sole paths we add -- where every occurrence must
+        # be a gate definition (mirroring the secrets-gate scope).
+        #
+        # The ARG/ENV ban lives in the image-source-shape check, not here.
+        set -euo pipefail
+        tag="moog-collector:image-clean"
+        canary="''${IMAGE_CLEAN_CANARY:-}"
+        docker build -q -t "$tag" .
+        cid=$(docker create "$tag")
+        work=$(mktemp -d)
+        cleanup() {
+          docker rm -f "$cid" >/dev/null
+          rm -rf "$work"
+        }
+        trap cleanup EXIT
+        fail=0
+        docker export "$cid" | tar -x -C "$work"
+        leak_paths=$(grep -a -r -l -E -e 'v2\.public' -e 'github_pat_' "$work" || true)
+        if [[ -n "$leak_paths" ]]; then
+          echo "image-clean: key-shaped strings in these image paths:" >&2
+          printf '%s\n' "$leak_paths" >&2
+          fail=1
+        fi
+        if [[ -n "$canary" ]]; then
+          canary_paths=$(grep -a -r -l -F -e "$canary" "$work" || true)
+          if [[ -n "$canary_paths" ]]; then
+            echo "image-clean: canary found in these image paths:" >&2
+            printf '%s\n' "$canary_paths" >&2
+            fail=1
+          fi
+        fi
+        app_files=$(grep -a -r -l -E -e 'Bearer ' -e 'auth=' -e 'ghp_' "$work/app" || true)
+        if [[ -n "$app_files" ]]; then
+          while IFS= read -r f; do
+            rest=$(grep -a -E -e 'Bearer ' -e 'auth=' -e 'ghp_' "$f" | grep -v -c -F \
+              -e 'auth=|v2\.public|Bearer |Authorization|-u [^ ]+:[^ ]+|password' \
+              -e 'Authorization: Bearer %s' || true)
+            if [[ "$rest" -ne 0 ]]; then
+              echo "image-clean: unexpected key-shaped line(s) under /app in ''${f#"$work"/}" >&2
+              fail=1
+            fi
+          done <<< "$app_files"
+        fi
+        env_out=$(docker run --rm "$tag" env)
+        env_hits=$(printf '%s\n' "$env_out" | grep -E -c -e '^(.*_)?(KEY|TOKEN|SECRET|PASSWORD|BEARER)(_.*)?=[^[:space:]]' -e 'ghp_' -e 'github_pat_' -e 'Bearer ' -e 'v2\.public' -e 'auth=' || true)
+        if [[ "$env_hits" -ne 0 ]]; then
+          echo "image-clean: credential-shaped variable in 'docker run env'" >&2
+          fail=1
+        fi
+        if [[ -n "$canary" ]] && printf '%s\n' "$env_out" | grep -q -F -e "$canary"; then
+          echo "image-clean: canary found in 'docker run env'" >&2
+          fail=1
+        fi
+        if [[ "$fail" -ne 0 ]]; then
+          exit 1
+        fi
+        echo "image clean ok"
+      '';
+    };
+
     site-check = {
       runtimeInputs = [ pkgs.python3 pkgs.nodejs ];
       text = ''
@@ -148,6 +221,60 @@ print('site ok')
     '';
 
   apps = builtins.mapAttrs mkApp scripts;
+
+  # The image-clean app needs the docker daemon, which the nix build users
+  # cannot reach, so it cannot run as a sandboxed check. This check pins the
+  # static source shape (Dockerfile hygiene, CI publish shape) while the app
+  # performs the build, export and env scan. The gate runs both. The ARG/ENV
+  # ban lives here, not in the app.
+  image-source-shape = pkgs.runCommand "image-source-shape" {
+    nativeBuildInputs = [ pkgs.glibcLocales ];
+    LANG = "C.UTF-8";
+    LC_ALL = "C.UTF-8";
+  } ''
+    set -euo pipefail
+    cd ${src}
+    [[ -f Dockerfile ]] || { echo "image-source-shape: Dockerfile missing" >&2; exit 1; }
+    if grep -E '^ADD[[:space:]]' Dockerfile; then
+      echo "image-source-shape: Dockerfile must not use ADD" >&2
+      exit 1
+    fi
+    if grep -E '^(ARG|ENV)[[:space:]]' Dockerfile; then
+      echo "image-source-shape: Dockerfile must not use ARG or ENV" >&2
+      exit 1
+    fi
+    [[ $(grep -cE '^COPY[[:space:]]' Dockerfile) -eq 3 ]] || {
+      echo "image-source-shape: Dockerfile must copy exactly three sources" >&2
+      exit 1
+    }
+    for dir in collect deploy site; do
+      grep -qE "^COPY[[:space:]]+$dir[[:space:]]" Dockerfile || {
+        echo "image-source-shape: Dockerfile does not copy $dir" >&2
+        exit 1
+      }
+    done
+    grep -q 'ghcr.io/' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not publish to GHCR" >&2
+      exit 1
+    }
+    grep -q 'packages: write' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI lacks packages: write" >&2
+      exit 1
+    }
+    grep -q 'github.token' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not authenticate with GITHUB_TOKEN" >&2
+      exit 1
+    }
+    grep -q 'github.sha' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not tag the commit SHA" >&2
+      exit 1
+    }
+    grep -q ':main' .github/workflows/ci.yml || {
+      echo "image-source-shape: CI does not tag main" >&2
+      exit 1
+    }
+    touch $out
+  '';
 in
 {
   shellcheck = mkCheck "shellcheck" scripts.shellcheck;
@@ -157,6 +284,7 @@ in
   publish-gate = mkCheck "publish-gate" scripts.publish-gate;
   systemd-check = mkCheck "systemd-check" scripts.systemd-check;
   site-check = mkCheck "site-check" scripts.site-check;
+  image-source-shape = image-source-shape;
 
   inherit apps;
 }

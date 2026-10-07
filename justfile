@@ -35,3 +35,6 @@ systemd-check:
 
 site-check:
     nix run --quiet .#site-check
+
+image-clean:
+    nix run --quiet .#image-clean

@@ -30,6 +30,7 @@ jobs:
           .#checks.x86_64-linux.publish-gate
           .#checks.x86_64-linux.systemd-check
           .#checks.x86_64-linux.site-check
+          .#checks.x86_64-linux.image-source-shape
           .#devShells.x86_64-linux.default.inputDerivation
 
   shellcheck:
@@ -124,6 +125,39 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Check site
         run: nix run --quiet .#site-check
+
+  image:
+    name: CI collector image
+    needs: build-gate
+    runs-on: nixos
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      # No cachix here on purpose: the publish path below authenticates to
+      # GHCR with GITHUB_TOKEN only.
+      # One-time setup, outside this file: flip the pushed package to public
+      # in GHCR so the collector host pulls without a credential.
+      - name: Check the image is clean
+        run: nix run --quiet .#image-clean
+      - name: Build collector image
+        run: >-
+          docker build
+          -t ghcr.io/${{ github.repository }}:${{ github.sha }}
+          -t ghcr.io/${{ github.repository }}:main
+          .
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTOR: ${{ github.actor }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+      - name: Push collector image
+        if: github.event_name == 'push'
+        run: |
+          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}:main
 
   pr-preview:
     name: CI PR preview
