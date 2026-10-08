@@ -115,7 +115,9 @@ jobs:
 
   reproduce-evidence:
     name: CI reproduce evidence
-    needs: build-gate
+    # Serialized after the image job: both run docker-heavy smokes and
+    # overlap on one runner caused docker contention failures (run 37798697946).
+    needs: [image]
     runs-on: nixos
     steps:
       - uses: actions/checkout@v6
