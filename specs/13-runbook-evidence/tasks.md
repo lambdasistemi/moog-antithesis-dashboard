@@ -1,6 +1,6 @@
 # Tasks
 ## runbook-and-evidence
-- [ ] reproduce-script-break-red-restore
-- [ ] compare-live-dry-run-tool
-- [ ] operator-runbook-tokens-and-checklist
-- [ ] docs-rejected-alternatives-complete
+- [x] reproduce-script-break-red-restore
+- [x] compare-live-dry-run-tool
+- [x] operator-runbook-tokens-and-checklist
+- [x] docs-rejected-alternatives-complete
