@@ -12,7 +12,7 @@
 set -euo pipefail
 
 TMPDIR="${TMPDIR:-/tmp}"
-OUT=""
+OUT="${REPRODUCE_OUT:-}"
 LIST=0
 while [[ $# -gt 0 ]]; do
     case $1 in

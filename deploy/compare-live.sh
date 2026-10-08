@@ -106,7 +106,14 @@ for side in oracle agent; do
     fi
 done
 
-# Field-by-field value report over the stripped snapshots.
+# Field-by-field value report over the stripped snapshots. Lists that grow
+# and shift between snapshots (runs newest-first, chain.recent by slot,
+# nightly bounded) are aligned by identity before comparing, so a new entry
+# yields one named line per side instead of index-by-index noise:
+#   runs[] by run_id; chain.recent[] by directory|commit|try (the stable
+#   on-chain identity: same test run, same attempt); nightly[] by databaseId
+#   (the stable GitHub Actions run id).
+# Scalar/object sections keep the field-by-field walk below.
 jq --slurpfile live "$WORK/live.json" --slurpfile local "$WORK/local.json" -n '
     def walk($a; $b; $p):
       if ($a | type) != ($b | type) then empty
@@ -118,7 +125,22 @@ jq --slurpfile live "$WORK/live.json" --slurpfile local "$WORK/local.json" -n '
           | walk($a[$i]; $b[$i]; ($p + "[" + ($i | tostring) + "]")))
       elif $a != $b then "\($p): live=\($a | tojson) local=\($b | tojson)"
       else empty end;
-    [walk($live[0]; $local[0]; "$")] | .[]
+    def keyed(arr; key): ((arr // []) | map({key: key, value: .}) | from_entries);
+    def aligned($a; $b; $p; key):
+      (keyed($a; key)) as $ma | (keyed($b; key)) as $mb
+      | ((($ma | keys) + ($mb | keys) | unique)[] | . as $k
+        | if ($ma | has($k) | not) then "only in local: \($p)[\($k)]"
+          elif ($mb | has($k) | not) then "only in live: \($p)[\($k)]"
+          else walk($ma[$k]; $mb[$k]; "\($p)[\($k)]")
+          end);
+    ($live[0] | del(.runs, .nightly) | (.chain |= (. // {} | del(.recent)))) as $la
+    | ($local[0] | del(.runs, .nightly) | (.chain |= (. // {} | del(.recent)))) as $lb
+    | ([walk($la; $lb; "$")]
+       + [aligned($live[0].runs; $local[0].runs; "$.runs"; (.run_id // "null"))]
+       + [aligned(($live[0].chain // {}).recent; ($local[0].chain // {}).recent;
+                   "$.chain.recent"; "\(.directory)|\(.commit)|\(.try)")]
+       + [aligned($live[0].nightly; $local[0].nightly; "$.nightly"; ((.databaseId // "null") | tostring))]
+       | .[])
   ' >"$WORK/diffs.txt"
 if [[ -s $WORK/diffs.txt ]]; then
     printf 'value differences (stripped snapshots):\n'
