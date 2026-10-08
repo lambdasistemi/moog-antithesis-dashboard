@@ -17,11 +17,12 @@ hands-on companion: tokens, hosts, cutover, recovery.
 | Antithesis API key (`antithesis-key`) | Antithesis tenant admin | read key for the tenant | tenant admin, per tenant policy | `runs` goes stale; every other source is unaffected |
 | Moog read environment (`moog-read-env`) | moog operator: provider URL plus read-only settings only, never wallet paths | read-only view of the moog setup | moog operator, on rotation of the provider setup | `chain` and `token` fail; everything else is unaffected |
 
-Open question for the operator to verify (not asserted here): do read-only
-`moog facts test-runs` and `moog token` work with the read-only moog env
-file alone, without the wallet paths the old setup sourced? Confirm on the
-collector host before cutover; if not, extend the read env minimally and
-re-run `deploy/compare-live.sh`.
+Verified on the collector host (2026-10-08): read-only `moog facts
+test-runs` and `moog token` both work with the read env alone — no wallet
+paths, no `being_*` identity, isolated HOME. The env file needs exactly
+three settings: `MOOG_MPFS_HOST`, `MOOG_TOKEN_ID`, and (only `moog token`
+reads it) `MOOG_GITHUB_PAT`. Evidence: `facts test-runs --whose cfhal`
+exit 0 with 1486 facts; `token` exit 0 with the pending-request list.
 
 ## Action checklist (current state)
 
