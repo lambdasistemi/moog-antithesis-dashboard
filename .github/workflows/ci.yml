@@ -28,8 +28,12 @@ jobs:
           .#checks.x86_64-linux.syntax
           .#checks.x86_64-linux.secrets-gate
           .#checks.x86_64-linux.publish-gate
-          .#checks.x86_64-linux.systemd-check
           .#checks.x86_64-linux.site-check
+          .#checks.x86_64-linux.loop-runtime
+          .#checks.x86_64-linux.schema-reject
+          .#checks.x86_64-linux.host-stale
+          .#checks.x86_64-linux.props-summary
+          .#checks.x86_64-linux.image-source-shape
           .#devShells.x86_64-linux.default.inputDerivation
 
   shellcheck:
@@ -97,21 +101,6 @@ jobs:
       - name: Test publish gate
         run: nix run --quiet .#publish-gate
 
-  systemd:
-    name: CI systemd
-    needs: build-gate
-    runs-on: nixos
-    steps:
-      - uses: actions/checkout@v6
-      - uses: cachix/cachix-action@v17
-        with:
-          name: paolino
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-      - name: Verify units
-        run: nix run --quiet .#systemd-check
-      - name: systemd-analyze verify (host, outside the sandbox)
-        run: systemd-analyze verify systemd/moog-antithesis-dashboard.service
-
   site:
     name: CI site
     needs: build-gate
@@ -124,6 +113,76 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Check site
         run: nix run --quiet .#site-check
+
+  props-summary:
+    name: CI props summary
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check property summaries
+        run: nix run --quiet .#props-summary
+
+  reproduce-evidence:
+    name: CI reproduce evidence
+    # Serialized after the image job: both run docker-heavy smokes and
+    # overlap on one runner caused docker contention failures (run 37798697946).
+    needs: [image]
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Run reproduction evidence
+        run: nix run --quiet .#reproduce
+
+  image:
+    name: CI collector image
+    needs: build-gate
+    runs-on: nixos
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+      # No cachix here on purpose: every docker call below runs through the
+      # flake's pinned docker client, and the publish step authenticates to
+      # GHCR with GITHUB_TOKEN only. GITHUB_REPOSITORY and GITHUB_SHA come
+      # from the runner's default environment.
+      # One-time setup, outside this file: flip the pushed package to public
+      # in GHCR so the collector host pulls without a credential.
+      - name: Check the image is clean
+        run: nix run --quiet .#image-clean
+      - name: Smoke test the collector image
+        run: nix run --quiet .#container-smoke
+      - name: Smoke test the reporter image
+        run: nix run --quiet .#reporter-smoke
+      - name: Smoke test the verdict push step
+        run: nix run --quiet .#push-verdict-smoke
+      - name: Build collector image
+        run: nix run --quiet .#image-publish
+      - name: Publish collector image
+        if: github.event_name == 'push'
+        env:
+          PUBLISH: '1'
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTOR: ${{ github.actor }}
+        run: nix run --quiet .#image-publish
+      - name: Build reporter image
+        run: nix run --quiet .#reporter-publish
+      - name: Publish reporter image
+        if: github.event_name == 'push'
+        env:
+          PUBLISH: '1'
+          GH_TOKEN: ${{ github.token }}
+          GH_ACTOR: ${{ github.actor }}
+        run: nix run --quiet .#reporter-publish
 
   pr-preview:
     name: CI PR preview

@@ -1,0 +1,4 @@
+# Plan (one vertical slice)
+1. runbook-and-evidence: `verify/reproduce.sh` as the `reproduce` nix app (green matrix, break/red/restore matrix with recorded exits, clean-tree guards, bounded waits); `deploy/compare-live.sh` (dry-run collector vs the live page, named volatile-field ignore list); `docs/runbook.md` (token inventory, operator action checklist, recovery, tool usage); the rejected-alternatives paragraph completed; a dedicated CI job runs `nix run .#reproduce` isolated from the Build Gate steps so in-place breaks cannot affect them.
+
+Constraints: reproduce and compare-live make no outward write and need no real secrets beyond what the operator mounts for compare-live; every docker step bounded (timeout 30, build 120) with cleanup; breaks restore through git and are verified clean after each; the working gate never depends on uncommitted files.
