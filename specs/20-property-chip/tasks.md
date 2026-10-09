@@ -1,6 +1,6 @@
 # Tasks
 ## property-chip-every-node
-- [ ] count-group-nodes-in-props-summary
-- [ ] skip-caching-empty-summaries
-- [ ] props-summary-fixture-check
-- [ ] docs-chip-semantics
+- [x] count-group-nodes-in-props-summary
+- [x] skip-caching-empty-summaries
+- [x] props-summary-fixture-check
+- [x] docs-chip-semantics
