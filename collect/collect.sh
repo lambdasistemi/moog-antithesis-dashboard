@@ -104,7 +104,7 @@ src_runs() {
 # Property summary of one run; cached forever once the run is completed.
 props_for() {
     local rid=$1 status=$2
-    local cached="$CACHE/props/$rid.json"
+    local cached="$CACHE/props/v2-$rid.json"
     if [[ -s $cached ]]; then
         cat "$cached"
         return 0
@@ -113,16 +113,19 @@ props_for() {
         echo null
         return 0
     }
-    local summary
+    local summary total
     summary=$(anti_get "runs/$rid/properties" | jq -c '
-      [.data[] | select(.is_group | not)] as $p
+      [.data[]] as $p
       | { total: ($p | length),
           passing: ([$p[] | select(.status == "Passing")] | length),
           failing: [$p[] | select(.status != "Passing") | .name] }') || {
         echo null
         return 0
     }
-    [[ $status == completed ]] && printf '%s\n' "$summary" >"$cached"
+    total=$(jq -r .total <<<"$summary")
+    if [[ $status == completed && $total -gt 0 ]]; then
+        printf '%s\n' "$summary" >"$cached"
+    fi
     printf '%s\n' "$summary"
 }
 

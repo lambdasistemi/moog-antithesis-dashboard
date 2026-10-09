@@ -38,7 +38,7 @@ HERE=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 cd "$HERE"
 
-MATRIX=(reporter-smoke push-verdict-smoke schema-reject host-stale publish-gate site-check loop-runtime container-smoke image-clean secrets-gate)
+MATRIX=(reporter-smoke push-verdict-smoke schema-reject host-stale publish-gate site-check loop-runtime container-smoke image-clean secrets-gate props-summary)
 
 if [[ $LIST -eq 1 ]]; then
     for name in "${MATRIX[@]}"; do
@@ -266,6 +266,19 @@ row_secrets_gate() {
     restore_files README.md || return 1
     green_check secrets-gate 300 restore-green || return 1
     log "secrets-gate | nix run --quiet .#secrets-gate | green-exit=0 | break=password-planted-in-readme red-exit=$red red='match found' | restore=git-checkout-clean | green-exit=0"
+}
+
+row_props_summary() {
+    ROW=props-summary
+    green_check props-summary 600 || return 1
+    apply_break collect/collect.sh '[.data[]]' '[.data[] | select(.is_group | not)]' || return 1
+    red=$(red_check props-summary 600 'props-summary: evidence total') || {
+        restore_files collect/collect.sh
+        return 1
+    }
+    restore_files collect/collect.sh || return 1
+    green_check props-summary 600 restore-green || return 1
+    log "props-summary | nix run --quiet .#props-summary | green-exit=0 | break=group-filter-readded red-exit=$red red='evidence total' | restore=git-checkout-clean | green-exit=0"
 }
 
 {

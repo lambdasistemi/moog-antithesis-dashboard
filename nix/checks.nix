@@ -1631,6 +1631,136 @@ DRIVER_EOF
         echo "host stale ok"
       '';
     };
+
+    props-summary = {
+      runtimeInputs = [ pkgs.bash pkgs.jq pkgs.curl pkgs.coreutils pkgs.gnugrep pkgs.gnused pkgs.findutils ];
+      text = ''
+        # The run property summary counts EVERY node in the properties
+        # response (groups included), exactly the population the per-run
+        # detail embeds — chip and detail cannot disagree. Fixture taxonomy
+        # mirrors the live API (failing/passing groups, plain and event
+        # leaves, one empty response). The evidence shape (39 groups: 31
+        # failing + 8 passing; 11 passing leaves) must read total=50,
+        # passing=19 with all 31 failing names. No docker, no network: a
+        # fake curl first on PATH dispatches the Antithesis endpoints to
+        # fixtures, so the real collect.sh (validator, caches, assembly,
+        # detail files) runs unmodified end to end.
+        set -euo pipefail
+        TMPDIR="''${TMPDIR:-/tmp}"
+        FIXDIR=$(mktemp -d -p "$TMPDIR")
+        mkdir -p "$FIXDIR/bin"
+        jq -n '{data: (
+          [range(30) | {name: ("Failing group " + tostring), status: "Failing", is_group: true, is_event: (. < 2)}]
+          + [{name: "Praos block diffusion p95 latency (100052.7ms) < 5000.0ms", status: "Failing", is_group: true, is_event: false}]
+          + [range(8) | {name: ("Passing group " + tostring), status: "Passing", is_group: true, is_event: (. < 2)}]
+          + [range(11) | {name: ("Plain leaf " + tostring), status: "Passing", is_group: false, is_event: (. < 2)}]
+        )}' >"$FIXDIR/props.json"
+        jq -n '{data: [{run_id: "RID-evidence-1", status: "completed", created_at: "2026-10-01T00:00:00Z", started_at: "2026-10-01T00:00:00Z", description: "{}", parameters: {"antithesis.test_name": "t", "antithesis.duration": "60"}}]}' >"$FIXDIR/runs-done.json"
+        jq -n '{data: [{run_id: "RID-progress-1", status: "in_progress", created_at: "2026-10-01T00:00:00Z", started_at: "2026-10-01T00:00:00Z", description: "{}", parameters: {"antithesis.test_name": "t", "antithesis.duration": "60"}}]}' >"$FIXDIR/runs-progress.json"
+        jq -n '{run_id: "RID-evidence-1", status: "completed", created_at: "2026-10-01T00:00:00Z", started_at: "2026-10-01T00:00:00Z", completed_at: "2026-10-01T03:00:00Z", description: "{}", parameters: {"antithesis.test_name": "t", "antithesis.duration": "60"}}' >"$FIXDIR/run-obj.json"
+        jq -n '{run_id: "RID-progress-1", status: "in_progress", created_at: "2026-10-01T00:00:00Z", started_at: "2026-10-01T00:00:00Z", description: "{}", parameters: {"antithesis.test_name": "t", "antithesis.duration": "60"}}' >"$FIXDIR/run-obj-progress.json"
+        printf '{"data": []}' >"$FIXDIR/props-empty.json"
+        cat >"$FIXDIR/bin/curl" <<'EOF'
+#!/bin/sh
+url=$(grep '^url = ' | ${pkgs.gnused}/bin/sed 's/^url = "//;s/"$//')
+case "$url" in
+  *"/properties") cat "$FIXTURE_PROPS" ;;
+  *"runs?limit="*) cat "$RUNS_FIX" ;;
+  *"/runs/"*) cat "$RUNOBJ_FIX" ;;
+  *) echo "fake curl: unknown url" >&2; exit 1 ;;
+esac
+EOF
+        chmod +x "$FIXDIR/bin/curl"
+        export PATH="$FIXDIR/bin:$PATH"
+        printf 'fixture-antithesis-key' >"$FIXDIR/fake.key"
+        export ANTITHESIS_API_KEY_FILE="$FIXDIR/fake.key"
+        collect_once() {
+          DASHBOARD_CACHE="$1" DASHBOARD_OUT="$1/out" PROXY_URL=http://127.0.0.1:9/ \
+            bash collect/collect.sh >"$1/collect.log" 2>&1 || true
+        }
+        want_total=50
+        want_passing=19
+        want_failing=31
+        # Scenario 1: evidence shape; a stale pre-fix cache file is ignored.
+        c1=$(mktemp -d -p "$TMPDIR")
+        mkdir -p "$c1/out" "$c1/props"
+        printf '{"total":11,"passing":11,"failing":[]}' >"$c1/props/RID-evidence-1.json"
+        export FIXTURE_PROPS="$FIXDIR/props.json" RUNS_FIX="$FIXDIR/runs-done.json" RUNOBJ_FIX="$FIXDIR/run-obj.json"
+        collect_once "$c1"
+        got=$(jq -r '.runs[0].properties.total' "$c1/out/data.json")
+        [[ $got == "$want_total" ]] || {
+          echo "props-summary: evidence total $got, want $want_total" >&2
+          exit 1
+        }
+        [[ $(jq -r '.runs[0].properties.passing' "$c1/out/data.json") == "$want_passing" ]] || {
+          echo "props-summary: evidence passing wrong" >&2
+          exit 1
+        }
+        [[ $(jq -r '.runs[0].properties.failing | length' "$c1/out/data.json") == "$want_failing" ]] || {
+          echo "props-summary: evidence failing count wrong" >&2
+          exit 1
+        }
+        jq -e '.runs[0].properties.failing | index("Praos block diffusion p95 latency (100052.7ms) < 5000.0ms")' \
+          "$c1/out/data.json" >/dev/null || {
+          echo "props-summary: failing group name missing" >&2
+          exit 1
+        }
+        [[ -s "$c1/props/v2-RID-evidence-1.json" ]] || {
+          echo "props-summary: new-namespace cache not written" >&2
+          exit 1
+        }
+        # Detail agreement: the embedded list shows the same numbers.
+        dtotal=$(jq '.properties | length' "$c1/out/runs/RID-evidence-1.json")
+        [[ $dtotal == "$want_total" ]] || {
+          echo "props-summary: detail total $dtotal, want $want_total" >&2
+          exit 1
+        }
+        dpass=$(jq '[.properties[] | select(.status == "Passing")] | length' "$c1/out/runs/RID-evidence-1.json")
+        [[ $dpass == "$want_passing" ]] || {
+          echo "props-summary: detail passing wrong" >&2
+          exit 1
+        }
+        jq --slurpfile summ <(jq '.runs[0].properties.failing' "$c1/out/data.json") -n -e \
+          --slurpfile det <(jq '[.properties[] | select(.status != "Passing") | .name]' "$c1/out/runs/RID-evidence-1.json") \
+          '$summ[0] - $det[0] | length == 0' >/dev/null || {
+          echo "props-summary: summary/detail failing names disagree" >&2
+          exit 1
+        }
+        # Scenario 2: empty response leaves no cache file and is retried.
+        c2=$(mktemp -d -p "$TMPDIR")
+        mkdir -p "$c2/out"
+        export FIXTURE_PROPS="$FIXDIR/props-empty.json"
+        collect_once "$c2"
+        jq -e '.runs[0].properties == {total: 0, passing: 0, failing: []}' "$c2/out/data.json" >/dev/null || {
+          echo "props-summary: empty summary shape wrong" >&2
+          exit 1
+        }
+        if ls "$c2/props/"*.json >/dev/null 2>&1; then
+          echo "props-summary: empty response was cached" >&2
+          exit 1
+        fi
+        export FIXTURE_PROPS="$FIXDIR/props.json"
+        collect_once "$c2"
+        [[ $(jq -r '.runs[0].properties.total' "$c2/out/data.json") == "$want_total" ]] || {
+          echo "props-summary: no refetch after empty" >&2
+          exit 1
+        }
+        # Scenario 3: in-progress run yields null without caching.
+        c3=$(mktemp -d -p "$TMPDIR")
+        mkdir -p "$c3/out"
+        export FIXTURE_PROPS="$FIXDIR/props.json" RUNS_FIX="$FIXDIR/runs-progress.json" RUNOBJ_FIX="$FIXDIR/run-obj-progress.json"
+        collect_once "$c3"
+        jq -e '.runs[0].properties == null' "$c3/out/data.json" >/dev/null || {
+          echo "props-summary: in-progress properties not null" >&2
+          exit 1
+        }
+        if ls "$c3/props/"*.json >/dev/null 2>&1; then
+          echo "props-summary: in-progress response was cached" >&2
+          exit 1
+        fi
+        echo "props summary ok"
+      '';
+    };
   };
 
   mkApp = name: { runtimeInputs, text }:
@@ -1772,6 +1902,7 @@ in
   loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
   schema-reject = mkCheck "schema-reject" scripts.schema-reject;
   host-stale = mkCheck "host-stale" scripts.host-stale;
+  props-summary = mkCheck "props-summary" scripts.props-summary;
   image-source-shape = image-source-shape;
 
   inherit apps;

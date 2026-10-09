@@ -32,6 +32,7 @@ jobs:
           .#checks.x86_64-linux.loop-runtime
           .#checks.x86_64-linux.schema-reject
           .#checks.x86_64-linux.host-stale
+          .#checks.x86_64-linux.props-summary
           .#checks.x86_64-linux.image-source-shape
           .#devShells.x86_64-linux.default.inputDerivation
 
@@ -112,6 +113,19 @@ jobs:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Check site
         run: nix run --quiet .#site-check
+
+  props-summary:
+    name: CI props summary
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check property summaries
+        run: nix run --quiet .#props-summary
 
   reproduce-evidence:
     name: CI reproduce evidence
