@@ -1,0 +1,39 @@
+{
+  "run_id": "ea5813e04ef5245fced6d73fed6e3a86-62-14",
+  "status": "in_progress",
+  "created_at": "2026-10-11T02:58:18Z",
+  "started_at": "2026-10-11T02:58:18Z",
+  "completed_at": null,
+  "test_name": "amaru-v2",
+  "duration_minutes": 180,
+  "directory": "testnets/cardano_node_head",
+  "commit": "27ebdc434285f2d9e6d9a5083daf6f241acc27a8",
+  "try": 1,
+  "requester": "cfhal",
+  "repository": "cardano-foundation/cardano-node-antithesis",
+  "parameters": {
+    "antithesis.config_image": "us-central1-docker.pkg.dev/molten-verve-216720/pragma-repository/cardano-moog-config:08e16101d2",
+    "antithesis.description": "{\"testRun\":{\"commitId\":\"27ebdc434285f2d9e6d9a5083daf6f241acc27a8\",\"directory\":\"testnets/cardano_node_head\",\"platform\":\"github\",\"repository\":{\"organization\":\"cardano-foundation\",\"repo\":\"cardano-node-antithesis\"},\"requester\":\"cfhal\",\"try\":1,\"type\":\"test-run\"},\"testRunId\":\"08e16101d25c0792bf01ac9164408e705d2735d775d4ac84c9aaa602a5bac69a\"}",
+    "antithesis.duration": "180",
+    "antithesis.integrations.type": "none",
+    "antithesis.is_ephemeral": "false",
+    "antithesis.is_setup": "false",
+    "antithesis.performance_tier": "standard",
+    "antithesis.report.recipients": "antithesis@cardanofoundation.org",
+    "antithesis.source": "cardano-foundation/cardano-node-antithesis",
+    "antithesis.test_name": "amaru-v2",
+    "custom.container_faults_kill_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.container_faults_pause_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.container_faults_stop_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.faults_enabled": "true",
+    "custom.instrumented": "true",
+    "custom.network_fault_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator"
+  },
+  "properties": [],
+  "chain": {
+    "phase": "accepted",
+    "outcome": null,
+    "slot": 136004445
+  },
+  "nightly": []
+}

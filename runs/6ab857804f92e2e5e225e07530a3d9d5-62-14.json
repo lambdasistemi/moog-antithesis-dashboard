@@ -1,0 +1,615 @@
+{
+  "run_id": "6ab857804f92e2e5e225e07530a3d9d5-62-14",
+  "status": "completed",
+  "created_at": "2026-10-07T08:00:29Z",
+  "started_at": "2026-10-07T08:00:29Z",
+  "completed_at": "2026-10-07T12:48:56Z",
+  "test_name": "amaru-v2",
+  "duration_minutes": 180,
+  "directory": "testnets/cardano_node_governance",
+  "commit": "cd863f268bd6212ae2fb14d43725f0ecd598a588",
+  "try": 1,
+  "requester": "saratomaz",
+  "repository": "input-output-hk/cardano-node-tests-antithesis",
+  "parameters": {
+    "antithesis.config_image": "us-central1-docker.pkg.dev/molten-verve-216720/pragma-repository/cardano-moog-config:4673eadbb5",
+    "antithesis.description": "{\"testRun\":{\"commitId\":\"cd863f268bd6212ae2fb14d43725f0ecd598a588\",\"directory\":\"testnets/cardano_node_governance\",\"platform\":\"github\",\"repository\":{\"organization\":\"input-output-hk\",\"repo\":\"cardano-node-tests-antithesis\"},\"requester\":\"saratomaz\",\"try\":1,\"type\":\"test-run\"},\"testRunId\":\"4673eadbb5fc44639369618a8d9ea4826fe703902dbd23d329deb7fb5d526e43\"}",
+    "antithesis.duration": "180",
+    "antithesis.integrations.type": "none",
+    "antithesis.is_ephemeral": "false",
+    "antithesis.is_setup": "false",
+    "antithesis.performance_tier": "standard",
+    "antithesis.report.recipients": "antithesis@cardanofoundation.org",
+    "antithesis.source": "input-output-hk/cardano-node-tests-antithesis",
+    "antithesis.test_name": "amaru-v2",
+    "custom.container_faults_kill_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose",
+    "custom.container_faults_pause_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose",
+    "custom.container_faults_stop_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose",
+    "custom.faults_enabled": "true",
+    "custom.instrumented": "true",
+    "custom.network_fault_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose"
+  },
+  "properties": [
+    {
+      "name": "No Antithesis errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Software images match expected platform",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 9,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build warnings",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Virtual time per wall time",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Test ran with full parallelism",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Containers joined the Antithesis network",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 10,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "The Antithesis Fault Injector was started",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Peak memory usage",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 608844,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected crashes",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected container exits",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis session errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain_progress_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1651,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "committee_quorum_maintained",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1574,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "create_action_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1465,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "create_pparam_update_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 983,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "create_treasury_withdrawal_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1165,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "eventually_votes_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 793,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "finally_governance_summary_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 213,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "govstate_invariant_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1574,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "govstate_well_formed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1574,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "leios_load_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 779,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "pparam_update_enactment_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1333,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "relay_reachable_under_fault",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1651,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "treasury_withdrawal_enactment_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1021,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "treasury_withdrawal_no_overpay",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 4,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "vote_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1164,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "vote_pparam_update_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 828,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "vote_treasury_withdrawal_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1606,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "no critical logs",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "cluster fork depth < k",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p1 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p2 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p3 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "PeerStatusChanged",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "TraceAddBlockEvent.SwitchedToAFork",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "action_fully_voted_after_recovery",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 18,
+      "counterexample_count": 775,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-9065825143076880273",
+            "vtime": "3034.307878284715"
+          },
+          "event_group": "action_fully_voted_after_recovery",
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 7072
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": null,
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "action_fully_voted_after_recovery",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "action_fully_voted_after_recovery",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "action_majority_reached",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 137,
+      "counterexample_count": 205,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-8161316815807110686",
+            "vtime": "3035.4555066777393"
+          },
+          "event_group": "action_majority_reached",
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 7514
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "majority": 7,
+              "total": 1
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "action_majority_reached",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "action_majority_reached",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "action_voted_by_all_roles",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 182,
+      "counterexample_count": 160,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-8161316815807110686",
+            "vtime": "3035.455506161554"
+          },
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 7514
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "cc": 1,
+              "drep": 0,
+              "spo": 0
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "action_voted_by_all_roles",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "action_voted_by_all_roles",
+            "must_hit": true
+          },
+          "event_group": "action_voted_by_all_roles"
+        }
+      ]
+    },
+    {
+      "name": "actions_live",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 351,
+      "counterexample_count": 603,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-8014242081027630677",
+            "vtime": "3019.6521762511693"
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "live": 0
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "actions_live",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "actions_live",
+            "must_hit": true
+          },
+          "event_group": "actions_live",
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 7064
+          }
+        }
+      ]
+    },
+    {
+      "name": "chain_producing",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1262,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain_stalled_under_fault",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 389,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "cluster fork observed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "committee_active_after_setup",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 937,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "dreps_registered_after_setup",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 937,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "find log files",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "gov_op_under_perturbation",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 17,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "governance_registration_submitted",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 973,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "governance_run_completed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 213,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "governance_setup_complete",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 937,
+      "counterexample_count": 0,
+      "counterexamples": []
+    }
+  ],
+  "chain": null,
+  "nightly": []
+}
