@@ -118,6 +118,10 @@ with stripped group and other permissions.
   shows `error` until its first success — never a silently stale number.
 - Property descriptions repeat verbatim across runs, so they publish once in
   `property-descriptions.json` instead of inside every detail file.
+- A run's property chip counts every property node the API returns — group
+  nodes included — so any failing property at any level turns the chip
+  non-green and is named. The per-run detail file embeds the same node
+  population, so chip and detail cannot disagree.
 
 ## Status reporters (oracle, agent, monitor)
 
