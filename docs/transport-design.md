@@ -3,7 +3,7 @@
 Revision 2: no systemd anywhere in the design; the freshness monitor pushes its own verdict like the hosts.
 
 Slice 1 (oracle) implemented: the oracle reporter (`reporter/report.sh` +
-`reporter/loop.sh`, `Dockerfile.reporter`, `reporter/compose.yaml`) follows
+`reporter/loop.sh`, `nix/reporter-image.nix`, `reporter/compose.yaml`) follows
 design A below; the collector reads the oracle issue with the strict schema
 Slice 2 (agent) implemented as well: `reporter/report.sh` accepts
 `REPORTER_ROLE=agent`, counting `errors_6h` and `published_24h` from the
@@ -23,7 +23,7 @@ and assembles `data.json.hosts` from both last-good values.
 ## Decisions
 
 ### 1. Image
-- `Dockerfile`: pinned base with bash, jq, curl, gh, git, coreutils. `COPY collect deploy site` only. No `ARG`/`ENV` for any credential; no `.git`, no `~/.secrets`, no moog checkout.
+- `nix/image.nix`: `dockerTools.buildLayeredImage` packages pinned Nix runtime dependencies and only `collect`, `deploy`, and `site`. No checkout or secret files enter the image. The archive is built without a Docker daemon.
 - CI job `image`: build, push to GHCR on merge to `main` (tag = commit SHA and `main`), package **public** so hosts pull without a credential. The workflow uses only `GITHUB_TOKEN` with `packages: write`; nothing else reaches the build.
 - The systemd units and timer are deleted from the repo (swap rule: the replacement removes the old path in the same diff).
 
@@ -106,7 +106,7 @@ reported_at`.
 
 ## Verification (each a Nix check of the existing shape, each shown red first)
 1. `publish-gate`: plant each secret literal in `data.json`, a run detail file and a status payload; every plant refuses. Includes the empty-line control.
-2. `image-clean`: `docker export` of the built image, grep for every planted-at-build canary and the token patterns; `docker run --rm image env` has no credential-shaped variable. Control: build once with a canary `ENV` and watch it fail.
+2. `image-clean`: `docker export` of the built image, grep for every planted-at-build canary and the token patterns; `docker run --rm image env` has no credential-shaped variable. Control: place a canary in an application file and run with `IMAGE_CLEAN_CANARY` set to that value; the scan must fail.
 3. `host-stale`: feed the collector a fixture issue body, stop updating it, assert `stale` plus the right `last_success`; update again, assert `ok` with no manual step.
 4. `schema-reject`: a body with extra keys, wrong types or a future `reported_at` is refused.
 5. Each is accompanied by a recorded break → red → restore → green run in the PR.

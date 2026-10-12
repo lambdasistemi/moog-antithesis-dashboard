@@ -189,10 +189,10 @@ src_token() {
 # One shared strict jq schema: known keys only (role, containers,
 # reported_at, plus errors_6h and published_24h for the agent, verdict and
 # ok for the monitor), types, every string at most 200 characters, at most
-# 50 containers, reported_at UTC ISO 8601 and not more than 2 minutes in
+# 50 containers, reported_at UTC ISO 8601 and not in
 # the future. The monitor verdict is a non-empty string with no http(s)
 # URL and ok equals `verdict | startswith("OK")`; counts are non-negative
-# integers. Unknown keys are dropped; missing keys or wrong types fail. A
+# integers. Unknown keys, missing keys or wrong types fail. A
 # payload older than 15 minutes fails as stale so the last good value is
 # served. Error messages never include body text.
 # Fetch seams for checks only: STATUS_BODY_CMD_ORACLE (else legacy
@@ -218,11 +218,13 @@ validate_status_payload() {
         if type != "object" then error("bad")
         elif $role == "monitor" and (has("role") and has("verdict") and has("ok") and has("reported_at") | not) then error("bad")
         elif $role != "monitor" and (has("role") and has("containers") and has("reported_at") | not) then error("bad")
+        elif (keys | sort) != (if $role == "monitor" then ["ok", "reported_at", "role", "verdict"] elif $role == "agent" then ["containers", "errors_6h", "published_24h", "reported_at", "role"] else ["containers", "reported_at", "role"] end) then error("bad")
         elif (.role | type) != "string" or .role != $role or (.role | length) > 200 then error("bad")
         elif $role != "monitor" and ((.containers | type) != "array" or (.containers | length) > 50) then error("bad")
         elif (.reported_at | type) != "string" or (.reported_at | length) > 200 then error("bad")
         elif (.reported_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") | not) then error("bad")
         elif $role != "monitor" and ([.containers[] | select(type != "object"
+            or (keys | sort) != ["image", "name", "status"]
             or (has("name") and has("image") and has("status") | not)
             or (.name | type) != "string" or (.image | type) != "string" or (.status | type) != "string"
             or (.name | length) > 200 or (.image | length) > 200 or (.status | length) > 200)] | length) > 0 then error("bad")
@@ -236,7 +238,7 @@ validate_status_payload() {
             or (.ok | type) != "boolean" or .ok != (.verdict | startswith("OK"))) then error("bad")
         else
             (.reported_at | fromdateiso8601) as $rep
-            | if $rep > ($now + 120) then error("bad")
+            | if $rep > $now then error("bad")
               elif $role == "agent" then {role, containers: [.containers[] | {name, image, status}], errors_6h, published_24h, reported_at}
               elif $role == "monitor" then {role, verdict, ok, reported_at}
               else {role, containers: [.containers[] | {name, image, status}], reported_at}

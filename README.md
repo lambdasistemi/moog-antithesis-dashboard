@@ -77,6 +77,18 @@ read token lives only in the environment of the single `gh` call that
 uses it, and the push token only on a pipe to git's credential helper.
 A dry `docker run --rm <image> env` shows no credential.
 
+## Build the collector image
+
+`nix build .#collector-image` creates `result`, a Docker image archive
+assembled from the runtime dependencies pinned by `flake.lock`. It needs
+no Docker daemon or package installation from Debian repositories.
+
+Load it with `docker load -i result`; the local tag is `moog-collector:nix`.
+CI loads this same Nix archive for the leak scan and restricted container
+smoke test, then tags it with the commit SHA and `main` for GHCR.
+`nix run .#container-smoke` also checks a second Nix image built from source
+with stripped group and other permissions.
+
 ## One-time setup
 
 1. Create the four secret files above on the collector host.
@@ -103,8 +115,17 @@ A dry `docker run --rm <image> env` shows no credential.
 
 ## Status reporters (oracle, agent, monitor)
 
+The reporter image is built from the pinned Nix closure with
+`nix build .#reporter-image`. CI loads this archive for its smoke checks
+and publishes the same archive under the commit SHA. No Dockerfile or
+package installation at image-build time is used.
+
 One tiny container runs on each of the oracle and agent hosts and edits
-one status issue on this repository every 5 minutes. It lists containers
+one status issue on this repository. It samples every minute and pushes
+when container state, health, image or agent counts change, plus a
+five-minute heartbeat when unchanged. Timestamp and elapsed uptime do
+not trigger a push. Successful public comparison state lives on the
+reporter-state volume; failed pushes retry on the next sample. It lists containers
 through the Docker socket with curl, keeps names matching `moog` (name,
 image without the registry prefix, status), and PATCHes the payload as the
 issue body over HTTPS. The oracle sends `{role, containers, reported_at}`
@@ -123,8 +144,10 @@ the reporter exits non-zero and the previous body stays.
 
 A host clock more than 15 minutes behind shows stale even while reporting:
 `last_success` is the payload's `reported_at`, and anything older than 15
-minutes counts as failed. (More than 2 minutes ahead is refused outright.)
-Keep host clocks in sync.
+minutes counts as failed. (Future timestamps are refused outright.)
+Keep host clocks in sync. Set the collector's `STATUS_ISSUE_ORACLE` and
+`STATUS_ISSUE_AGENT` to those issue numbers before starting its Compose
+stack. The reporters use the corresponding number as `STATUS_ISSUE_NUMBER`.
 
 ```sh
 # On either host: check the payload without sending anything.
@@ -196,7 +219,7 @@ stay overridable via the environment variables at the top of each script.
 | One loop container (`loop.sh` + `cycle.sh`, restart `unless-stopped`) | systemd timer | The collector is one always-on container on one host; a unit plus a timer plus a lock is three moving parts doing the job of one loop. The loop logs a failing cycle and continues, and stops promptly on SIGTERM. |
 | Publish from the host to the `gh-pages` branch | Pages in workflow mode | The snapshot refreshes every 10 minutes with secrets mounted as files into the collector container (Antithesis key, GitHub tokens, moog read environment). A workflow build has none of those inputs, so it cannot produce `data.json`. The legacy branch is the deployment mechanism, not documentation hosting. |
 | HTTPS push with a file-read credential helper | SSH deploy keys and agent sockets | One Contents-write token in a mounted file, handed to git on a pipe only for the push. No key material in the image, no agent socket crossing into the container. |
-| Status via per-reporter issue edits (#11, #12) | Always-on receiver endpoint | No listening service to supervise and patch; each reporter token can only edit its own status issue. See `docs/transport-design.md`. |
+| Status via per-reporter issue edits (#11, #12) | Always-on receiver endpoint | No listening service to supervise and patch; the reporter targets its configured issue; GitHub Issues-write permission applies to the whole repository. See `docs/transport-design.md`. |
 | No versioned releases | release-please | There is no installable artifact. The dashboard deploys continuously from the collector container; a version tag on every change would be noise. |
 | No separate documentation site | MkDocs site on Pages | Pages already serves the dashboard itself. This README is the documentation; it carries the stories and the diagram above. |
 | One failing source never blanks the page | Fail the whole snapshot on any source error | Each source is independent. The page shows the last good value marked `stale` so one outage stays visible without hiding the rest. |

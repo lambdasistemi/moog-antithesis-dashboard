@@ -60,7 +60,7 @@ When a card goes stale, in order: is the reporter container running
 (`docker ps`, `docker logs` — one failing report logs one line and the
 loop continues)? Is its token expired (table above)? Is the host clock in
 sync (more than 15 minutes behind shows stale even while reporting, more
-than 2 minutes ahead is refused)? Can the collector reach api.github.com?
+any time ahead is refused)? Can the collector reach api.github.com?
 What does the source error on the page banner say, and how old is
 `last_success`?
 

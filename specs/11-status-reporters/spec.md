@@ -1,9 +1,10 @@
 # Oracle and agent push status through GitHub issues (#11)
 
 ## User story
-As the operator, I start a reporter container on the oracle or agent host with one fine-grained token and observe that host's section on the page update every 5 minutes, and turn stale with the right last-success time when I stop it.
+As the operator, I start a reporter container on the oracle or agent host with one fine-grained token and observe that host's section on the page sampled every minute, published on change with a five-minute heartbeat, and turn stale with the right last-success time when I stop it.
 
 ## Requirements
+- change-aware-reporting: sample every minute; publish changed stable container facts or agent counts, and otherwise a heartbeat after five minutes. Elapsed uptime and reported_at do not trigger publication. Failed publication does not advance comparison state.
 - reporter-payload-matches-today: containers whose name matches `moog` with name, image (registry prefix dropped) and status; on the agent also the count of log lines matching `exception|error` over 6 hours and `Published result` over 24 hours; plus `reported_at` (UTC, ISO 8601).
 - reporter-uses-docker-api-only: the reporter talks to the Docker socket with curl; no docker CLI, no shell access, raw logs never leave the host, only counts.
 - reporter-pushes-by-issue-edit: it edits the body of one status issue (number from configuration) through the GitHub API over HTTPS, token read from a file, never in argv.
