@@ -174,6 +174,7 @@ row_schema_reject() {
 row_reporter_diff() {
     ROW=reporter-diff
     green_check reporter-diff 300 || return 1
+    # shellcheck disable=SC2016
     apply_break reporter/report.sh '($now - .reported_epoch) < $heartbeat' '($now - .reported_epoch) < 0' || return 1
     red=$(red_check reporter-diff 300 'uptime alone must not publish') || {
         restore_files reporter/report.sh
