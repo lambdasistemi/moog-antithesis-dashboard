@@ -231,7 +231,7 @@ row_publish_gate() {
 row_site_check() {
     ROW=site-check
     green_check site-check 300 || return 1
-    apply_break site/index.html '  const oracleState = oracleStale ? ["warn", "stale"]' '  const oracleState = oracleStale ? ["ok", "up"]' || return 1
+    apply_break site/index.html '  const agentStale = !agentSrc || agentSrc.status !== "ok";' '  const agentStale = false;' || return 1
     red=$(red_check site-check 300 'not marked stale') || {
         restore_files site/index.html
         return 1
