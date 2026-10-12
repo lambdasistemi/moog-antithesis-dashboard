@@ -942,8 +942,8 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
           exit 1
         fi
         tag="moog-reporter:push-verdict-smoke"
-        timeout 120 docker build -q -f Dockerfile.reporter -t "$tag" . >/dev/null \
-          || { echo "push-verdict-smoke: build timed out or failed" >&2; exit 1; }
+        timeout 120 docker load -i ${reporterImages.image} >/dev/null
+        docker tag moog-reporter:nix "$tag"
         bad=$(timeout 30 docker run --rm --user 1000:1000 "$tag" find /app/reporter -name '*.sh' ! -executable -print) \
           || { echo "push-verdict-smoke: find timed out" >&2; exit 1; }
         if [[ -n $bad ]]; then
@@ -1538,13 +1538,7 @@ DRIVER_EOF
         seed_sources
         jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t,zzz:$m}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
-        monitor_ok "$c" "$NOW" "OK x" true monitor-extra-keys || exit 1
-        jq -e '.monitor|keys==["last","ok"]' "$c/out/data.json" >/dev/null \
-          || { echo "schema-reject: monitor extra keys not dropped" >&2; exit 1; }
-        if grep -q "$MARKER" "$c/out/data.json"; then
-          echo "schema-reject: monitor extra keys leaked into data" >&2
-          exit 1
-        fi
+        monitor_refused "$c" monitor-extra-keys || exit 1
         seed_sources
         jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
@@ -1783,6 +1777,10 @@ in
   site-check = mkCheck "site-check" scripts.site-check;
   loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
   reporter-diff = mkCheck "reporter-diff" scripts.reporter-diff;
+  monitor-http = mkCheck "monitor-http" {
+    runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.gnused ];
+    text = ''bash tests/monitor-http.sh'';
+  };
   schema-reject = mkCheck "schema-reject" scripts.schema-reject;
   host-stale = mkCheck "host-stale" scripts.host-stale;
   image-source-shape = image-source-shape;
