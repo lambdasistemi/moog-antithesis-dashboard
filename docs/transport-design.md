@@ -67,13 +67,21 @@ Recommendation: **A**, because it has no listening service and the smallest toke
 ### 5. The monitor source
 The freshness monitor pushes its own verdict. A push step in the monitor's script (one `curl`, URLs stripped from the verdict line, token read from a file) edits the "status: monitor" issue with `{verdict, reported_at}`. The collector validates it with the same schema check and staleness window. No journal access, no file mount, no systemd hook. The monitor's script is outside this repo and receives this one change.
 
+Slice 3 (monitor) implemented: `reporter/push-verdict.sh` (stdin or file
+verdict line, URL strip, `{role verdict ok reported_at}` with
+`ok = startswith "OK"`, dry-run and curl-stdin-config PATCH like the
+container reporter) ships in the reporter image; the collector validates
+the monitor branch and serves `{last, ok}` with `last_success =
+reported_at`.
+
 ### 6. Staleness contract
 - Source split: `hosts` becomes `oracle` and `agent`, each its own `run_source` with its own `last/*.json` and `last/*.at`; `monitor` is read from its issue. `data.json.hosts` keeps today's shape, assembled from each side's last good value. The page's source chips are generated from `sources`, so the only page change is two more chips; `site/index.html` lines 113 and 165 need confirming.
 - A reporter is `ok` only if its issue parses, matches the schema and `reported_at` is within 15 minutes (three missed pushes). `last_success` = the payload's `reported_at`, not the fetch time, so an unchanged old payload cannot look fresh.
 - Per source, when a piece stops:
-- Both status sources are implemented (`oracle`/`agent` in `sources` instead
-  of `hosts`; `last_success` is the payload's `reported_at`; the page marks
-  a hosts card stale with that time).
+- All three status sources are implemented (`oracle`/`agent`/`monitor` in
+  `sources`; `last_success` is the payload's `reported_at`; the page marks
+  a hosts card stale with that time, and the monitor chip goes stale with
+  its last success).
 
 | stops | result |
 |---|---|

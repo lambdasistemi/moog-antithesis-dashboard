@@ -100,6 +100,24 @@ if [[ -s $PATTERNS ]] && grep -rqF -f "$PATTERNS" "$STAGE"; then
     exit 2
 fi
 
+# URL gate (monitor payloads): the reporter strips URLs before sending, so
+# a URL in a status payload or in data.json's monitor subtree is a leak or
+# a hand edit: refuse. Run and detail URLs (runs/, nightly links) stay
+# legal and are out of scope here; only file names are reported, never
+# matched text.
+if compgen -G "$STAGE/status/*.json" >/dev/null; then
+    if grep -rqE 'https?://' "$STAGE/status"; then
+        echo "secrets gate: URL in status payload, refusing to publish" >&2
+        (cd "$STAGE/status" && grep -rEl 'https?://' .) >&2
+        exit 2
+    fi
+fi
+if jq -e '.monitor | .. | strings | select(test("https?://"))' "$STAGE/data.json" >/dev/null; then
+    echo "secrets gate: URL in monitor payload, refusing to publish" >&2
+    echo "data.json" >&2
+    exit 2
+fi
+
 # Credential helper: git calls this for the HTTPS push. The username is
 # fixed; the token is read from its file at request time, so it never lands
 # in argv, the remote URL, git config on disk or any message.
