@@ -1,0 +1,147 @@
+{
+  "schema": "milestone-stories/v1",
+  "title": "Reliable dashboard collection",
+  "milestoneUrl": "https://github.com/lambdasistemi/moog-antithesis-dashboard/milestone/3",
+  "wikiUrl": "https://github.com/lambdasistemi/moog-antithesis-dashboard/wiki/Milestone-3",
+  "updatedAt": "2026-10-12T09:59:16.398Z",
+  "operationalState": "running",
+  "summary": "Ownership recovery in progress. Existing candidates are preserved; implementation staffing and acceptance remain pending. Wiki publication is blocked because the wiki Git repository is unavailable.",
+  "groups": [
+    {
+      "id": "pipeline-operation",
+      "title": "Run and observe the pipeline"
+    }
+  ],
+  "stories": [
+    {
+      "id": "collector-runtime",
+      "group": "pipeline-operation",
+      "title": "Run the collector as a container",
+      "persona": "Pipeline operator",
+      "want": "run the collector as a container",
+      "benefit": "A reliable public dashboard with safe operational data",
+      "kind": "enabler",
+      "tracking": {
+        "kind": "ticketed",
+        "tickets": [
+          {
+            "label": "#10",
+            "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/10"
+          }
+        ],
+        "note": "Preserved child of architecture epic #14; existing PR remains a candidate."
+      },
+      "owner": "Epic #14 owner — recovery roster pending; milestone desk owns routing",
+      "state": "review",
+      "summary": "Existing PR #15 has successful hosted checks at the recovered head; acceptance and deployed evidence have not been recovered.",
+      "acceptance": "The CI-built container runs repeated collection and publication with mounted-file secrets.",
+      "next": "Recover ticket evidence and staffing before execution or acceptance.",
+      "dependencies": [],
+      "evidence": [
+        {
+          "label": "PR #15",
+          "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/pull/15"
+        }
+      ]
+    },
+    {
+      "id": "role-status",
+      "group": "pipeline-operation",
+      "title": "See agent and oracle status without SSH",
+      "persona": "Pipeline operator",
+      "want": "see agent and oracle status without ssh",
+      "benefit": "A reliable public dashboard with safe operational data",
+      "kind": "enabler",
+      "tracking": {
+        "kind": "ticketed",
+        "tickets": [
+          {
+            "label": "#11",
+            "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/11"
+          }
+        ],
+        "note": "Preserved child of architecture epic #14; existing PR remains a candidate."
+      },
+      "owner": "Epic #14 owner — recovery roster pending; milestone desk owns routing",
+      "state": "review",
+      "summary": "Existing PR #17 has successful hosted checks at the recovered head; acceptance and deployed evidence have not been recovered.",
+      "acceptance": "Agent and oracle push validated status; their last good values become visibly stale on interruption.",
+      "next": "Recover ticket evidence and staffing before execution or acceptance.",
+      "dependencies": [
+        "collector-runtime"
+      ],
+      "evidence": [
+        {
+          "label": "PR #17",
+          "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/pull/17"
+        }
+      ]
+    },
+    {
+      "id": "freshness-status",
+      "group": "pipeline-operation",
+      "title": "See the monitor verdict without host journal access",
+      "persona": "Pipeline operator",
+      "want": "see the monitor verdict without host journal access",
+      "benefit": "A reliable public dashboard with safe operational data",
+      "kind": "enabler",
+      "tracking": {
+        "kind": "ticketed",
+        "tickets": [
+          {
+            "label": "#12",
+            "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/12"
+          }
+        ],
+        "note": "Preserved child of architecture epic #14; existing PR remains a candidate."
+      },
+      "owner": "Epic #14 owner — recovery roster pending; milestone desk owns routing",
+      "state": "review",
+      "summary": "Existing PR #18 has successful hosted checks at the recovered head; acceptance and deployed evidence have not been recovered.",
+      "acceptance": "The monitor pushes its verdict and the collector preserves its independent freshness.",
+      "next": "Recover ticket evidence and staffing before execution or acceptance.",
+      "dependencies": [
+        "role-status"
+      ],
+      "evidence": [
+        {
+          "label": "PR #18",
+          "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/pull/18"
+        }
+      ]
+    },
+    {
+      "id": "deployed-evidence",
+      "group": "pipeline-operation",
+      "title": "Operate and recover the complete dashboard pipeline",
+      "persona": "Pipeline operator",
+      "want": "operate and recover the complete dashboard pipeline",
+      "benefit": "A reliable public dashboard with safe operational data",
+      "kind": "operation",
+      "tracking": {
+        "kind": "ticketed",
+        "tickets": [
+          {
+            "label": "#13",
+            "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/13"
+          }
+        ],
+        "note": "Preserved child of architecture epic #14; existing PR remains a candidate."
+      },
+      "owner": "Epic #14 owner — recovery roster pending; milestone desk owns routing",
+      "state": "review",
+      "summary": "Existing PR #19 has successful hosted checks at the recovered head; acceptance and deployed evidence have not been recovered.",
+      "acceptance": "A deployed end-to-end run and stop/restart controls prove the pipeline and operator recovery.",
+      "next": "Recover ticket evidence and staffing before execution or acceptance.",
+      "dependencies": [
+        "freshness-status"
+      ],
+      "evidence": [
+        {
+          "label": "PR #19",
+          "url": "https://github.com/lambdasistemi/moog-antithesis-dashboard/pull/19"
+        }
+      ]
+    }
+  ]
+}
