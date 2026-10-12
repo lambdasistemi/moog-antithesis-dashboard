@@ -10,12 +10,14 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       src = ./.;
-      checksFull = import ./nix/checks.nix { inherit pkgs src; };
+      images = import ./nix/image.nix { inherit pkgs src; };
+      checksFull = import ./nix/checks.nix { inherit pkgs src images; };
       checkApps = import ./nix/apps.nix { inherit pkgs; checks = checksFull; };
       previewApps = import ./nix/preview-apps.nix { inherit pkgs; };
       checks = builtins.removeAttrs checksFull [ "apps" ];
     in
     {
+      packages.${system}.collector-image = images.image;
       checks.${system} = checks;
       apps.${system} = checkApps // previewApps // {
         default = checkApps.shellcheck;
