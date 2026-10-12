@@ -1141,7 +1141,7 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
         set -euo pipefail
         export TMPDIR="''${TMPDIR:-/tmp}"
         export REPRODUCE_OUT="''${REPRODUCE_OUT:-$TMPDIR/reproduce-evidence.txt}"
-        exec ./verify/reproduce.sh "$@"
+        exec bash ${src}/verify/reproduce.sh "$@"
       '';
     };
 
