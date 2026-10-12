@@ -80,4 +80,25 @@ count 9 'agent count change'
 printf 'not-json' >"$REPORT_STATE_FILE"
 report
 count 10 'corrupt state recovered by publication'
+# Sampling cadence includes collection time, rather than adding a minute.
+printf '0' >"$work/clock"
+for tool in date sleep cycle; do
+    printf '#!%s\n' "$(command -v bash)" >"$work/bin/$tool"
+done
+cat >>"$work/bin/date" <<'DATE'
+cat "$FIXTURE_WORK/clock"
+DATE
+cat >>"$work/bin/sleep" <<'SLEEP'
+printf '%s\n' "$1" >>"$FIXTURE_WORK/delays"
+SLEEP
+cat >>"$work/bin/cycle" <<'CYCLE'
+epoch=$(cat "$FIXTURE_WORK/clock")
+printf '%s' "$((epoch + 27))" >"$FIXTURE_WORK/clock"
+CYCLE
+chmod +x "$work/bin/date" "$work/bin/sleep" "$work/bin/cycle"
+REPORT_MAX_CYCLES=3 CYCLE_CMD="$work/bin/cycle" bash reporter/loop.sh
+[[ $(cat "$work/delays") == $'33\n33' ]] || {
+    echo 'reporter-diff: sampling interval excludes collection time' >&2
+    exit 1
+}
 echo 'reporter diff ok'

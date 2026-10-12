@@ -18,6 +18,7 @@ while true; do
     if [[ $shutdown -eq 1 ]]; then
         break
     fi
+    started=$(date +%s)
     if "$CYCLE"; then
         :
     else
@@ -30,7 +31,9 @@ while true; do
     if [[ $shutdown -eq 1 ]]; then
         break
     fi
-    sleep "$INTERVAL" &
+    delay=$((INTERVAL - ($(date +%s) - started)))
+    if [[ $delay -lt 0 ]]; then delay=0; fi
+    sleep "$delay" &
     sleep_pid=$!
     wait "$sleep_pid" || true
 done
