@@ -1,5 +1,5 @@
 # Status reporter for the moog Antithesis dashboard (oracle host).
-# One reporter container per host loops reporter/report.sh every 5 minutes
+# One reporter container per host loops reporter/report.sh every minute and pushes changes or a 5-minute heartbeat
 # and PATCHes one status issue. The Docker group GID is injected from the
 # host so the non-root user can read the socket; find it with
 # `getent group docker`.
@@ -16,8 +16,15 @@ services:
     group_add:
       - ${DOCKER_GID:-999}
     environment:
+      REPORT_STATE_FILE: /cache/report-state.json
+      REPORT_INTERVAL: "60"
+      REPORT_HEARTBEAT_SECONDS: "300"
       REPORTER_ROLE: ${REPORTER_ROLE:-oracle}
       STATUS_ISSUE_NUMBER: ${STATUS_ISSUE_NUMBER:?set STATUS_ISSUE_NUMBER to the status issue number}
     volumes:
+      - reporter-state:/cache
       - /var/run/docker.sock:/var/run/docker.sock
       - /srv/moog-status-reporter/status-token:/run/secrets/status-token:ro
+
+volumes:
+  reporter-state:

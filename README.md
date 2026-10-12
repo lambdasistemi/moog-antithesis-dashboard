@@ -117,7 +117,11 @@ and publishes the same archive under the commit SHA. No Dockerfile or
 package installation at image-build time is used.
 
 One tiny container runs on each of the oracle and agent hosts and edits
-one status issue on this repository every 5 minutes. It lists containers
+one status issue on this repository. It samples every minute and pushes
+when container state, health, image or agent counts change, plus a
+five-minute heartbeat when unchanged. Timestamp and elapsed uptime do
+not trigger a push. Successful public comparison state lives on the
+reporter-state volume; failed pushes retry on the next sample. It lists containers
 through the Docker socket with curl, keeps names matching `moog` (name,
 image without the registry prefix, status), and PATCHes the payload as the
 issue body over HTTPS. The oracle sends `{role, containers, reported_at}`
@@ -136,7 +140,7 @@ the reporter exits non-zero and the previous body stays.
 
 A host clock more than 15 minutes behind shows stale even while reporting:
 `last_success` is the payload's `reported_at`, and anything older than 15
-minutes counts as failed. (More than 2 minutes ahead is refused outright.)
+minutes counts as failed. (Future timestamps are refused outright.)
 Keep host clocks in sync.
 
 ```sh

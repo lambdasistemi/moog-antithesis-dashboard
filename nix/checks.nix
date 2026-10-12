@@ -1065,6 +1065,13 @@ DRIVER_EOF
       '';
     };
 
+    reporter-diff = {
+      runtimeInputs = [ pkgs.bash pkgs.jq pkgs.coreutils ];
+      text = ''
+        bash tests/reporter-diff.sh
+      '';
+    };
+
     schema-reject = {
       runtimeInputs = [ pkgs.bash pkgs.jq pkgs.curl pkgs.coreutils pkgs.gnugrep pkgs.findutils ];
       text = ''
@@ -1387,6 +1394,7 @@ in
   publish-gate = mkCheck "publish-gate" scripts.publish-gate;
   site-check = mkCheck "site-check" scripts.site-check;
   loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
+  reporter-diff = mkCheck "reporter-diff" scripts.reporter-diff;
   schema-reject = mkCheck "schema-reject" scripts.schema-reject;
   host-stale = mkCheck "host-stale" scripts.host-stale;
   image-source-shape = image-source-shape;

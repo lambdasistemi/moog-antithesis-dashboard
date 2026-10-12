@@ -16,6 +16,8 @@
 #   STATUS_TOKEN_FILE    default /run/secrets/status-token
 #   REPORT_DRY_RUN=1     print the payload and exit 0, no token, no issue
 #                        number and no outward request
+#   REPORT_STATE_FILE    comparison state (default /tmp/report-state.json)
+#   REPORT_HEARTBEAT_SECONDS default 300; unchanged reports refresh then
 #   REPORT_API_BASE      default https://api.github.com (test seam for the
 #                        smoke; production uses the default and nothing else)
 #
@@ -39,6 +41,12 @@ DOCKER_SOCKET=${DOCKER_SOCKET:-/var/run/docker.sock}
 REPORT_REPOSITORY=${REPORT_REPOSITORY:-lambdasistemi/moog-antithesis-dashboard}
 STATUS_TOKEN_FILE=${STATUS_TOKEN_FILE:-/run/secrets/status-token}
 REPORT_API_BASE=${REPORT_API_BASE:-https://api.github.com}
+REPORT_STATE_FILE=${REPORT_STATE_FILE:-/tmp/report-state.json}
+REPORT_HEARTBEAT_SECONDS=${REPORT_HEARTBEAT_SECONDS:-300}
+[[ $REPORT_HEARTBEAT_SECONDS =~ ^[1-9][0-9]*$ ]] || {
+    echo "reporter: invalid heartbeat interval" >&2
+    exit 1
+}
 
 agent_mode=0
 if [[ $ROLE == "agent" ]]; then
@@ -187,6 +195,26 @@ fi
     exit 1
 }
 
+# Compare stable facts, excluding timestamps and elapsed uptime text.
+comparison=$(jq -cS '
+    def stable_status:
+        if startswith("Up ") then
+            "Up" + (try capture("(?<health>\\([^)]*\\))$").health catch "")
+        elif test("^(Exited|Restarting) \\([0-9]+\\)") then
+            capture("^(?<state>(Exited|Restarting) \\([0-9]+\\))").state
+        else . end;
+    del(.reported_at) | .containers |= map(.status |= stable_status)
+' <<<"$payload")
+now_epoch=$(date +%s)
+if [[ -r $REPORT_STATE_FILE ]] && jq -e \
+    --argjson comparison "$comparison" --argjson now "$now_epoch" \
+    --argjson heartbeat "$REPORT_HEARTBEAT_SECONDS" '
+    .comparison == $comparison and (.reported_epoch | type) == "number"
+    and .reported_epoch <= $now and ($now - .reported_epoch) < $heartbeat
+' "$REPORT_STATE_FILE" >/dev/null 2>&1; then
+    exit 0
+fi
+
 api_url="$REPORT_API_BASE/repos/$REPORT_REPOSITORY/issues/$STATUS_ISSUE_NUMBER"
 patch_json=$(jq -n -c --arg body "$payload" '{body: $body}')
 
@@ -201,3 +229,11 @@ if ! printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/
     echo "reporter: failed to update status issue $STATUS_ISSUE_NUMBER in $REPORT_REPOSITORY" >&2
     exit 1
 fi
+
+# Retain only successfully published public facts. A failed PATCH must retry.
+umask 077
+state_tmp=$(mktemp "$(dirname "$REPORT_STATE_FILE")/.report-state.XXXXXX")
+trap 'rm -f "$state_tmp"' EXIT
+jq -n --argjson comparison "$comparison" --argjson reported_epoch "$now_epoch" \
+    '{comparison: $comparison, reported_epoch: $reported_epoch}' >"$state_tmp"
+mv "$state_tmp" "$REPORT_STATE_FILE"

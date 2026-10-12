@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Loop the status reporter every REPORT_INTERVAL seconds (default 300).
+# Loop the status reporter every REPORT_INTERVAL seconds (default 60).
 # Same signal handling as deploy/loop.sh: a failing report logs one line
 # and the loop continues; SIGTERM ends the loop promptly without starting
 # another sleep.
 set -uo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-INTERVAL=${REPORT_INTERVAL:-300}
+INTERVAL=${REPORT_INTERVAL:-60}
 MAX_CYCLES=${REPORT_MAX_CYCLES:-0}
 CYCLE=${CYCLE_CMD:-"$HERE/report.sh"}
 
