@@ -14,8 +14,6 @@ let
     find $out/app -type d -exec chmod 0755 {} +
     find $out/app -type f -exec chmod 0644 {} +
     find $out/app/collect $out/app/deploy -name '*.sh' -exec chmod 0755 {} +
-    printf 'root:x:0:0:root:/root:/bin/bash\ncollector:x:1000:1000:collector:/home/collector:/bin/bash\n' >$out/etc/passwd
-    printf 'root:x:0:\ncollector:x:1000:\n' >$out/etc/group
   '';
   tools = pkgs.buildEnv {
     name = "collector-tools";
@@ -30,6 +28,11 @@ let
     inherit tag;
     contents = [ root tools pkgs.dockerTools.binSh pkgs.dockerTools.usrBinEnv ];
     fakeRootCommands = ''
+      # Docker exec resolves account files inside the container root. They
+      # must be regular files, not absolute links into the Nix store.
+      mkdir -p etc
+      printf 'root:x:0:0:root:/root:/bin/bash\ncollector:x:1000:1000:collector:/home/collector:/bin/bash\n' >etc/passwd
+      printf 'root:x:0:\ncollector:x:1000:\n' >etc/group
       chown 1000:1000 cache home/collector
       chmod 1777 tmp
     '';
