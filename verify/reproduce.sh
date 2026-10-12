@@ -245,12 +245,12 @@ exit 3' || return 1
 row_image_clean() {
     ROW=image-clean
     green_check image-clean 900 || return 1
-    append_break Dockerfile 'ENV GH_TOKEN=fake-break-f43d' || return 1
+    apply_break nix/image.nix '      Env = [' '      Env = [ "GH_TOKEN=fake-break-f43d"' || return 1
     red=$(red_check image-clean 900 'credential-shaped variable') || {
-        restore_files Dockerfile
+        restore_files nix/image.nix
         return 1
     }
-    restore_files Dockerfile || return 1
+    restore_files nix/image.nix || return 1
     green_check image-clean 900 restore-green || return 1
     log "image-clean | nix run --quiet .#image-clean | green-exit=0 | break=token-env-baked red-exit=$red red='credential-shaped variable' | restore=git-checkout-clean | green-exit=0"
 }
