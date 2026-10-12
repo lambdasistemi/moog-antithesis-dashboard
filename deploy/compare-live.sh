@@ -32,6 +32,13 @@ SECRETS_DIR=${SECRETS_DIR:-/srv/moog-antithesis-dashboard}
 MOOG_DIR=${MOOG_DIR:-/opt/moog}
 OUT_DIR=${OUT_DIR:-$(mktemp -d)}
 mkdir -p "$OUT_DIR"
+[[ -n ${STATUS_ISSUE_ORACLE:-} && -n ${STATUS_ISSUE_AGENT:-} ]] || {
+    echo "compare-live: configure STATUS_ISSUE_ORACLE and STATUS_ISSUE_AGENT" >&2
+    exit 2
+}
+# Give only the fresh snapshot directory write access to container uid 1000.
+SNAPSHOT_DIR=$(mktemp -d "$OUT_DIR/snapshot.XXXXXX")
+chmod 0777 "$SNAPSHOT_DIR"
 
 WORK=$(mktemp -d)
 live="$WORK/live-raw.json"
@@ -51,13 +58,14 @@ if ! timeout 570 docker run --rm --user 1000:1000 --read-only --tmpfs /tmp --cap
     -v "$SECRETS_DIR/gh-read:/run/secrets/gh-read:ro" \
     -v "$SECRETS_DIR/moog-read-env:/run/secrets/moog-read-env:ro" \
     -v "$MOOG_DIR:/opt/moog:ro" \
-    -v "$OUT_DIR:/out" \
+    -v "$SNAPSHOT_DIR:/out" \
     -e DASHBOARD_OUT=/out -e DASHBOARD_CACHE=/tmp/cache \
+    -e STATUS_ISSUE_ORACLE -e STATUS_ISSUE_AGENT -e STATUS_ISSUE_MONITOR \
     "$IMAGE" /app/collect/collect.sh >/dev/null 2>&1; then
     echo "compare-live: local collection failed" >&2
     exit 2
 fi
-[[ -s $OUT_DIR/data.json ]] || {
+[[ -s $SNAPSHOT_DIR/data.json ]] || {
     echo "compare-live: local collection produced no data.json" >&2
     exit 2
 }
@@ -72,7 +80,7 @@ strip_volatile <"$live" >"$WORK/live.json" || {
     echo "compare-live: live snapshot shape unreadable" >&2
     exit 2
 }
-strip_volatile <"$OUT_DIR/data.json" >"$WORK/local.json" || {
+strip_volatile <"$SNAPSHOT_DIR/data.json" >"$WORK/local.json" || {
     echo "compare-live: local snapshot shape unreadable" >&2
     exit 2
 }

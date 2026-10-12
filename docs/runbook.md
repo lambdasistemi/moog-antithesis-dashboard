@@ -48,11 +48,23 @@ exit 0 with 1486 facts; `token` exit 0 with the pending-request list.
 7. Flip the two GHCR packages
    (`moog-antithesis-dashboard`, `moog-antithesis-dashboard-reporter`) to
    public after the first push to main, so hosts pull without a credential.
-8. Cutover order: dry-run the collector first and compare with
-   `deploy/compare-live.sh`; stop the old timer before switching the
-   container to the real `gh-pages` remote; keep the old checkout for one
-   release as rollback; never let the old publisher and the new publisher
-   write `gh-pages` simultaneously.
+8. Pin deployed images to the merged commit SHA. Dry-run the collector
+   first and compare with `deploy/compare-live.sh`, setting all installed
+   `STATUS_ISSUE_*` numbers. The legacy timer is already disabled; leave
+   it disabled. Save the current Compose configuration and image SHA
+   before updating; rollback restores that previous Nix-built service.
+   Keep the existing cache volume and never run two publishers together.
+
+Oracle and agent reporters sample every minute, publish on meaningful
+changes, and send a five-minute heartbeat. The collector publishes every
+ten minutes. The monitor hook is one-shot; its external scheduler must
+produce fresh reports within the fifteen-minute staleness window.
+
+The table describes recommended credential scopes, not an attestation of
+every deployed token. The current collector uses existing operator tokens
+with broader permissions. Issues-write covers all issues in the selected
+repository, not one issue. The reporter's Docker socket grants privileged
+Engine API access despite the read-only container configuration.
 
 ## Recovery
 
@@ -71,8 +83,17 @@ REPORTER_ROLE=oracle REPORT_DRY_RUN=1 ./reporter/report.sh
 REPORTER_ROLE=agent REPORT_DRY_RUN=1 ./reporter/report.sh
 echo "OK run_id=$id age=${age}s maximum=${max}s" | REPORT_DRY_RUN=1 ./reporter/push-verdict.sh
 DASHBOARD_DRY_RUN=1 ./deploy/publish.sh
-LIVE_URL=... ./deploy/compare-live.sh
+STATUS_ISSUE_ORACLE=27 STATUS_ISSUE_AGENT=28 STATUS_ISSUE_MONITOR=... \
+  IMAGE=ghcr.io/lambdasistemi/moog-antithesis-dashboard:<merged-sha> \
+  ./deploy/compare-live.sh
 ```
+
+The comparison stores its local JSON in a fresh `snapshot.*` directory
+under `OUT_DIR`. It compares structure and reports value differences;
+it ignores source freshness fields and the monitor verdict, so exit zero
+does not certify service health or monitor cutover. The reproduction
+matrix uses controlled fixtures for reporter stopping and recovery;
+production outage and recovery evidence must be recorded separately.
 
 ## Rejected transports
 
