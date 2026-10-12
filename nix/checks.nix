@@ -1524,15 +1524,15 @@ DRIVER_EOF
         c=$(run_collect)
         monitor_ok "$c" "$NOW" "STALE no recent runs" false monitor-valid-stale || exit 1
         seed_sources
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:false,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:false,reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-ok-mismatch || exit 1
         seed_sources
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"see https://example.invalid/v",ok:false,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"see https://example.invalid/v",ok:false,reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-url-in-verdict || exit 1
         seed_sources
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:"true",reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:"true",reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-string-ok || exit 1
         seed_sources
@@ -1540,7 +1540,7 @@ DRIVER_EOF
         c=$(run_collect)
         monitor_refused "$c" monitor-extra-keys || exit 1
         seed_sources
-        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-future-reported-at || exit 1
         echo "schema reject ok"
