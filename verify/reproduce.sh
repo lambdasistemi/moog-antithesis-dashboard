@@ -38,7 +38,7 @@ HERE=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 cd "$HERE"
 
-MATRIX=(reporter-smoke push-verdict-smoke schema-reject host-stale publish-gate site-check loop-runtime container-smoke image-clean secrets-gate props-summary)
+MATRIX=(reporter-smoke push-verdict-smoke reporter-diff monitor-http schema-reject host-stale publish-gate site-check loop-runtime container-smoke image-clean secrets-gate props-summary)
 
 if [[ $LIST -eq 1 ]]; then
     for name in "${MATRIX[@]}"; do
@@ -171,6 +171,32 @@ row_schema_reject() {
     log "schema-reject | nix run --quiet .#schema-reject | green-exit=0 | break=ok-consistency-removed red-exit=$red red='monitor-ok-mismatch monitor accepted' | restore=git-checkout-clean | green-exit=0"
 }
 
+row_reporter_diff() {
+    ROW=reporter-diff
+    green_check reporter-diff 300 || return 1
+    apply_break reporter/report.sh '($now - .reported_epoch) < $heartbeat' '($now - .reported_epoch) < 0' || return 1
+    red=$(red_check reporter-diff 300 'uptime alone must not publish') || {
+        restore_files reporter/report.sh
+        return 1
+    }
+    restore_files reporter/report.sh || return 1
+    green_check reporter-diff 300 restore-green || return 1
+    log "reporter-diff | nix run --quiet .#reporter-diff | green-exit=0 | break=unchanged-suppression-disabled red-exit=$red | restore=git-checkout-clean | green-exit=0"
+}
+
+row_monitor_http() {
+    ROW=monitor-http
+    green_check monitor-http 300 || return 1
+    apply_break reporter/push-verdict.sh 'curl -K - -sS --fail --max-time' 'curl -K - -sS --max-time' || return 1
+    red=$(red_check monitor-http 300 'monitor hook reported an HTTP refusal as success') || {
+        restore_files reporter/push-verdict.sh
+        return 1
+    }
+    restore_files reporter/push-verdict.sh || return 1
+    green_check monitor-http 300 restore-green || return 1
+    log "monitor-http | nix run --quiet .#monitor-http | green-exit=0 | break=http-refusal-ignored red-exit=$red | restore=git-checkout-clean | green-exit=0"
+}
+
 row_host_stale() {
     ROW=host-stale
     green_check host-stale 600 || return 1
@@ -205,14 +231,14 @@ row_publish_gate() {
 row_site_check() {
     ROW=site-check
     green_check site-check 300 || return 1
-    apply_break nix/checks.nix "indexOf('stale') < 0" "indexOf('stale') >= 0" || return 1
+    apply_break site/index.html '  const agentStale = !agentSrc || agentSrc.status !== "ok";' '  const agentStale = false;' || return 1
     red=$(red_check site-check 300 'not marked stale') || {
-        restore_files nix/checks.nix
+        restore_files site/index.html
         return 1
     }
-    restore_files nix/checks.nix || return 1
+    restore_files site/index.html || return 1
     green_check site-check 300 restore-green || return 1
-    log "site-check | nix run --quiet .#site-check | green-exit=0 | break=render-assertion-inverted red-exit=$red red='not marked stale' | restore=git-checkout-clean | green-exit=0"
+    log "site-check | nix run --quiet .#site-check | green-exit=0 | break=stale-host-labelled-up red-exit=$red red='not marked stale' | restore=git-checkout-clean | green-exit=0"
 }
 
 row_loop_runtime() {
