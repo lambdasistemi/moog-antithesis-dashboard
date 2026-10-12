@@ -141,7 +141,9 @@ the reporter exits non-zero and the previous body stays.
 A host clock more than 15 minutes behind shows stale even while reporting:
 `last_success` is the payload's `reported_at`, and anything older than 15
 minutes counts as failed. (Future timestamps are refused outright.)
-Keep host clocks in sync.
+Keep host clocks in sync. Set the collector's `STATUS_ISSUE_ORACLE` and
+`STATUS_ISSUE_AGENT` to those issue numbers before starting its Compose
+stack. The reporters use the corresponding number as `STATUS_ISSUE_NUMBER`.
 
 ```sh
 # On either host: check the payload without sending anything.

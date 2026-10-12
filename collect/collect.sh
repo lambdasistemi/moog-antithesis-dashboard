@@ -185,9 +185,9 @@ src_token() {
 # Oracle and agent status from their GitHub issues (#11). One shared strict
 # jq schema: known keys only (role, containers, reported_at, plus errors_6h
 # and published_24h for the agent), types, every string at most 200
-# characters, at most 50 containers, reported_at UTC ISO 8601 and not more
-# than 2 minutes in the future. Counts are non-negative integers. Unknown
-# keys are dropped; missing keys or wrong types fail. A payload older than
+# characters, at most 50 containers, reported_at UTC ISO 8601 and not in
+# the future. Counts are non-negative integers. Unknown keys, missing
+# keys or wrong types fail. A payload older than
 # 15 minutes fails as stale so the last good value is served. Error
 # messages never include body text.
 # Fetch seams for checks only: STATUS_BODY_CMD_ORACLE (else legacy
