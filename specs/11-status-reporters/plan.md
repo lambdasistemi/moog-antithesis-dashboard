@@ -1,0 +1,4 @@
+# Plan (vertical: each slice is runnable end to end)
+1. oracle-end-to-end: reporter (role oracle) with a dry-run mode, its image and compose, the collector's strict reader for the oracle source, last-success from `reported_at`, the page marking the oracle part stale, `DASHBOARD_DRY_RUN` for the publish step, `schema-reject` and `host-stale` checks on the oracle source. The agent part stays an interim failing source.
+2. agent-end-to-end: the agent role (log counts through the Docker API), the agent source, deletion of the remaining ssh pulls and the interim stub.
+Constraints: status issue numbers are configuration (STATUS_ISSUE_ORACLE, STATUS_ISSUE_AGENT); the reporter needs only Issues-write; the collector reads with its existing read token. Dry-run modes need no token and make no outward write.
