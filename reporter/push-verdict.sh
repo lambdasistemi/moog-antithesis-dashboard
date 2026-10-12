@@ -86,7 +86,7 @@ patch_json=$(jq -n -c --arg body "$payload" '{body: $body}')
 # purpose: it must never contain the token or a verdict URL.
 if ! printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/vnd.github+json"\n' \
     "$(cat "$STATUS_TOKEN_FILE")" |
-    curl -K - -sS --max-time 30 -X PATCH \
+    curl -K - -sS --fail --max-time 30 -X PATCH \
         -H "Content-Type: application/json" \
         --data "$patch_json" "$api_url" >/dev/null; then
     echo "push-verdict: failed to update status issue $STATUS_ISSUE_NUMBER in $REPORT_REPOSITORY" >&2

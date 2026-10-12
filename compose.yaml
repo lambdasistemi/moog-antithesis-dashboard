@@ -14,6 +14,9 @@ services:
       - ALL
     environment:
       DASHBOARD_CACHE: /cache
+      STATUS_ISSUE_ORACLE: ${STATUS_ISSUE_ORACLE:-}
+      STATUS_ISSUE_AGENT: ${STATUS_ISSUE_AGENT:-}
+      STATUS_ISSUE_MONITOR: ${STATUS_ISSUE_MONITOR:-}
     volumes:
       - dashboard-cache:/cache
       - /srv/moog-antithesis-dashboard/antithesis-key:/run/secrets/antithesis-key:ro

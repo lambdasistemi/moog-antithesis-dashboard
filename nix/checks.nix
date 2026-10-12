@@ -1,4 +1,4 @@
-{ pkgs, src }:
+{ pkgs, src, images, reporterImages }:
 let
   scripts = {
     shellcheck = {
@@ -243,25 +243,21 @@ let
         # dry run exposes no credential-shaped variable. Only match counts
         # and file paths are reported, never matched values.
         #
-        # Scoping, measured 2026-10-07 against the pinned base plus our
-        # packages: `v2.public`, `github_pat_` and the canary occur nowhere
-        # benign, so they are scanned across the whole exported filesystem.
+        # `v2.public`, `github_pat_` and the canary are scanned across
+        # the whole exported Nix filesystem.
         # `Bearer `, `auth=` and `ghp_` occur in tool help text and binaries
         # (curl, gh, libcurl) outside our control, so they are scanned only
         # under /app -- the sole paths we add -- where every occurrence must
         # be a gate definition (mirroring the secrets-gate scope).
         #
-        # The ARG/ENV ban lives in the image-source-shape check, not here.
+        # Image metadata is checked separately without a Docker daemon.
         set -euo pipefail
         canary="''${IMAGE_CLEAN_CANARY:-}"
         check_one() {
-          local tag=$1 dockerfile=$2
+          local tag=$1 archive=$2
           local cid work fail leak_paths canary_paths app_files env_out env_hits
-          if [[ "$dockerfile" == "Dockerfile" ]]; then
-            docker build -q -t "$tag" .
-          else
-            docker build -q -f "$dockerfile" -t "$tag" .
-          fi
+          docker load -i "$archive" >/dev/null
+          docker tag "$3" "$tag"
           cid=$(docker create "$tag")
           work=$(mktemp -d)
           fail=0
@@ -303,11 +299,12 @@ let
             fail=1
           fi
           docker rm -f "$cid" >/dev/null
+          chmod -R u+w "$work"
           rm -rf "$work"
           [[ "$fail" -eq 0 ]]
         }
-        check_one "moog-collector:image-clean" "Dockerfile"
-        check_one "moog-reporter:image-clean" "Dockerfile.reporter"
+        check_one "moog-collector:image-clean" ${images.image} moog-collector:nix
+        check_one "moog-reporter:image-clean" ${reporterImages.image} moog-reporter:nix
         echo "image clean ok"
       '';
     };
@@ -321,9 +318,9 @@ let
         # publish with none of the fake secret literals in the pushed tree,
         # the logs, or the run env; a planted literal must refuse without
         # pushing. Only paths and counts are reported, never values.
-        # A second build from a throwaway context copy with all group/other
+        # A second Nix image from source with all group/other
         # permission bits stripped proves mode normalisation is independent
-        # of the build context.
+        # of source checkout modes.
         #
         # No host bind mount anywhere: some daemons cannot see the
         # invoker's filesystem, so every fixture lives in named volumes,
@@ -343,7 +340,8 @@ let
           exit 1
         fi
         tag="moog-collector:container-smoke"
-        docker build -q -t "$tag" .
+        docker load -i ${images.image} >/dev/null
+        docker tag moog-collector:nix "$tag"
         assert_modes() {
           local t bad
           t=$1
@@ -368,15 +366,24 @@ let
           fi
         }
         assert_modes "$tag" || exit 1
+        docker run --rm --user 1000:1000 "$tag" bash -c '
+          set -euo pipefail
+          for tool in bash curl gh git jq flock unzip grep sed find awk; do
+            type -P "$tool" >/dev/null
+          done
+          test -s "$SSL_CERT_FILE"
+          test -w /cache
+          test -w "$HOME"
+        '
         secvol="smoke-secrets-$$-$RANDOM"
         vol="smoke-cache-$$-$RANDOM"
         remvol="smoke-remote-$$-$RANDOM"
         cyc="smoke-cycle-$$-$RANDOM"
-        ctx=""
+        credential_log=$(mktemp)
         cleanup() {
-          docker rm -f "$cyc" "$cyc-plant" "$cyc-env" >/dev/null 2>&1 || true
+          docker rm -f "$cyc" "$cyc-plant" "$cyc-env" "$cyc-identity" >/dev/null 2>&1 || true
           docker volume rm "$secvol" "$vol" "$remvol" >/dev/null 2>&1 || true
-          [[ -n $ctx ]] && rm -rf "$ctx"
+          rm -f "$credential_log"
         }
         trap cleanup EXIT
         m_sec="--mount=type=volume,src=$secvol,dst=/s"
@@ -417,6 +424,9 @@ let
           -e DASHBOARD_MAX_CYCLES=1)
         probe_flags=(--rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
           "$m_secrets" "$m_cache" "$m_remote")
+        docker run -d --name "$cyc-identity" "''${probe_flags[@]}" "$tag" sleep 60 >/dev/null
+        docker exec "$cyc-identity" id -u | grep -qx 1000
+        docker rm -f "$cyc-identity" >/dev/null
         diag_cycle() {
           echo "smoke: $1" >&2
           code=$(docker inspect --format='{{.State.ExitCode}}' "$2" 2>/dev/null || echo unknown)
@@ -462,6 +472,32 @@ let
             exit 1
           }
         done <<<"$lits_text"
+        # Exercise the actual publisher's HTTPS credential path on Docker's
+        # noexec /tmp. A local remote helper requests credentials, records
+        # successful file-read authentication, then refuses the push.
+        docker run --rm "''${probe_flags[@]}" "$tag" bash -c '
+          mkdir -p /cache/git-helper
+          cat >/cache/git-helper/git-remote-https <<"EOF"
+#!/usr/bin/env bash
+set -euo pipefail
+credential=$(printf "protocol=https\nhost=fixture.invalid\n\n" | git credential fill)
+[[ "$credential" == *"password=$(cat "$PAGES_PUSH_TOKEN_FILE")"* ]]
+printf ok >/cache/credential-helper-result
+exit 1
+EOF
+          chmod 755 /cache/git-helper/git-remote-https
+        '
+        if docker run --rm "''${probe_flags[@]}" \
+          -e DASHBOARD_CACHE=/cache -e DASHBOARD_REMOTE=https://fixture.invalid/repo \
+          -e GIT_EXEC_PATH=/cache/git-helper \
+          --entrypoint /app/deploy/publish.sh "$tag" >"$credential_log" 2>&1; then
+          echo "smoke: refusing HTTPS fixture unexpectedly succeeded" >&2
+          exit 1
+        fi
+        docker run --rm "''${probe_flags[@]}" "$tag" test -f /cache/credential-helper-result || {
+          echo "smoke: HTTPS credential helper failed on noexec /tmp" >&2
+          exit 1
+        }
         docker run --rm --user 0:0 "$m_sec" "$m_cachec" "$tag" bash -c '
           set -euo pipefail
           printf "{\"reporter\":\"evil\",\"note\":\"%s\"}" "$(cat /s/antithesis-key)" \
@@ -484,12 +520,9 @@ let
           diag_cycle "planted cycle pushed" "$cyc-plant" "$out2"
           exit 1
         fi
-        ctx=$(mktemp -d)
-        mkdir -p "$ctx/collect" "$ctx/deploy" "$ctx/site"
-        cp -r collect deploy site Dockerfile "$ctx/"
-        chmod -R go-rwx "$ctx"
         tag2="moog-collector:container-smoke-modes"
-        docker build -q -t "$tag2" "$ctx"
+        docker load -i ${images.modesImage} >/dev/null
+        docker tag moog-collector:nix-modes "$tag2"
         assert_modes "$tag2" || exit 1
         echo "container smoke ok"
       '';
@@ -529,8 +562,9 @@ let
           exit 1
         fi
         tag="moog-reporter:reporter-smoke"
-        timeout 120 docker build -q -f Dockerfile.reporter -t "$tag" . >/dev/null \
-          || { echo "reporter-smoke: build timed out or failed" >&2; exit 1; }
+        timeout 120 docker load -i ${reporterImages.image} >/dev/null \
+          || { echo "reporter-smoke: load timed out or failed" >&2; exit 1; }
+        docker tag moog-reporter:nix "$tag"
         assert_modes() {
           local t bad
           t=$1
@@ -685,7 +719,7 @@ class H(BaseHTTPRequestHandler):
     open("/rec/last.json","w").write(json.dumps({"auth":auth,"body":body,"path":self.path}))
     time.sleep(3)
     r=b"{}"
-    self.send_response(200)
+    self.send_response(403 if self.path.endswith("/999") else 200)
     self.send_header("Content-Type","application/json")
     self.send_header("Content-Length",str(len(r)))
     self.end_headers()
@@ -765,6 +799,16 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
         printf '%s' "$rec_out" | jq -r .body | jq -r .body \
           | jq -e '.role=="oracle" and (.containers|length==2)' >/dev/null \
           || { echo "reporter-smoke: recorded body is not the payload" >&2; exit 1; }
+        # An expired or denied token must make the cycle fail.
+        if timeout 30 docker run --rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL \
+            --network "$net" "$m_sock" "$m_sec" \
+            -e REPORTER_ROLE=oracle -e DOCKER_SOCKET=/sock/docker.sock \
+            -e REPORT_REPOSITORY=owner/repo -e STATUS_ISSUE_NUMBER=999 \
+            -e STATUS_TOKEN_FILE=/s/status-token -e REPORT_API_BASE=http://fake-gh:8080 \
+            "$tag" /app/reporter/report.sh >/dev/null 2>&1; then
+          echo "reporter-smoke: HTTP refusal reported as success" >&2
+          exit 1
+        fi
         # Agent role: same container list plus log-count integers from the
         # moog-agent container, parsed from the multiplexed log stream.
         cred=$(timeout 15 docker run --rm "$m_sec" "$tag" cat /s/credpat) \
@@ -862,12 +906,9 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
           exit 1
         fi
         ctx=$(mktemp -d)
-        mkdir -p "$ctx/reporter"
-        cp -r reporter Dockerfile.reporter "$ctx/"
-        chmod -R go-rwx "$ctx"
         tag2="moog-reporter:reporter-smoke-modes"
-        timeout 120 docker build -q -f "$ctx/Dockerfile.reporter" -t "$tag2" "$ctx" >/dev/null \
-          || { echo "reporter-smoke: stripped build" >&2; exit 1; }
+        docker load -i ${reporterImages.modesImage} >/dev/null
+        docker tag moog-reporter:nix-modes "$tag2"
         assert_modes "$tag2" || exit 1
         echo "reporter smoke ok"
       '';
@@ -903,8 +944,8 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
           exit 1
         fi
         tag="moog-reporter:push-verdict-smoke"
-        timeout 120 docker build -q -f Dockerfile.reporter -t "$tag" . >/dev/null \
-          || { echo "push-verdict-smoke: build timed out or failed" >&2; exit 1; }
+        timeout 120 docker load -i ${reporterImages.image} >/dev/null
+        docker tag moog-reporter:nix "$tag"
         bad=$(timeout 30 docker run --rm --user 1000:1000 "$tag" find /app/reporter -name '*.sh' ! -executable -print) \
           || { echo "push-verdict-smoke: find timed out" >&2; exit 1; }
         if [[ -n $bad ]]; then
@@ -1116,7 +1157,9 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
         sha="''${GITHUB_SHA:?GITHUB_SHA must be set}"
         sha_tag="ghcr.io/$repo:$sha"
         main_tag="ghcr.io/$repo:main"
-        docker build -q -t "$sha_tag" -t "$main_tag" .
+        docker load -i ${images.image} >/dev/null
+        docker tag moog-collector:nix "$sha_tag"
+        docker tag moog-collector:nix "$main_tag"
         if [[ "''${PUBLISH:-0}" == "1" ]]; then
           actor="''${GH_ACTOR:?GH_ACTOR must be set for PUBLISH=1}"
           printf '%s\n' "''${GH_TOKEN:?GH_TOKEN must be set for PUBLISH=1}" \
@@ -1131,7 +1174,7 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
     reporter-publish = {
       runtimeInputs = [ pkgs.docker pkgs.coreutils pkgs.bash ];
       text = ''
-        # Build the reporter image (Dockerfile.reporter) tagged with the
+        # Tag the Nix reporter archive with the
         # commit SHA and `main` as ghcr.io/<repo>-reporter, and push both
         # tags only when PUBLISH=1. Same shape as image-publish: repository
         # and SHA from the environment, token via --password-stdin.
@@ -1140,7 +1183,9 @@ HTTPServer(("0.0.0.0",8080),H).serve_forever()
         sha="''${GITHUB_SHA:?GITHUB_SHA must be set}"
         sha_tag="ghcr.io/$repo-reporter:$sha"
         main_tag="ghcr.io/$repo-reporter:main"
-        docker build -q -f Dockerfile.reporter -t "$sha_tag" -t "$main_tag" .
+        docker load -i ${reporterImages.image} >/dev/null
+        docker tag moog-reporter:nix "$sha_tag"
+        docker tag moog-reporter:nix "$main_tag"
         if [[ "''${PUBLISH:-0}" == "1" ]]; then
           actor="''${GH_ACTOR:?GH_ACTOR must be set for PUBLISH=1}"
           printf '%s\n' "''${GH_TOKEN:?GH_TOKEN must be set for PUBLISH=1}" \
@@ -1320,10 +1365,17 @@ DRIVER_EOF
       '';
     };
 
+    reporter-diff = {
+      runtimeInputs = [ pkgs.bash pkgs.jq pkgs.coreutils ];
+      text = ''
+        bash tests/reporter-diff.sh
+      '';
+    };
+
     schema-reject = {
       runtimeInputs = [ pkgs.bash pkgs.jq pkgs.curl pkgs.coreutils pkgs.gnugrep pkgs.findutils ];
       text = ''
-        # Strict oracle schema: extra keys are dropped (still ok); wrong
+        # Strict oracle schema: extra keys are refused; wrong
         # types, missing keys, future reported_at, oversize lists and
         # overlong strings are refused. Refusal errors never include body
         # text (each bad fixture plants a marker that must not leak).
@@ -1400,28 +1452,25 @@ DRIVER_EOF
           || { echo "schema-reject: valid hosts shape" >&2; exit 1; }
         jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:[{name:"a",image:"b",status:"c",zzz:$m}],reported_at:$t,aaa:$m}' >"$TMPDIR/body.json"
         c=$(run_collect)
-        expect_ok "$c" "$NOW" extra-keys || exit 1
-        jq -e '.hosts.oracle[0]|keys==["image","name","status"]' "$c/out/data.json" >/dev/null \
-          || { echo "schema-reject: extra keys not dropped" >&2; exit 1; }
-        if grep -q "$MARKER" "$c/out/data.json"; then
-          echo "schema-reject: extra keys leaked into data" >&2
-          exit 1
-        fi
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:$m,reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        expect_refused "$c" extra-keys || exit 1
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:[{name:"a",image:"b",status:"c",extra:$m}],reported_at:$t}' >"$TMPDIR/body.json"
+        c=$(run_collect)
+        expect_refused "$c" nested-extra-keys || exit 1
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:$m,reported_at:$t}' >"$TMPDIR/body.json"
         c=$(run_collect)
         expect_refused "$c" wrong-types || exit 1
-        jq -n -c --arg m "$MARKER" '{role:"oracle",containers:[],note:$m}' >"$TMPDIR/body.json"
+        jq -n -c --arg m "$MARKER" '{role:"oracle",containers:[]}' >"$TMPDIR/body.json"
         c=$(run_collect)
         expect_refused "$c" missing-keys || exit 1
-        FUT=$(date -u -d "+10 minutes" +%FT%TZ)
-        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"oracle",containers:[],reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        FUT=$(date -u -d "+1 minute" +%FT%TZ)
+        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"oracle",containers:[],reported_at:$t}' >"$TMPDIR/body.json"
         c=$(run_collect)
         expect_refused "$c" future-reported-at || exit 1
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:[range(51)|{name:"c",image:"i",status:"s"}],reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"oracle",containers:[range(51)|{name:"c",image:"i",status:"s"}],reported_at:$t}' >"$TMPDIR/body.json"
         c=$(run_collect)
         expect_refused "$c" oversize-list || exit 1
         LONG=$(printf 'x%.0s' $(seq 1 201))
-        jq -n -c --arg t "$NOW" --arg n "$LONG" --arg m "$MARKER" '{role:"oracle",containers:[{name:$n,image:"i",status:"s"}],reported_at:$t,note:$m}' >"$TMPDIR/body.json"
+        jq -n -c --arg t "$NOW" --arg n "$LONG" --arg m "$MARKER" '{role:"oracle",containers:[{name:$n,image:"i",status:"s"}],reported_at:$t}' >"$TMPDIR/body.json"
         c=$(run_collect)
         expect_refused "$c" overlong-string || exit 1
         jq -n -c --arg m "$MARKER" '{role:"oracle",containers:[],reported_at:$m}' >"$TMPDIR/body.json"
@@ -1462,23 +1511,17 @@ DRIVER_EOF
         seed_oracle
         jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"agent",containers:[{name:"a",image:"b",status:"c",zzz:$m}],errors_6h:0,published_24h:0,reported_at:$t,aaa:$m}' >"$TMPDIR/abody.json"
         c=$(run_collect)
-        agent_ok "$c" "$NOW" agent-extra-keys || exit 1
-        jq -e '.hosts.agent[0]|keys==["image","name","status"]' "$c/out/data.json" >/dev/null \
-          || { echo "schema-reject: agent extra keys not dropped" >&2; exit 1; }
-        if grep -q "$MARKER" "$c/out/data.json"; then
-          echo "schema-reject: agent extra keys leaked into data" >&2
-          exit 1
-        fi
+        agent_refused "$c" agent-extra-keys || exit 1
         seed_oracle
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"agent",containers:[],errors_6h:"2",published_24h:0,reported_at:$t,note:$m}' >"$TMPDIR/abody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"agent",containers:[],errors_6h:"2",published_24h:0,reported_at:$t}' >"$TMPDIR/abody.json"
         c=$(run_collect)
         agent_refused "$c" agent-string-counts || exit 1
         seed_oracle
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"agent",containers:[],errors_6h:-1,published_24h:0,reported_at:$t,note:$m}' >"$TMPDIR/abody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"agent",containers:[],errors_6h:-1,published_24h:0,reported_at:$t}' >"$TMPDIR/abody.json"
         c=$(run_collect)
         agent_refused "$c" agent-negative-counts || exit 1
         seed_oracle
-        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"agent",containers:[],errors_6h:0,published_24h:0,reported_at:$t,note:$m}' >"$TMPDIR/abody.json"
+        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"agent",containers:[],errors_6h:0,published_24h:0,reported_at:$t}' >"$TMPDIR/abody.json"
         c=$(run_collect)
         agent_refused "$c" agent-future-reported-at || exit 1
         # Monitor source: verdict vocabulary OK|FAIL|STALE with matching ok.
@@ -1495,29 +1538,23 @@ DRIVER_EOF
         c=$(run_collect)
         monitor_ok "$c" "$NOW" "STALE no recent runs" false monitor-valid-stale || exit 1
         seed_sources
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:false,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:false,reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-ok-mismatch || exit 1
         seed_sources
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"see https://example.invalid/v",ok:false,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"see https://example.invalid/v",ok:false,reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-url-in-verdict || exit 1
         seed_sources
-        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:"true",reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:"true",reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-string-ok || exit 1
         seed_sources
         jq -n -c --arg t "$NOW" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t,zzz:$m}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
-        monitor_ok "$c" "$NOW" "OK x" true monitor-extra-keys || exit 1
-        jq -e '.monitor|keys==["last","ok"]' "$c/out/data.json" >/dev/null \
-          || { echo "schema-reject: monitor extra keys not dropped" >&2; exit 1; }
-        if grep -q "$MARKER" "$c/out/data.json"; then
-          echo "schema-reject: monitor extra keys leaked into data" >&2
-          exit 1
-        fi
+        monitor_refused "$c" monitor-extra-keys || exit 1
         seed_sources
-        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t,note:$m}' >"$TMPDIR/mbody.json"
+        jq -n -c --arg t "$FUT" --arg m "$MARKER" '{role:"monitor",verdict:"OK x",ok:true,reported_at:$t}' >"$TMPDIR/mbody.json"
         c=$(run_collect)
         monitor_refused "$c" monitor-future-reported-at || exit 1
         echo "schema reject ok"
@@ -1653,46 +1690,37 @@ DRIVER_EOF
 
   apps = builtins.mapAttrs mkApp scripts;
 
-  # The image-clean app needs the docker daemon, which the nix build users
-  # cannot reach, so it cannot run as a sandboxed check. This check pins the
-  # static source shape (Dockerfile hygiene, CI publish shape) while the app
-  # performs the build, export and env scan. The gate runs both. The ARG/ENV
-  # ban lives here, not in the app.
+  # Inspect the delivered Nix archive in the sandbox; daemon-backed leak
+  # and execution checks remain separate apps in the collector CI job.
   image-source-shape = pkgs.runCommand "image-source-shape" {
-    nativeBuildInputs = [ pkgs.glibcLocales ];
-    LANG = "C.UTF-8";
-    LC_ALL = "C.UTF-8";
+    nativeBuildInputs = [ pkgs.jq pkgs.gnutar ];
   } ''
     set -euo pipefail
+    mkdir archive
+    tar -xf ${images.image} -C archive
+    config=$(jq -r '.[0].Config' archive/manifest.json)
+    jq -e '.config.User == "1000:1000" and
+      .config.WorkingDir == "/app" and
+      .config.Cmd == ["/app/deploy/loop.sh"] and
+      (.config.Env | sort) == (["PATH=/bin", "HOME=/home/collector",
+        "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt",
+        "GIT_SSL_CAINFO=/etc/ssl/certs/ca-bundle.crt"] | sort)' "archive/$config"
+    mkdir reporter-archive
+    tar -xf ${reporterImages.image} -C reporter-archive
+    config=$(jq -r '.[0].Config' reporter-archive/manifest.json)
+    jq -e '.config.User == "1000:1000" and
+      .config.WorkingDir == "/app" and
+      .config.Cmd == ["/app/reporter/loop.sh"] and
+      (.config.Env | sort) == (["PATH=/bin", "HOME=/home/reporter",
+        "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt",
+        "GIT_SSL_CAINFO=/etc/ssl/certs/ca-bundle.crt"] | sort)' "reporter-archive/$config"
     cd ${src}
-    [[ -f Dockerfile ]] || { echo "image-source-shape: Dockerfile missing" >&2; exit 1; }
-    [[ -f Dockerfile.reporter ]] || { echo "image-source-shape: Dockerfile.reporter missing" >&2; exit 1; }
-    if grep -E '^ADD[[:space:]]' Dockerfile Dockerfile.reporter; then
-      echo "image-source-shape: image must not use ADD" >&2
+    test ! -e Dockerfile
+    test ! -e Dockerfile.reporter
+    if grep -q 'docker[[:space:]]build' nix/checks.nix .github/workflows/ci.yml; then
+      echo "image-source-shape: legacy image builder" >&2
       exit 1
     fi
-    if grep -E '^(ARG|ENV)[[:space:]]' Dockerfile Dockerfile.reporter; then
-      echo "image-source-shape: image must not use ARG or ENV" >&2
-      exit 1
-    fi
-    [[ $(grep -cE '^COPY[[:space:]]' Dockerfile) -eq 3 ]] || {
-      echo "image-source-shape: Dockerfile must copy exactly three sources" >&2
-      exit 1
-    }
-    for dir in collect deploy site; do
-      grep -qE "^COPY[[:space:]]+$dir[[:space:]]" Dockerfile || {
-        echo "image-source-shape: Dockerfile does not copy $dir" >&2
-        exit 1
-      }
-    done
-    [[ $(grep -cE '^COPY[[:space:]]' Dockerfile.reporter) -eq 1 ]] || {
-      echo "image-source-shape: Dockerfile.reporter must copy exactly one source" >&2
-      exit 1
-    }
-    grep -qE '^COPY[[:space:]]+reporter[[:space:]]' Dockerfile.reporter || {
-      echo "image-source-shape: Dockerfile.reporter does not copy only reporter/" >&2
-      exit 1
-    }
     # The publish pipeline is split: the workflow gates and authenticates,
     # the image-publish app (in this file) owns the registry and tag shape.
     grep -q 'packages: write' .github/workflows/ci.yml || {
@@ -1751,10 +1779,6 @@ DRIVER_EOF
       echo "image-source-shape: image-publish does not use password-stdin" >&2
       exit 1
     }
-    grep -q 'Dockerfile.reporter' nix/checks.nix || {
-      echo "image-source-shape: reporter-publish does not use Dockerfile.reporter" >&2
-      exit 1
-    }
     grep -q '\-reporter:' nix/checks.nix || {
       echo "image-source-shape: reporter image has no -reporter tag" >&2
       exit 1
@@ -1770,6 +1794,11 @@ in
   publish-gate = mkCheck "publish-gate" scripts.publish-gate;
   site-check = mkCheck "site-check" scripts.site-check;
   loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
+  reporter-diff = mkCheck "reporter-diff" scripts.reporter-diff;
+  monitor-http = mkCheck "monitor-http" {
+    runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.gnused ];
+    text = ''bash tests/monitor-http.sh'';
+  };
   schema-reject = mkCheck "schema-reject" scripts.schema-reject;
   host-stale = mkCheck "host-stale" scripts.host-stale;
   image-source-shape = image-source-shape;

@@ -30,8 +30,11 @@ jobs:
           .#checks.x86_64-linux.publish-gate
           .#checks.x86_64-linux.site-check
           .#checks.x86_64-linux.loop-runtime
+          .#checks.x86_64-linux.reporter-diff
           .#checks.x86_64-linux.schema-reject
           .#checks.x86_64-linux.host-stale
+          .#collector-image
+          .#reporter-image
           .#checks.x86_64-linux.image-source-shape
           .#devShells.x86_64-linux.default.inputDerivation
 
