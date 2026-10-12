@@ -279,9 +279,11 @@ let
         vol="smoke-cache-$$-$RANDOM"
         remvol="smoke-remote-$$-$RANDOM"
         cyc="smoke-cycle-$$-$RANDOM"
+        credential_log=$(mktemp)
         cleanup() {
-          docker rm -f "$cyc" "$cyc-plant" "$cyc-env" >/dev/null 2>&1 || true
+          docker rm -f "$cyc" "$cyc-plant" "$cyc-env" "$cyc-identity" >/dev/null 2>&1 || true
           docker volume rm "$secvol" "$vol" "$remvol" >/dev/null 2>&1 || true
+          rm -f "$credential_log"
         }
         trap cleanup EXIT
         m_sec="--mount=type=volume,src=$secvol,dst=/s"
@@ -322,6 +324,9 @@ let
           -e DASHBOARD_MAX_CYCLES=1)
         probe_flags=(--rm --user 1000:1000 --read-only --tmpfs /tmp --cap-drop ALL
           "$m_secrets" "$m_cache" "$m_remote")
+        docker run -d --name "$cyc-identity" "''${probe_flags[@]}" "$tag" sleep 60 >/dev/null
+        docker exec "$cyc-identity" id -u | grep -qx 1000
+        docker rm -f "$cyc-identity" >/dev/null
         diag_cycle() {
           echo "smoke: $1" >&2
           code=$(docker inspect --format='{{.State.ExitCode}}' "$2" 2>/dev/null || echo unknown)
@@ -367,6 +372,32 @@ let
             exit 1
           }
         done <<<"$lits_text"
+        # Exercise the actual publisher's HTTPS credential path on Docker's
+        # noexec /tmp. A local remote helper requests credentials, records
+        # successful file-read authentication, then refuses the push.
+        docker run --rm "''${probe_flags[@]}" "$tag" bash -c '
+          mkdir -p /cache/git-helper
+          cat >/cache/git-helper/git-remote-https <<"EOF"
+#!/usr/bin/env bash
+set -euo pipefail
+credential=$(printf "protocol=https\nhost=fixture.invalid\n\n" | git credential fill)
+[[ "$credential" == *"password=$(cat "$PAGES_PUSH_TOKEN_FILE")"* ]]
+printf ok >/cache/credential-helper-result
+exit 1
+EOF
+          chmod 755 /cache/git-helper/git-remote-https
+        '
+        if docker run --rm "''${probe_flags[@]}" \
+          -e DASHBOARD_CACHE=/cache -e DASHBOARD_REMOTE=https://fixture.invalid/repo \
+          -e GIT_EXEC_PATH=/cache/git-helper \
+          --entrypoint /app/deploy/publish.sh "$tag" >"$credential_log" 2>&1; then
+          echo "smoke: refusing HTTPS fixture unexpectedly succeeded" >&2
+          exit 1
+        fi
+        docker run --rm "''${probe_flags[@]}" "$tag" test -f /cache/credential-helper-result || {
+          echo "smoke: HTTPS credential helper failed on noexec /tmp" >&2
+          exit 1
+        }
         docker run --rm --user 0:0 "$m_sec" "$m_cachec" "$tag" bash -c '
           set -euo pipefail
           printf "{\"reporter\":\"evil\",\"note\":\"%s\"}" "$(cat /s/antithesis-key)" \
