@@ -99,7 +99,7 @@ reported_at=$(date -u +%FT%TZ)
 # "ghcr.io/org/moog-oracle:main" or "moog-oracle:v0.5.1.5"; Status like
 # "Up 5 days". Keep those whose name matches `moog`, drop the registry
 # prefix from the image, keep the API Status string verbatim.
-docker_json=$(curl -sS --max-time 15 --unix-socket "$DOCKER_SOCKET" http://localhost/containers/json) || {
+docker_json=$(curl -sS --fail --max-time 15 --unix-socket "$DOCKER_SOCKET" http://localhost/containers/json) || {
     echo "reporter: failed to list containers from $DOCKER_SOCKET" >&2
     exit 1
 }
@@ -195,7 +195,7 @@ patch_json=$(jq -n -c --arg body "$payload" '{body: $body}')
 # purpose: it must never contain the token.
 if ! printf 'header = "Authorization: Bearer %s"\nheader = "Accept: application/vnd.github+json"\n' \
     "$(cat "$STATUS_TOKEN_FILE")" |
-    curl -K - -sS --max-time 30 -X PATCH \
+    curl -K - -sS --fail --max-time 30 -X PATCH \
         -H "Content-Type: application/json" \
         --data "$patch_json" "$api_url" >/dev/null; then
     echo "reporter: failed to update status issue $STATUS_ISSUE_NUMBER in $REPORT_REPOSITORY" >&2

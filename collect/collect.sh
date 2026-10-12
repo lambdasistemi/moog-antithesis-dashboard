@@ -212,11 +212,13 @@ validate_status_payload() {
     jq -e --arg role "$role" --argjson now "$now_epoch" '
         if type != "object" then error("bad")
         elif (has("role") and has("containers") and has("reported_at") | not) then error("bad")
+        elif (keys | sort) != (if $role == "agent" then ["containers", "errors_6h", "published_24h", "reported_at", "role"] else ["containers", "reported_at", "role"] end) then error("bad")
         elif (.role | type) != "string" or .role != $role or (.role | length) > 200 then error("bad")
         elif (.containers | type) != "array" or (.containers | length) > 50 then error("bad")
         elif (.reported_at | type) != "string" or (.reported_at | length) > 200 then error("bad")
         elif (.reported_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$") | not) then error("bad")
         elif ([.containers[] | select(type != "object"
+            or (keys | sort) != ["image", "name", "status"]
             or (has("name") and has("image") and has("status") | not)
             or (.name | type) != "string" or (.image | type) != "string" or (.status | type) != "string"
             or (.name | length) > 200 or (.image | length) > 200 or (.status | length) > 200)] | length) > 0 then error("bad")
@@ -226,7 +228,7 @@ validate_status_payload() {
             or (.errors_6h | floor) != .errors_6h or (.published_24h | floor) != .published_24h) then error("bad")
         else
             (.reported_at | fromdateiso8601) as $rep
-            | if $rep > ($now + 120) then error("bad")
+            | if $rep > $now then error("bad")
               elif $role == "agent" then {role, containers: [.containers[] | {name, image, status}], errors_6h, published_24h, reported_at}
               else {role, containers: [.containers[] | {name, image, status}], reported_at}
               end

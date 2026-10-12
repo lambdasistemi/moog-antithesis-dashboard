@@ -119,12 +119,13 @@ cat >"$PUSH_HELPER" <<'HELPER_EOF'
 #!/usr/bin/env bash
 printf 'username=x-access-token\npassword=%s\n' "$(cat "$PAGES_PUSH_TOKEN_FILE")"
 HELPER_EOF
-chmod +x "$PUSH_HELPER"
+# Docker mounts /tmp noexec. Read the helper with Bash rather than asking
+# the kernel to execute a file from that filesystem.
 
 cd "$STAGE"
 git init -q -b gh-pages
 git add -A
 git -c user.name="moog-antithesis-dashboard" -c user.email="noreply@lambdasistemi.net" \
     commit -q -m "data $(jq -r .generated_at data.json)"
-GIT_TERMINAL_PROMPT=0 git -c credential.helper="$PUSH_HELPER" push -q -f "$REMOTE" gh-pages
+GIT_TERMINAL_PROMPT=0 git -c credential.helper="!bash \"$PUSH_HELPER\"" push -q -f "$REMOTE" gh-pages
 echo "published $(jq -r .generated_at data.json)"
