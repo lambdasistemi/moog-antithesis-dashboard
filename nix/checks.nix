@@ -1358,6 +1358,11 @@ DRIVER_EOF
       '';
     };
 
+    monitor-http = {
+      runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.gnused ];
+      text = ''bash tests/monitor-http.sh'';
+    };
+
     schema-reject = {
       runtimeInputs = [ pkgs.bash pkgs.jq pkgs.curl pkgs.coreutils pkgs.gnugrep pkgs.findutils ];
       text = ''
@@ -1777,10 +1782,7 @@ in
   site-check = mkCheck "site-check" scripts.site-check;
   loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
   reporter-diff = mkCheck "reporter-diff" scripts.reporter-diff;
-  monitor-http = mkCheck "monitor-http" {
-    runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.jq pkgs.gnused ];
-    text = ''bash tests/monitor-http.sh'';
-  };
+  monitor-http = mkCheck "monitor-http" scripts.monitor-http;
   schema-reject = mkCheck "schema-reject" scripts.schema-reject;
   host-stale = mkCheck "host-stale" scripts.host-stale;
   image-source-shape = image-source-shape;
