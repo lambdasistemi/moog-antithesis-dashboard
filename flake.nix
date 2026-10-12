@@ -11,13 +11,17 @@
       pkgs = import nixpkgs { inherit system; };
       src = ./.;
       images = import ./nix/image.nix { inherit pkgs src; };
-      checksFull = import ./nix/checks.nix { inherit pkgs src images; };
+      reporterImages = import ./nix/reporter-image.nix { inherit pkgs src; };
+      checksFull = import ./nix/checks.nix { inherit pkgs src images reporterImages; };
       checkApps = import ./nix/apps.nix { inherit pkgs; checks = checksFull; };
       previewApps = import ./nix/preview-apps.nix { inherit pkgs; };
       checks = builtins.removeAttrs checksFull [ "apps" ];
     in
     {
-      packages.${system}.collector-image = images.image;
+      packages.${system} = {
+        collector-image = images.image;
+        reporter-image = reporterImages.image;
+      };
       checks.${system} = checks;
       apps.${system} = checkApps // previewApps // {
         default = checkApps.shellcheck;

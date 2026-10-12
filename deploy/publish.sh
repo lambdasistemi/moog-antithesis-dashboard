@@ -8,6 +8,10 @@
 # mounted secret. The push token reaches git through a credential helper
 # that reads it from a file; it never appears in argv, the remote URL, git
 # config on disk or any message.
+#
+# DASHBOARD_DRY_RUN=1 stages the same files, runs the full gate, commits
+# locally in the staging directory and prints what would be published,
+# without pushing and without needing a token file.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")/.." && pwd)
@@ -24,10 +28,12 @@ export PAGES_PUSH_TOKEN_FILE
     echo "no data.json in $OUT_DIR" >&2
     exit 1
 }
-[[ -s $PAGES_PUSH_TOKEN_FILE ]] || {
-    echo "no push token file in $PAGES_PUSH_TOKEN_FILE" >&2
-    exit 1
-}
+if [[ ${DASHBOARD_DRY_RUN:-0} != "1" ]]; then
+    [[ -s $PAGES_PUSH_TOKEN_FILE ]] || {
+        echo "no push token file in $PAGES_PUSH_TOKEN_FILE" >&2
+        exit 1
+    }
+fi
 
 STAGE=$(mktemp -d)
 PATTERNS=$(mktemp)
@@ -97,6 +103,18 @@ fi
 # Credential helper: git calls this for the HTTPS push. The username is
 # fixed; the token is read from its file at request time, so it never lands
 # in argv, the remote URL, git config on disk or any message.
+if [[ ${DASHBOARD_DRY_RUN:-0} == "1" ]]; then
+    cd "$STAGE"
+    git init -q -b gh-pages
+    git add -A
+    git -c user.name="moog-antithesis-dashboard" -c user.email="noreply@lambdasistemi.net" \
+        commit -q -m "data $(jq -r .generated_at data.json)"
+    n=$(git ls-files | wc -l | tr -d ' ')
+    t=$(jq -r .generated_at data.json)
+    echo "dry run: would publish $n files, generated_at $t"
+    git ls-files
+    exit 0
+fi
 cat >"$PUSH_HELPER" <<'HELPER_EOF'
 #!/usr/bin/env bash
 printf 'username=x-access-token\npassword=%s\n' "$(cat "$PAGES_PUSH_TOKEN_FILE")"

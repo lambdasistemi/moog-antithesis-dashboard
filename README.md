@@ -31,7 +31,7 @@ flowchart LR
     subgraph collect [collect/collect.sh]
         A[Antithesis API] --> J[data.json]
         B[moog facts + token] --> J
-        C[oracle + agent status: error until #11] --> J
+        C[oracle + agent status: live since #11] --> J
         D[proxy readyz] --> J
         E[freshness monitor: error until #12] --> J
         F[nightly runs + receipts] --> J
@@ -43,11 +43,11 @@ flowchart LR
 
 1. `collect/collect.sh` fetches seven independent sources into one
    `data.json`: Antithesis runs and their properties, on-chain test-run
-   facts and pending requests, oracle and agent status (interim: `error`,
-   see below), proxy readiness, the freshness monitor verdict (interim:
+   facts and pending requests, oracle and agent status (live, via their
+   status issues), proxy readiness, the freshness monitor verdict (interim:
    `error`), and nightly Amaru integration runs with their receipts. It
    also writes one detail file per run (`runs/<run_id>.json`), status
-   payloads (`status/<reporter>.json`, once the reporters exist), and the
+   payloads (`status/<reporter>.json`), and the
    shared `property-descriptions.json`.
 2. `deploy/publish.sh` runs a secrets gate and force-pushes `site/` plus
    `data.json` and the detail files as a single orphan commit to `gh-pages`
@@ -109,13 +109,67 @@ with stripped group and other permissions.
 - Property descriptions repeat verbatim across runs, so they publish once in
   `property-descriptions.json` instead of inside every detail file.
 
+## Status reporters (oracle and agent)
+
+The reporter image is built from the pinned Nix closure with
+`nix build .#reporter-image`. CI loads this archive for its smoke checks
+and publishes the same archive under the commit SHA. No Dockerfile or
+package installation at image-build time is used.
+
+One tiny container runs on each of the oracle and agent hosts and edits
+one status issue on this repository. It samples every minute and pushes
+when container state, health, image or agent counts change, plus a
+five-minute heartbeat when unchanged. Timestamp and elapsed uptime do
+not trigger a push. Successful public comparison state lives on the
+reporter-state volume; failed pushes retry on the next sample. It lists containers
+through the Docker socket with curl, keeps names matching `moog` (name,
+image without the registry prefix, status), and PATCHes the payload as the
+issue body over HTTPS. The oracle sends `{role, containers, reported_at}`
+(UTC, ISO 8601); the agent adds `errors_6h` and `published_24h`. The token
+lives in a file and reaches curl through its stdin config, never argv; on
+failure the old body stays and the reporter logs one line and retries.
+
+On the agent, the two counts come from the first container whose name
+matches `moog-agent`, read through `GET /containers/<id>/logs` over the
+same socket: lines matching `exception|error` (case-insensitive) over the
+last 6 hours, and lines matching `Published result` over the last 24
+hours. The log stream is demultiplexed in memory and counted line by
+line; no raw log ever leaves the host — only the two integers travel in
+the payload. If no moog-agent container exists or the logs call fails,
+the reporter exits non-zero and the previous body stays.
+
+A host clock more than 15 minutes behind shows stale even while reporting:
+`last_success` is the payload's `reported_at`, and anything older than 15
+minutes counts as failed. (Future timestamps are refused outright.)
+Keep host clocks in sync. Set the collector's `STATUS_ISSUE_ORACLE` and
+`STATUS_ISSUE_AGENT` to those issue numbers before starting its Compose
+stack. The reporters use the corresponding number as `STATUS_ISSUE_NUMBER`.
+
+```sh
+# On either host: check the payload without sending anything.
+REPORTER_ROLE=agent REPORT_DRY_RUN=1 ./reporter/report.sh
+# Collector side: check what would publish without pushing or needing a token.
+DASHBOARD_DRY_RUN=1 ./deploy/publish.sh
+```
+
+The reporter needs one fine-grained token (Issues: write on this repo
+only, nothing else) in `/srv/moog-status-reporter/status-token`, mode
+`0400`, and the issue number in `STATUS_ISSUE_NUMBER` (see
+`reporter/compose.yaml` for the socket mount and the Docker group GID).
+When the token expires, that host's card turns stale with its last success
+time; nothing else breaks. Rotate yearly at most (maximum token lifetime).
+
+Rejected: ssh pulls (the collector has no ssh client by design), a
+receiver service (a new always-on endpoint to patch for the same outcome),
+gists (no fine-grained scope), pushing a git branch (the token could write
+gh-pages).
+
 ## Interim state
 
-The oracle/agent (`hosts`) and freshness-monitor (`monitor`) sources show
-`error`: their push reporters land in #11 and #12. Until then the
-collector has no ssh client and no journal access by design, so there is
-nothing to read those sources with — and the page says `error` rather
-than guessing. Nothing else is affected.
+The freshness-monitor (`monitor`) source shows `error`: its push reporter
+lands in #12. Until then the collector has no journal access by design,
+so there is nothing to read that source with — and the page says `error`
+rather than guessing. Nothing else is affected.
 
 ## What never leaves the collector
 
@@ -151,7 +205,7 @@ stay overridable via the environment variables at the top of each script.
 | One loop container (`loop.sh` + `cycle.sh`, restart `unless-stopped`) | systemd timer | The collector is one always-on container on one host; a unit plus a timer plus a lock is three moving parts doing the job of one loop. The loop logs a failing cycle and continues, and stops promptly on SIGTERM. |
 | Publish from the host to the `gh-pages` branch | Pages in workflow mode | The snapshot refreshes every 10 minutes with secrets mounted as files into the collector container (Antithesis key, GitHub tokens, moog read environment). A workflow build has none of those inputs, so it cannot produce `data.json`. The legacy branch is the deployment mechanism, not documentation hosting. |
 | HTTPS push with a file-read credential helper | SSH deploy keys and agent sockets | One Contents-write token in a mounted file, handed to git on a pipe only for the push. No key material in the image, no agent socket crossing into the container. |
-| Status via per-reporter issue edits (#11, #12) | Always-on receiver endpoint | No listening service to supervise and patch; each reporter token can only edit its own status issue. See `docs/transport-design.md`. |
+| Status via per-reporter issue edits (#11, #12) | Always-on receiver endpoint | No listening service to supervise and patch; the reporter targets its configured issue; GitHub Issues-write permission applies to the whole repository. See `docs/transport-design.md`. |
 | No versioned releases | release-please | There is no installable artifact. The dashboard deploys continuously from the collector container; a version tag on every change would be noise. |
 | No separate documentation site | MkDocs site on Pages | Pages already serves the dashboard itself. This README is the documentation; it carries the stories and the diagram above. |
 | One failing source never blanks the page | Fail the whole snapshot on any source error | Each source is independent. The page shows the last good value marked `stale` so one outage stays visible without hiding the rest. |
