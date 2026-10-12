@@ -38,3 +38,6 @@ loop-runtime:
 
 image-clean:
     nix run --quiet .#image-clean
+
+docs-presentation:
+    nix run --quiet .#docs-presentation

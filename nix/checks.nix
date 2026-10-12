@@ -1,6 +1,13 @@
 { pkgs, src, images, reporterImages }:
 let
   scripts = {
+    docs-presentation = {
+      runtimeInputs = [ pkgs.python3 ];
+      text = ''
+        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md
+      '';
+    };
+
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
@@ -1792,6 +1799,7 @@ DRIVER_EOF
   '';
 in
 {
+  docs-presentation = mkCheck "docs-presentation" scripts.docs-presentation;
   shellcheck = mkCheck "shellcheck" scripts.shellcheck;
   format-check = mkCheck "format-check" scripts.format-check;
   syntax = mkCheck "syntax" scripts.syntax;

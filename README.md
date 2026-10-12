@@ -18,6 +18,23 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   refreshing, a banner names it and its last success instead of silently
   showing old numbers.
 
+## Collection design and delivery status
+
+GitHub supplies service observations and, in the approved wallet design, public
+wallet coordinates: role, verified network, active and historical addresses.
+The collector queries Koios directly for those wallets, just as it queries
+Antithesis directly for test data, then publishes the derived observations in
+the GitHub gh-pages snapshot. There is no separate wallet balance reporter.
+See the [system design](docs/transport-design.md) for the target flow and the
+[operator runbook](docs/runbook.md) for setup and recovery.
+
+Oracle and agent status issues are deployed. Monitor code is merged; production
+cutover is unverified. [MPFS status](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29)
+and wallet collection ([agent/oracle](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23),
+[requester](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24))
+remain planned. The diagram below describes the current collection code, not
+completed wallet or MPFS delivery. Existing legacy Moog reads remain in place.
+
 ## How it runs
 
 One always-on collector container loops `deploy/cycle.sh` every 10 minutes
@@ -27,24 +44,17 @@ continues; overlapping cycles are skipped by the existing lock. The
 container stops promptly on SIGTERM.
 
 ```mermaid
-flowchart LR
-    subgraph collect [collect/collect.sh]
-        A[Antithesis API] --> J[data.json]
-        B[moog facts + token] --> J
-        C[oracle + agent status: live since #11] --> J
-        D[proxy readyz] --> J
-        E[freshness monitor verdict: live since #12] --> J
-        F[nightly runs + receipts] --> J
-    end
-    J --> K[deploy/publish.sh secrets gate]
-    K --> L[gh-pages branch over HTTPS]
-    L --> M[live page polls data.json every minute]
+flowchart TB
+    I[GitHub host status and Actions<br/>Antithesis tests<br/>Legacy Moog facts and token<br/>Proxy readiness] -->|Read sources| C[Collector]
+    C -->|Public snapshot| V[Publication gate]
+    V -->|HTTPS push| H[GitHub gh-pages]
+    H -->|Read snapshot| D[Dashboard]
 ```
 
 1. `collect/collect.sh` fetches seven independent sources into one
    `data.json`: Antithesis runs and their properties, on-chain test-run
    facts and pending requests, oracle and agent status (live, via their
-   status issues), proxy readiness, the freshness monitor verdict (live, via
+   status issues), proxy readiness, the freshness monitor verdict (via
    its status issue), and nightly Amaru integration runs with their receipts. It
    also writes one detail file per run (`runs/<run_id>.json`), status
    payloads (`status/<reporter>.json`), and the

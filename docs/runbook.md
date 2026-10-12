@@ -1,7 +1,8 @@
 # Operator runbook: moog Antithesis dashboard
 
-How to bring the dashboard up, keep it up, and recover when a card goes
-stale. The live page, the collection loop and the push transport are
+As the pipeline operator, I bring the dashboard up, keep it up, and recover
+when a source goes stale. I inspect the published inputs before trusting an
+old service observation or wallet balance. The live page, the collection loop and the push transport are
 described in `README.md` and `docs/transport-design.md`; this file is the
 hands-on companion: tokens, hosts, cutover, recovery.
 
@@ -104,3 +105,47 @@ patch for the same outcome), pushing a git branch (the token could write
 option), and on-chain facts (barred: the dashboard never writes chain
 data). The per-issue edit won: no listening service and the smallest token
 blast radius.
+
+## Public wallet configuration and Koios collection (planned)
+
+GitHub holds wallet query coordinates, not a balance issue supplied by a second
+publisher. Configure role, verified network, active public addresses and historical
+address scope in a versioned public document. Record the deployed wallet-to-role
+mapping evidence; never copy wallet files or private keys into the collector or
+repository. A testnet address alone does not determine which testnet to query.
+
+The collector reads the document at one commit, validates its schema and scope,
+chooses an allowlisted Koios endpoint for that network and queries Koios directly.
+Antithesis follows the same direct API collection pattern for tests. The existing
+publication gate publishes derived wallet observations in gh-pages; inspect the
+snapshot there or through the dashboard. A separate wallet status publisher is
+not part of this design.
+
+During recovery, distinguish a GitHub configuration failure from a Koios provider
+failure. The source must show its last successful query time, configured address
+scope and revision, network and history coverage. Rereading coordinates cannot
+refresh a stale balance. After address rotation, old cached observations retain
+the old scope and remain stale until the new scope is queried successfully.
+Unavailable data is never zero ADA. Complete history is never inferred from one
+page of transactions. Fee attribution and locked funds need transaction evidence.
+
+## MPFS status publication (planned)
+
+MPFS needs its own reporter and status issue. Bind it to the legacy service used
+by the collector; do not substitute umpfs or use the Antithesis proxy readiness
+probe. Publish container/image identity and bounded API probe outcome. Inspect
+that issue first when the MPFS source is stale, then verify reporter execution,
+GitHub write access and producer timestamps. Running and reachable do not imply
+chain synchronization; synchronization remains unmeasured until supported.
+
+## Delivery progress
+
+Oracle and agent issue reporting is deployed. Monitor reporting is merged but
+installation and fresh production verdict evidence remain open. MPFS reporting
+and direct Koios wallet collection are not installed; the previous sections state
+their approved contract and recovery behavior, not executable setup commands.
+The funds tickets retain balance and historical accounting as distinct acceptance
+requirements. See the [system design](transport-design.md) and issues
+[MPFS](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29),
+[agent/oracle](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23)
+and [requester](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24).

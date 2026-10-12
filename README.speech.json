@@ -1,0 +1,220 @@
+{
+  "moog-antithesis-dashboard": [
+    {
+      "text": "moog-antithesis-dashboard.",
+      "pause": 500
+    },
+    {
+      "text": "Live status page for the moog Antithesis test pipeline of cardano-foundation/cardano-node-antithesis.",
+      "pause": 400
+    },
+    {
+      "text": "Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/",
+      "pause": 400
+    }
+  ],
+  "who-this-is-for": [
+    {
+      "text": "Who this is for.",
+      "pause": 500
+    },
+    {
+      "text": "Someone checking the pipeline opens the live page and sees, in one screen, whether test requests are flowing, the oracle and agent are up, Antithesis runs are progressing, on-chain runs are settling, the proxy is ready, and the freshness monitor is happy. A stale source is labelled stale instead of blanking the page, and a snapshot older than 25 minutes raises a banner that the collector may be stopped.",
+      "pause": 300
+    },
+    {
+      "text": "The operator running the collector starts one container with docker compose up -d, then checks the same page. When a source stops refreshing, a banner names it and its last success instead of silently showing old numbers.",
+      "pause": 300
+    }
+  ],
+  "collection-design-and-delivery-status": [
+    {
+      "text": "Collection design and delivery status.",
+      "pause": 500
+    },
+    {
+      "text": "GitHub supplies service observations and, in the approved wallet design, public wallet coordinates: role, verified network, active and historical addresses. The collector queries Koios directly for those wallets, just as it queries Antithesis directly for test data, then publishes the derived observations in the GitHub gh-pages snapshot. There is no separate wallet balance reporter. See the system design for the target flow and the operator runbook for setup and recovery.",
+      "pause": 400
+    },
+    {
+      "text": "Oracle and agent status issues are deployed. Monitor code is merged; production cutover is unverified. MPFS status and wallet collection (agent/oracle, requester) remain planned. The diagram below describes the current collection code, not completed wallet or MPFS delivery. Existing legacy Moog reads remain in place.",
+      "pause": 400
+    }
+  ],
+  "how-it-runs": [
+    {
+      "text": "How it runs.",
+      "pause": 500
+    },
+    {
+      "text": "One always-on collector container loops deploy/cycle.sh every 10 minutes (deploy/loop.sh, DASHBOARD_INTERVAL, default 600). Each cycle collects one snapshot and publishes it. A failing cycle logs one line and the loop continues; overlapping cycles are skipped by the existing lock. The container stops promptly on SIGTERM.",
+      "pause": 400
+    },
+    {
+      "text": "collect/collect.sh fetches seven independent sources into one data.json: Antithesis runs and their properties, on-chain test-run facts and pending requests, oracle and agent status (live, via their status issues), proxy readiness, the freshness monitor verdict (via its status issue), and nightly Amaru integration runs with their receipts. It also writes one detail file per run (runs/<run_id>.json), status payloads (status/<reporter>.json), and the shared property-descriptions.json.",
+      "pause": 300
+    },
+    {
+      "text": "deploy/publish.sh runs a secrets gate and force-pushes site/ plus data.json and the detail files as a single orphan commit to gh-pages over HTTPS, authenticating with a push token read from a file.",
+      "pause": 300
+    },
+    {
+      "text": "The page re-reads data.json every minute and warns when the snapshot is older than 25 minutes.",
+      "pause": 400
+    }
+  ],
+  "secrets": [
+    {
+      "text": "Secrets.",
+      "pause": 500
+    },
+    {
+      "text": "Every secret is a read-only file mounted at /run/secrets. Nothing secret is baked into the image and nothing travels in argv or the environment of the container itself:",
+      "pause": 400
+    },
+    {
+      "text": "Put them at /srv/moog-antithesis-dashboard/ on the collector host, owned by uid 1000 (the collector user the image runs as), mode 0400 (see compose.yaml for the exact mount paths). Inside the container the Antithesis key travels by stdin pipe to curl, the GitHub read token lives only in the environment of the single gh call that uses it, and the push token only on a pipe to git's credential helper. A dry docker run --rm <image> env shows no credential.",
+      "pause": 400
+    }
+  ],
+  "build-the-collector-image": [
+    {
+      "text": "Build the collector image.",
+      "pause": 500
+    },
+    {
+      "text": "nix build .#collector-image creates result, a Docker image archive assembled from the runtime dependencies pinned by flake.lock. It needs no Docker daemon or package installation from Debian repositories.",
+      "pause": 400
+    },
+    {
+      "text": "Load it with docker load -i result; the local tag is moog-collector:nix. CI loads this same Nix archive for the leak scan and restricted container smoke test, then tags it with the commit SHA and main for GHCR. nix run .#container-smoke also checks a second Nix image built from source with stripped group and other permissions.",
+      "pause": 400
+    }
+  ],
+  "one-time-setup": [
+    {
+      "text": "One-time setup.",
+      "pause": 500
+    },
+    {
+      "text": "Create the four secret files above on the collector host.",
+      "pause": 300
+    },
+    {
+      "text": "Flip the moog-antithesis-dashboard container package to public in GHCR (one click in the package settings) so the host pulls the image without a credential.",
+      "pause": 300
+    },
+    {
+      "text": "Provide the moog binaries read-only at /opt/moog on the host.",
+      "pause": 300
+    },
+    {
+      "text": "docker compose up -d.",
+      "pause": 300
+    }
+  ],
+  "caching": [
+    {
+      "text": "Caching.",
+      "pause": 500
+    },
+    {
+      "text": "A source that fails keeps its last good value, marked stale on the page.",
+      "pause": 300
+    },
+    {
+      "text": "Properties of completed Antithesis runs, per-run detail files, and receipts of concluded nightly runs never change, so they are fetched once and kept in the dashboard-cache volume (/cache in the container).",
+      "pause": 300
+    },
+    {
+      "text": "If the cache volume is lost, every source loses its last good value and shows error until its first success — never a silently stale number.",
+      "pause": 300
+    },
+    {
+      "text": "Property descriptions repeat verbatim across runs, so they publish once in property-descriptions.json instead of inside every detail file.",
+      "pause": 300
+    }
+  ],
+  "status-reporters-oracle-agent-monitor": [
+    {
+      "text": "Status reporters (oracle, agent, monitor).",
+      "pause": 500
+    },
+    {
+      "text": "The reporter image is built from the pinned Nix closure with nix build .#reporter-image. CI loads this archive for its smoke checks and publishes the same archive under the commit SHA. No Dockerfile or package installation at image-build time is used.",
+      "pause": 400
+    },
+    {
+      "text": "One tiny container runs on each of the oracle and agent hosts and edits one status issue on this repository. It samples every minute and pushes when container state, health, image or agent counts change, plus a five-minute heartbeat when unchanged. Timestamp and elapsed uptime do not trigger a push. Successful public comparison state lives on the reporter-state volume; failed pushes retry on the next sample. It lists containers through the Docker socket with curl, keeps names matching moog (name, image without the registry prefix, status), and PATCHes the payload as the issue body over HTTPS. The oracle sends {role, containers, reported_at} (UTC, ISO 8601); the agent adds errors_6h and published_24h. The token lives in a file and reaches curl through its stdin config, never argv; on failure the old body stays and the reporter logs one line and retries.",
+      "pause": 400
+    },
+    {
+      "text": "On the agent, the two counts come from the first container whose name matches moog-agent, read through GET /containers/<id>/logs over the same socket: lines matching exception|error (case-insensitive) over the last 6 hours, and lines matching Published result over the last 24 hours. The log stream is demultiplexed in memory and counted line by line; no raw log ever leaves the host — only the two integers travel in the payload. If no moog-agent container exists or the logs call fails, the reporter exits non-zero and the previous body stays.",
+      "pause": 400
+    },
+    {
+      "text": "A host clock more than 15 minutes behind shows stale even while reporting: last_success is the payload's reported_at, and anything older than 15 minutes counts as failed. (Future timestamps are refused outright.) Keep host clocks in sync. Set the collector's STATUS_ISSUE_ORACLE and STATUS_ISSUE_AGENT to those issue numbers before starting its Compose stack. The reporters use the corresponding number as STATUS_ISSUE_NUMBER.",
+      "pause": 400
+    },
+    {
+      "text": "The reporter needs one fine-grained token per host (Issues: write on this repo only, nothing else): the oracle and agent tokens live in /srv/moog-status-reporter/status-token on their hosts, and the third one belongs to the freshness-monitor host, mode 0400 everywhere, with the issue number in STATUS_ISSUE_NUMBER (see reporter/compose.yaml for the socket mount and the Docker group GID). When a token expires, that card turns stale with its last success time; nothing else breaks. Rotate yearly at most (maximum token lifetime).",
+      "pause": 400
+    },
+    {
+      "text": "The freshness monitor is not a container here: the monitor's own script calls the same reporter image one-shot, verdict line on stdin, token file bind-mounted read-only:",
+      "pause": 400
+    },
+    {
+      "text": "Rejected: ssh pulls (the collector has no ssh client by design), a receiver service (a new always-on endpoint to patch for the same outcome), gists (no fine-grained scope), pushing a git branch (the token could write gh-pages), on-chain facts (barred: the dashboard never writes chain data).",
+      "pause": 400
+    }
+  ],
+  "what-never-leaves-the-collector": [
+    {
+      "text": "What never leaves the collector.",
+      "pause": 500
+    },
+    {
+      "text": "Antithesis report links (they carry access tokens) are dropped before publication.",
+      "pause": 300
+    },
+    {
+      "text": "The publish step refuses to push anything matching an authenticated link, a bearer header, a basic-auth argument, the Antithesis key, any mounted secret file, or any long value of the moog read environment. Continuous integration runs the same gate over fixtures.",
+      "pause": 300
+    }
+  ],
+  "develop": [
+    {
+      "text": "Develop.",
+      "pause": 500
+    },
+    {
+      "text": "Pull-request previews: every PR publishes site/ with the frozen sample in preview-sample/ to the shared preview host and posts the link on the PR, then checks the served files. The sample is stale by design; the staleness banner on a preview is expected.",
+      "pause": 400
+    },
+    {
+      "text": "Collector requirements live in compose.yaml: the image, the four secret files, the read-only moog directory, and the cache volume. Script paths stay overridable via the environment variables at the top of each script.",
+      "pause": 400
+    }
+  ],
+  "decisions": [
+    {
+      "text": "Decisions.",
+      "pause": 500
+    }
+  ],
+  "license": [
+    {
+      "text": "License.",
+      "pause": 500
+    },
+    {
+      "text": "Apache License 2.0. See LICENSE.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "README.md",
+    "sha256": "9cb3220f89f097738aa65cfa54a5b2e1d51fee27c1f67a673f44f657bd394020"
+  }
+}
