@@ -1,117 +1,152 @@
-# Collector container, push transport, secret safety — design (revision 2)
+# Dashboard collection and publication design
 
-Revision 2: no systemd anywhere in the design; the freshness monitor pushes its own verdict like the hosts.
+## Who this is for
 
-Slice 1 (oracle) implemented: the oracle reporter (`reporter/report.sh` +
-`reporter/loop.sh`, `nix/reporter-image.nix`, `reporter/compose.yaml`) follows
-design A below; the collector reads the oracle issue with the strict schema
-Slice 2 (agent) implemented as well: `reporter/report.sh` accepts
-`REPORTER_ROLE=agent`, counting `errors_6h` and `published_24h` from the
-first `moog-agent` container through
-`GET /containers/<id>/logs?stdout=1&stderr=1&since=<epoch>` (the 8-byte
-multiplexed frames are demultiplexed in memory; only the two integers
-leave the host). The collector validates both roles with one shared schema
-and assembles `data.json.hosts` from both last-good values.
+As the pipeline operator, I open the dashboard to see service health, test
+progress and remaining ADA. I can inspect GitHub to see the service observations
+and the public configuration that tells the collector which wallets to query.
+When a source fails, I see its last successful observation and its age; an
+unavailable wallet is never displayed as a zero balance.
 
-## Findings in the current code that shape the design
+This revision records the operator's corrected design. Oracle and agent issue
+reporting is deployed. Monitor reporting is merged but production cutover is
+unverified. Dedicated MPFS reporting and Koios wallet collection are planned,
+tracked in [MPFS status](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29),
+[agent/oracle funds](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23)
+and [requester funds](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24).
+The diagram is the target architecture, not a deployment receipt.
 
-1. `src_monitor` reads the host journal (`journalctl -u antithesis-run-freshness-monitor`). A container cannot see it, and mounting `/var/log/journal` would hand the collector every host log (which embed credentials). It breaks silently in a container, so the monitor pushes instead (section 5).
-2. `moog_env` sources `$MOOG_DIR/tmp/prod-setup.sh`, which defines `being_oracle`, `being_agent`, `being_requester` pointing at **wallet files**. The collector only runs read queries (`facts test-runs`, `token`), so it must not be handed wallet material at all.
-3. `publish.sh` pushes over `git@github.com:` (SSH) and the unit exports `SSH_AUTH_SOCK`. Both go, and the systemd unit and timer with them.
-4. The publish gate matches the key literal via `grep -F -f keyfile`. An empty line in a pattern file matches everything, and only that one file is scanned. Extending to more secrets needs a non-empty-line filter and a control that proves it fires.
+## System context
+
+```mermaid
+flowchart TB
+    R[Oracle, agent, monitor<br/>and MPFS reporters] -->|Push status| G[GitHub status issues]
+    G -->|Read observations| C[Collector]
+    C -->|Public snapshot| V[Publication gate]
+    V -->|HTTPS push| D[GitHub Pages dashboard]
+```
+
+The service diagram shows reporter-produced observations. The wallet flow below
+shows the collector querying an external API using public GitHub coordinates.
+Antithesis is queried directly by the same collector for test observations.
+
+```mermaid
+flowchart TB
+    W[GitHub wallet coordinates] -->|Read at one commit| C[Collector validates role,<br/>network and address scope]
+    C -->|Query public addresses| K[Koios API]
+    K -->|Balances and transactions| A[Collector accounts and caches]
+    A -->|Gate and publish| D[GitHub gh-pages snapshot]
+```
+
+GitHub holds two distinct inputs: producer observations and public query
+coordinates. Koios and Antithesis are peer external APIs called directly by the
+collector. Koios supplies chain observations; Antithesis supplies test
+observations. Neither needs a separate host reporter or a GitHub issue containing
+its entire API response. The resulting public wallet data lives with the
+collected snapshot on the repository's gh-pages branch and dashboard.
+
+GitHub Actions runs and receipts are additional GitHub API inputs. Existing
+Moog facts/token reads through legacy MPFS and the Antithesis proxy readiness
+probe remain deployed sources until a separately verified replacement exists.
+A successful proxy probe is not MPFS health. Do not silently substitute the newer
+umpfs service for the legacy MPFS used by deployed Moog.
+
+## Wallet coordinates and collection
+
+The versioned public configuration contains a schema version and, for each
+wallet, a stable identifier, role, explicit Cardano network, active and historical
+public address scope, and the evidence establishing its association with the
+running role or requester. A requester username alone is insufficient. Testnet
+addresses do not distinguish preprod from preview; verify the deployment network
+independently before choosing Koios. Address rotation preserves prior addresses.
+
+The collector reads this configuration from GitHub at a recorded commit, validates
+its schema and address/network scope, then chooses the supported Koios network
+endpoint from its own allowlist. Configuration cannot supply arbitrary endpoints,
+commands, wallet-file paths or private keys. Unknown fields and malformed,
+unsupported or empty address sets fail that source. Pin the configuration
+revision for a whole collection cycle, including every page of history.
+
+The collector queries Koios directly, using the configured addresses. It computes
+in integer lovelace, records provider and observation time and available chain
+point, and publishes formatted ADA balances and evidence-backed history. Shared
+addresses are visible and not double-counted. Fees, top-ups, transfers, internal
+change and known locked/refundable funds are separate; unresolved attribution
+remains unclassified. Partial pagination remains incomplete, never lifetime
+spending. The accounting acceptance criteria in the funds tickets remain binding.
+
+A missing configuration or failed Koios call retains the last-good observation
+with its original scope/revision and an explicit stale marker. After a scope
+change, old observations remain labelled with the old scope and cannot stand in
+for a successful query of the new scope. No balance is published until the role
+mapping, network and provider observation have been verified.
+
+## Host status publication
+
+Oracle, agent, monitor and MPFS publish allowlisted JSON to dedicated status
+issues. Oracle and agent sample every minute and write only on meaningful changes
+or a five-minute heartbeat. MPFS must follow that contract. The monitor's one-shot
+push hook must be invoked by its existing producer within the freshness window.
+
+The MPFS reporter records the configured service's container state, image and
+bounded read-only API probe outcome. It never publishes probe response bodies.
+Container running, API reachable and chain synchronized are separate claims;
+synchronization stays unmeasured without an established observation and reference.
+
+The collector independently validates each issue body: exact known keys, bounded
+strings and counts, correct role, UTC producer timestamp, no future date and no
+observation older than fifteen minutes. Schema validation limits what gets
+published; it does not authenticate the truth of a report. Anyone with issue-edit
+rights can replace a body. GitHub Issues-write applies to the repository, not a
+single issue. Docker socket access is privileged even in a read-only container.
+
+## Freshness and recovery
+
+Every source keeps its own last-good value. A failed query marks that source stale;
+without any successful observation it is unavailable. Producer timestamps define
+host observation age. Koios observation time defines wallet age; rereading GitHub
+coordinates or republishing a snapshot cannot refresh a failed chain query.
+
+The collector loops every ten minutes. Publication passes a secret gate before
+HTTPS push to gh-pages. The browser polls the snapshot every minute and warns
+when it is older than twenty-five minutes. Losing the cache loses last-good
+values, so sources are unavailable until fresh queries succeed.
+
+## Trust boundaries and credentials
+
+The collector has no SSH, wallet files, mnemonic, signing keys, host journal or
+inbound receiver. Reporters have no listening port and publish only public facts.
+Secrets enter as read-only mounted files; never as build arguments, image
+contents, container environment, process arguments or public output. Antithesis
+private report links are removed before publication.
+
+Nix builds both images without a Docker daemon. Deploy immutable merged-SHA tags,
+preserve the named cache volume, and restore the previous Nix-built Compose
+service for rollback. Never restore the legacy timer or run two publishers.
+The runbook's token scopes are recommendations; deployed broader operator tokens
+are not certified least-privilege by this design.
 
 ## Decisions
 
-### 1. Image
-- `nix/image.nix`: `dockerTools.buildLayeredImage` packages pinned Nix runtime dependencies and only `collect`, `deploy`, and `site`. No checkout or secret files enter the image. The archive is built without a Docker daemon.
-- CI job `image`: build, push to GHCR on merge to `main` (tag = commit SHA and `main`), package **public** so hosts pull without a credential. The workflow uses only `GITHUB_TOKEN` with `packages: write`; nothing else reaches the build.
-- The systemd units and timer are deleted from the repo (swap rule: the replacement removes the old path in the same diff).
+| Chosen | Alternative | Reason |
+|---|---|---|
+| GitHub stores public wallet query coordinates | Host wallet reporters publish balances to issues | Chain data is available through Koios, just as tests are available through Antithesis; keep collection in one place. |
+| Collector calls Koios and Antithesis directly | Stage both API responses in GitHub issues first | Avoid a second collection stage and its independent freshness/credential lifecycle. |
+| Host reporters publish service status to issues | Collector SSH or a public receiver | Host observations stay on the producing host; GitHub supplies transport without a new inbound service. |
+| Publish derived wallet observations in the gh-pages snapshot | Separate mutable balance status issues | Reuse the established atomic snapshot and publication gate while retaining inspectable GitHub output. |
+| Allowlisted provider selection from an explicit network | Arbitrary URL from public configuration | Public input cannot redirect credential-bearing or internal requests. |
+| Independent last-good values and explicit coverage | Zero on failure or spending inferred from outputs | Preserve the evidence and its limits when dependencies fail. |
 
-### 2. Runtime on development-epyc
-No systemd. One always-on collector container, restart policy `unless-stopped`, looping `cycle.sh` then `sleep 600`; the existing `flock` still prevents overlap. It is the only always-on piece on the collector side. A named volume `dashboard-cache` holds `last/`, `props/`, `details/`, `nightly/`. If that volume is lost, every source loses its last good value and shows `error` rather than `stale`; documented.
+## Delivery and verification
 
-### 3. Secrets, at rest and in transit
+The [runbook](runbook.md) distinguishes installed sources from planned sources.
+The [front page](../README.md) explains how to inspect the live snapshot.
+MPFS requires reporter/schema/heartbeat/stale/recovery and deployment evidence.
+Wallet collection requires public configuration controls, verified production
+role mapping and network, exact balance fixtures, pagination and accounting
+controls, independent provider reconciliation and final hosted checks.
 
-| secret | at rest (collector host) | transit into container | consumed by |
-|---|---|---|---|
-| Antithesis read key | user-only file (0400) | read-only file mount at `/run/secrets/antithesis-key` | `curl -K -` stdin config, one process, one pipe |
-| GitHub read token (Actions artifacts, run list, reading status issues) | file, fine-grained PAT, public repos only, no scopes | file mount `/run/secrets/gh-read` | `gh`, `GH_TOKEN` set inside the single call from the file, never in the image or `docker run -e` |
-| Pages push token | file, fine-grained PAT, Contents:write on this repo only | file mount `/run/secrets/pages-push` | `publish.sh` via git credential helper reading the file; HTTPS, no SSH |
-| moog read environment | file with provider URL and read-only settings **only**, no wallet paths | read-only mount of the moog binary directory plus that one env file | `moog facts`, `moog token` |
-| status tokens (3, below) | only on the oracle, agent and monitor hosts; never in the collector | — | that host's reporter |
-
-Rules: no `-e SECRET=…`, no `ARG`, no `--env-file`; secrets are files. Dry-run `docker run … env` must be clean.
-
-### 4. Status transport — two designs that meet the constraints
-
-**Design A (recommended): each reporter edits its own GitHub issue.**
-- Three reporters: oracle, agent, freshness monitor. Each host runs one reporter container (`restart: unless-stopped`, read-only filesystem, no inbound port) looping every 5 minutes over a ~20-line script. Oracle and agent: `docker ps` filtered to `moog`; on the agent, `docker logs --since` counts; output is today's JSON (`oracle`, `agent`, `agent_errors_6h`, `agent_published_24h`) plus `reported_at`. It `PATCH`es the body of issue "status: oracle" / "status: agent" on this repository over HTTPS. The Docker socket is mounted directly.
-- Credential: one fine-grained PAT **per reporter** (three), repository = this repo only, permission = Issues: write, nothing else. It cannot touch code or `gh-pages`. Created by the repository owner at github.com → Settings → Developer settings; the owner rotates; maximum lifetime one year. While expired: that reporter's section goes stale (section 6), nothing else breaks.
-- Slice 1 shipped the oracle reporter; slice 2 adds the agent role with the
-  log counts above. `REPORT_DRY_RUN=1` prints the payload with no token and
-  no outward request, and `DASHBOARD_DRY_RUN=1` does the same for the
-  publish step.
-- The collector reads the issues over the API with the read token and validates each body with a strict `jq` schema (known keys, types, string length caps, `reported_at` not in the future) before using any of it. Anything written into an issue outside that shape is dropped.
-- Direction of bytes: reporter → api.github.com → collector. No inbound port anywhere.
-- Limits, named: the reporter container has root-equivalent access to its host's Docker (mitigation: the token can only edit one issue; the container is a tiny script with a read-only filesystem and no inbound port). Any two Issues-write tokens can overwrite each other's issue (the scope cannot be narrowed to one issue). Anyone with issue-edit rights can edit a body (mitigated by schema validation and the publish gate). Issue edit history keeps old payloads (public data already).
-- New moving parts: 3 reporters, 3 tokens, 3 issues. No listening service.
-
-**Design B: collector-side HTTPS receiver.**
-- A small always-on service behind the existing reverse proxy accepts `POST /status/<name>` with a per-reporter HMAC and writes files the collector reads.
-- Pros: no GitHub dependency for status, tighter per-reporter authentication. Cons: a new always-on public endpoint to supervise and patch, three HMAC secrets plus TLS and routing. More parts, same outcome.
-
-Rejected: git branch pushes (token can write `gh-pages`); gists (classic PAT with account-wide gist scope, no fine-grained option); on-chain facts (barred); pulls of any kind (barred).
-
-Recommendation: **A**, because it has no listening service and the smallest token blast radius. B wins only if GitHub as a dependency for status is unacceptable.
-
-### 5. The monitor source
-The freshness monitor pushes its own verdict. A push step in the monitor's script (one `curl`, URLs stripped from the verdict line, token read from a file) edits the "status: monitor" issue with `{verdict, reported_at}`. The collector validates it with the same schema check and staleness window. No journal access, no file mount, no systemd hook. The monitor's script is outside this repo and receives this one change.
-
-Slice 3 (monitor) implemented: `reporter/push-verdict.sh` (stdin or file
-verdict line, URL strip, `{role verdict ok reported_at}` with
-`ok = startswith "OK"`, dry-run and curl-stdin-config PATCH like the
-container reporter) ships in the reporter image; the collector validates
-the monitor branch and serves `{last, ok}` with `last_success =
-reported_at`.
-
-### 6. Staleness contract
-- Source split: `hosts` becomes `oracle` and `agent`, each its own `run_source` with its own `last/*.json` and `last/*.at`; `monitor` is read from its issue. `data.json.hosts` keeps today's shape, assembled from each side's last good value. The page's source chips are generated from `sources`, so the only page change is two more chips; `site/index.html` lines 113 and 165 need confirming.
-- A reporter is `ok` only if its issue parses, matches the schema and `reported_at` is within 15 minutes (three missed pushes). `last_success` = the payload's `reported_at`, not the fetch time, so an unchanged old payload cannot look fresh.
-- Per source, when a piece stops:
-- All three status sources are implemented (`oracle`/`agent`/`monitor` in
-  `sources`; `last_success` is the payload's `reported_at`; the page marks
-  a hosts card stale with that time, and the monitor chip goes stale with
-  its last success).
-
-| stops | result |
-|---|---|
-| a reporter or its token | that source `stale`, `last_success` = last `reported_at`; recovers on the next push |
-| GitHub API unreachable | oracle, agent, monitor `stale`; other sources unaffected |
-| collector container | snapshot ages; existing 25-minute banner |
-| cache volume lost | sources show `error` until first success |
-| Antithesis key expired | `runs` stale; others unaffected |
-| Pages push token expired | publish fails, snapshot ages, banner fires |
-
-### 7. Leak surface and the control for each
-
-| place | key | tokens (gh, push, status) | moog env |
-|---|---|---|---|
-| rest | file mode 0400, not in repo | same | read-only env file only |
-| transit | stdin pipe to curl | file mounts, credential helper | read-only mount |
-| build log / layer | no build arg; check exports the filesystem and greps | same | not copied |
-| image env | dry-run `env` compared to empty | same | same |
-| published file | gate matches the literal of every secret file plus patterns | same | gate scans the value of every exported variable from the env file |
-| process list | check runs the fetch with a sniffer on `/proc/*/cmdline` | same (`reporter-smoke` asserts the token is absent from `docker top` and logs; the token travels via curl stdin config) | n/a |
-| error message | check forces curl/gh failure and greps stderr and `data.json` `error` fields | same | same |
-
-## Verification (each a Nix check of the existing shape, each shown red first)
-1. `publish-gate`: plant each secret literal in `data.json`, a run detail file and a status payload; every plant refuses. Includes the empty-line control.
-2. `image-clean`: `docker export` of the built image, grep for every planted-at-build canary and the token patterns; `docker run --rm image env` has no credential-shaped variable. Control: place a canary in an application file and run with `IMAGE_CLEAN_CANARY` set to that value; the scan must fail.
-3. `host-stale`: feed the collector a fixture issue body, stop updating it, assert `stale` plus the right `last_success`; update again, assert `ok` with no manual step.
-4. `schema-reject`: a body with extra keys, wrong types or a future `reported_at` is refused.
-5. Each is accompanied by a recorded break → red → restore → green run in the PR.
-
-## Open questions for the operator
-- Can the monitor's script be changed to add the push step? (Assumed yes.)
-- Is a read-only moog environment (no wallet paths) acceptable to create, and who holds it?
-- Is a public GHCR package acceptable? (It is the reason no pull credential exists.)
+This design change does not claim these future collection paths are implemented.
+Existing direct Moog reads remain visible; their replacement needs its own scope
+and verification. Monitor cutover, MPFS reporting and historical wallet coverage
+stay open until their production evidence is recorded.

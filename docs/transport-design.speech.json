@@ -1,0 +1,126 @@
+{
+  "who-this-is-for": [
+    {
+      "text": "Who this is for.",
+      "pause": 500
+    },
+    {
+      "text": "As the pipeline operator, I open the dashboard to see service health, test progress and remaining ADA. I can inspect GitHub to see the service observations and the public configuration that tells the collector which wallets to query. When a source fails, I see its last successful observation and its age; an unavailable wallet is never displayed as a zero balance.",
+      "pause": 400
+    },
+    {
+      "text": "This revision records the operator's corrected design. Oracle and agent issue reporting is deployed. Monitor reporting is merged but production cutover is unverified. Dedicated MPFS reporting and Koios wallet collection are planned, tracked in MPFS status, agent/oracle funds and requester funds. The diagram is the target architecture, not a deployment receipt.",
+      "pause": 400
+    }
+  ],
+  "system-context": [
+    {
+      "text": "System context.",
+      "pause": 500
+    },
+    {
+      "text": "The service diagram shows reporter-produced observations. The wallet flow below shows the collector querying an external API using public GitHub coordinates. Antithesis is queried directly by the same collector for test observations.",
+      "pause": 400
+    },
+    {
+      "text": "GitHub holds two distinct inputs: producer observations and public query coordinates. Koios and Antithesis are peer external APIs called directly by the collector. Koios supplies chain observations; Antithesis supplies test observations. Neither needs a separate host reporter or a GitHub issue containing its entire API response. The resulting public wallet data lives with the collected snapshot on the repository's gh-pages branch and dashboard.",
+      "pause": 400
+    },
+    {
+      "text": "GitHub Actions runs and receipts are additional GitHub API inputs. Existing Moog facts/token reads through legacy MPFS and the Antithesis proxy readiness probe remain deployed sources until a separately verified replacement exists. A successful proxy probe is not MPFS health. Do not silently substitute the newer umpfs service for the legacy MPFS used by deployed Moog.",
+      "pause": 400
+    }
+  ],
+  "wallet-coordinates-and-collection": [
+    {
+      "text": "Wallet coordinates and collection.",
+      "pause": 500
+    },
+    {
+      "text": "The versioned public configuration contains a schema version and, for each wallet, a stable identifier, role, explicit Cardano network, active and historical public address scope, and the evidence establishing its association with the running role or requester. A requester username alone is insufficient. Testnet addresses do not distinguish preprod from preview; verify the deployment network independently before choosing Koios. Address rotation preserves prior addresses.",
+      "pause": 400
+    },
+    {
+      "text": "The collector reads this configuration from GitHub at a recorded commit, validates its schema and address/network scope, then chooses the supported Koios network endpoint from its own allowlist. Configuration cannot supply arbitrary endpoints, commands, wallet-file paths or private keys. Unknown fields and malformed, unsupported or empty address sets fail that source. Pin the configuration revision for a whole collection cycle, including every page of history.",
+      "pause": 400
+    },
+    {
+      "text": "The collector queries Koios directly, using the configured addresses. It computes in integer lovelace, records provider and observation time and available chain point, and publishes formatted ADA balances and evidence-backed history. Shared addresses are visible and not double-counted. Fees, top-ups, transfers, internal change and known locked/refundable funds are separate; unresolved attribution remains unclassified. Partial pagination remains incomplete, never lifetime spending. The accounting acceptance criteria in the funds tickets remain binding.",
+      "pause": 400
+    },
+    {
+      "text": "A missing configuration or failed Koios call retains the last-good observation with its original scope/revision and an explicit stale marker. After a scope change, old observations remain labelled with the old scope and cannot stand in for a successful query of the new scope. No balance is published until the role mapping, network and provider observation have been verified.",
+      "pause": 400
+    }
+  ],
+  "host-status-publication": [
+    {
+      "text": "Host status publication.",
+      "pause": 500
+    },
+    {
+      "text": "Oracle, agent, monitor and MPFS publish allowlisted JSON to dedicated status issues. Oracle and agent sample every minute and write only on meaningful changes or a five-minute heartbeat. MPFS must follow that contract. The monitor's one-shot push hook must be invoked by its existing producer within the freshness window.",
+      "pause": 400
+    },
+    {
+      "text": "The MPFS reporter records the configured service's container state, image and bounded read-only API probe outcome. It never publishes probe response bodies. Container running, API reachable and chain synchronized are separate claims; synchronization stays unmeasured without an established observation and reference.",
+      "pause": 400
+    },
+    {
+      "text": "The collector independently validates each issue body: exact known keys, bounded strings and counts, correct role, UTC producer timestamp, no future date and no observation older than fifteen minutes. Schema validation limits what gets published; it does not authenticate the truth of a report. Anyone with issue-edit rights can replace a body. GitHub Issues-write applies to the repository, not a single issue. Docker socket access is privileged even in a read-only container.",
+      "pause": 400
+    }
+  ],
+  "freshness-and-recovery": [
+    {
+      "text": "Freshness and recovery.",
+      "pause": 500
+    },
+    {
+      "text": "Every source keeps its own last-good value. A failed query marks that source stale; without any successful observation it is unavailable. Producer timestamps define host observation age. Koios observation time defines wallet age; rereading GitHub coordinates or republishing a snapshot cannot refresh a failed chain query.",
+      "pause": 400
+    },
+    {
+      "text": "The collector loops every ten minutes. Publication passes a secret gate before HTTPS push to gh-pages. The browser polls the snapshot every minute and warns when it is older than twenty-five minutes. Losing the cache loses last-good values, so sources are unavailable until fresh queries succeed.",
+      "pause": 400
+    }
+  ],
+  "trust-boundaries-and-credentials": [
+    {
+      "text": "Trust boundaries and credentials.",
+      "pause": 500
+    },
+    {
+      "text": "The collector has no SSH, wallet files, mnemonic, signing keys, host journal or inbound receiver. Reporters have no listening port and publish only public facts. Secrets enter as read-only mounted files; never as build arguments, image contents, container environment, process arguments or public output. Antithesis private report links are removed before publication.",
+      "pause": 400
+    },
+    {
+      "text": "Nix builds both images without a Docker daemon. Deploy immutable merged-SHA tags, preserve the named cache volume, and restore the previous Nix-built Compose service for rollback. Never restore the legacy timer or run two publishers. The runbook's token scopes are recommendations; deployed broader operator tokens are not certified least-privilege by this design.",
+      "pause": 400
+    }
+  ],
+  "decisions": [
+    {
+      "text": "Decisions.",
+      "pause": 500
+    }
+  ],
+  "delivery-and-verification": [
+    {
+      "text": "Delivery and verification.",
+      "pause": 500
+    },
+    {
+      "text": "The runbook distinguishes installed sources from planned sources. The front page explains how to inspect the live snapshot. MPFS requires reporter/schema/heartbeat/stale/recovery and deployment evidence. Wallet collection requires public configuration controls, verified production role mapping and network, exact balance fixtures, pagination and accounting controls, independent provider reconciliation and final hosted checks.",
+      "pause": 400
+    },
+    {
+      "text": "This design change does not claim these future collection paths are implemented. Existing direct Moog reads remain visible; their replacement needs its own scope and verification. Monitor cutover, MPFS reporting and historical wallet coverage stay open until their production evidence is recorded.",
+      "pause": 400
+    }
+  ],
+  "_source": {
+    "file": "transport-design.md",
+    "sha256": "88bcd92b8f9f19577d240cda93259a59fbc85326ca43fc984b54c64b4c29a8d5"
+  }
+}
