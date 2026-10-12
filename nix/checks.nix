@@ -1,4 +1,4 @@
-{ pkgs, src }:
+{ pkgs, src, images }:
 let
   scripts = {
     shellcheck = {
@@ -142,23 +142,25 @@ let
         # dry run exposes no credential-shaped variable. Only match counts
         # and file paths are reported, never matched values.
         #
-        # Scoping, measured 2026-10-07 against the pinned base plus our
-        # packages: `v2.public`, `github_pat_` and the canary occur nowhere
-        # benign, so they are scanned across the whole exported filesystem.
+        # `v2.public`, `github_pat_` and the canary are scanned across
+        # the whole exported Nix filesystem.
         # `Bearer `, `auth=` and `ghp_` occur in tool help text and binaries
         # (curl, gh, libcurl) outside our control, so they are scanned only
         # under /app -- the sole paths we add -- where every occurrence must
         # be a gate definition (mirroring the secrets-gate scope).
         #
-        # The ARG/ENV ban lives in the image-source-shape check, not here.
+        # Image metadata is checked separately without a Docker daemon.
         set -euo pipefail
         tag="moog-collector:image-clean"
         canary="''${IMAGE_CLEAN_CANARY:-}"
-        docker build -q -t "$tag" .
+        docker load -i ${images.image} >/dev/null
+        docker tag moog-collector:nix "$tag"
         cid=$(docker create "$tag")
         work=$(mktemp -d)
         cleanup() {
           docker rm -f "$cid" >/dev/null
+          # Exported Nix store directories are immutable (0555).
+          chmod -R u+w "$work"
           rm -rf "$work"
         }
         trap cleanup EXIT
@@ -216,9 +218,9 @@ let
         # publish with none of the fake secret literals in the pushed tree,
         # the logs, or the run env; a planted literal must refuse without
         # pushing. Only paths and counts are reported, never values.
-        # A second build from a throwaway context copy with all group/other
+        # A second Nix image from source with all group/other
         # permission bits stripped proves mode normalisation is independent
-        # of the build context.
+        # of source checkout modes.
         #
         # No host bind mount anywhere: some daemons cannot see the
         # invoker's filesystem, so every fixture lives in named volumes,
@@ -238,7 +240,8 @@ let
           exit 1
         fi
         tag="moog-collector:container-smoke"
-        docker build -q -t "$tag" .
+        docker load -i ${images.image} >/dev/null
+        docker tag moog-collector:nix "$tag"
         assert_modes() {
           local t bad
           t=$1
@@ -263,15 +266,22 @@ let
           fi
         }
         assert_modes "$tag" || exit 1
+        docker run --rm --user 1000:1000 "$tag" bash -c '
+          set -euo pipefail
+          for tool in bash curl gh git jq flock unzip grep sed find awk; do
+            type -P "$tool" >/dev/null
+          done
+          test -s "$SSL_CERT_FILE"
+          test -w /cache
+          test -w "$HOME"
+        '
         secvol="smoke-secrets-$$-$RANDOM"
         vol="smoke-cache-$$-$RANDOM"
         remvol="smoke-remote-$$-$RANDOM"
         cyc="smoke-cycle-$$-$RANDOM"
-        ctx=""
         cleanup() {
           docker rm -f "$cyc" "$cyc-plant" "$cyc-env" >/dev/null 2>&1 || true
           docker volume rm "$secvol" "$vol" "$remvol" >/dev/null 2>&1 || true
-          [[ -n $ctx ]] && rm -rf "$ctx"
         }
         trap cleanup EXIT
         m_sec="--mount=type=volume,src=$secvol,dst=/s"
@@ -379,12 +389,9 @@ let
           diag_cycle "planted cycle pushed" "$cyc-plant" "$out2"
           exit 1
         fi
-        ctx=$(mktemp -d)
-        mkdir -p "$ctx/collect" "$ctx/deploy" "$ctx/site"
-        cp -r collect deploy site Dockerfile "$ctx/"
-        chmod -R go-rwx "$ctx"
         tag2="moog-collector:container-smoke-modes"
-        docker build -q -t "$tag2" "$ctx"
+        docker load -i ${images.modesImage} >/dev/null
+        docker tag moog-collector:nix-modes "$tag2"
         assert_modes "$tag2" || exit 1
         echo "container smoke ok"
       '';
@@ -402,7 +409,9 @@ let
         sha="''${GITHUB_SHA:?GITHUB_SHA must be set}"
         sha_tag="ghcr.io/$repo:$sha"
         main_tag="ghcr.io/$repo:main"
-        docker build -q -t "$sha_tag" -t "$main_tag" .
+        docker load -i ${images.image} >/dev/null
+        docker tag moog-collector:nix "$sha_tag"
+        docker tag moog-collector:nix "$main_tag"
         if [[ "''${PUBLISH:-0}" == "1" ]]; then
           actor="''${GH_ACTOR:?GH_ACTOR must be set for PUBLISH=1}"
           printf '%s\n' "''${GH_TOKEN:?GH_TOKEN must be set for PUBLISH=1}" \
@@ -546,37 +555,27 @@ print('site ok')
 
   apps = builtins.mapAttrs mkApp scripts;
 
-  # The image-clean app needs the docker daemon, which the nix build users
-  # cannot reach, so it cannot run as a sandboxed check. This check pins the
-  # static source shape (Dockerfile hygiene, CI publish shape) while the app
-  # performs the build, export and env scan. The gate runs both. The ARG/ENV
-  # ban lives here, not in the app.
+  # Inspect the delivered Nix archive in the sandbox; daemon-backed leak
+  # and execution checks remain separate apps in the collector CI job.
   image-source-shape = pkgs.runCommand "image-source-shape" {
-    nativeBuildInputs = [ pkgs.glibcLocales ];
-    LANG = "C.UTF-8";
-    LC_ALL = "C.UTF-8";
+    nativeBuildInputs = [ pkgs.jq pkgs.gnutar ];
   } ''
     set -euo pipefail
+    mkdir archive
+    tar -xf ${images.image} -C archive
+    config=$(jq -r '.[0].Config' archive/manifest.json)
+    jq -e '.config.User == "1000:1000" and
+      .config.WorkingDir == "/app" and
+      .config.Cmd == ["/app/deploy/loop.sh"] and
+      (.config.Env | sort) == (["PATH=/bin", "HOME=/home/collector",
+        "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt",
+        "GIT_SSL_CAINFO=/etc/ssl/certs/ca-bundle.crt"] | sort)' "archive/$config"
     cd ${src}
-    [[ -f Dockerfile ]] || { echo "image-source-shape: Dockerfile missing" >&2; exit 1; }
-    if grep -E '^ADD[[:space:]]' Dockerfile; then
-      echo "image-source-shape: Dockerfile must not use ADD" >&2
+    test ! -e Dockerfile
+    if grep -q 'docker[[:space:]]build' nix/checks.nix .github/workflows/ci.yml; then
+      echo "image-source-shape: legacy image builder" >&2
       exit 1
     fi
-    if grep -E '^(ARG|ENV)[[:space:]]' Dockerfile; then
-      echo "image-source-shape: Dockerfile must not use ARG or ENV" >&2
-      exit 1
-    fi
-    [[ $(grep -cE '^COPY[[:space:]]' Dockerfile) -eq 3 ]] || {
-      echo "image-source-shape: Dockerfile must copy exactly three sources" >&2
-      exit 1
-    }
-    for dir in collect deploy site; do
-      grep -qE "^COPY[[:space:]]+$dir[[:space:]]" Dockerfile || {
-        echo "image-source-shape: Dockerfile does not copy $dir" >&2
-        exit 1
-      }
-    done
     # The publish pipeline is split: the workflow gates and authenticates,
     # the image-publish app (in this file) owns the registry and tag shape.
     grep -q 'packages: write' .github/workflows/ci.yml || {

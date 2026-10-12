@@ -77,6 +77,18 @@ read token lives only in the environment of the single `gh` call that
 uses it, and the push token only on a pipe to git's credential helper.
 A dry `docker run --rm <image> env` shows no credential.
 
+## Build the collector image
+
+`nix build .#collector-image` creates `result`, a Docker image archive
+assembled from the runtime dependencies pinned by `flake.lock`. It needs
+no Docker daemon or package installation from Debian repositories.
+
+Load it with `docker load -i result`; the local tag is `moog-collector:nix`.
+CI loads this same Nix archive for the leak scan and restricted container
+smoke test, then tags it with the commit SHA and `main` for GHCR.
+`nix run .#container-smoke` also checks a second Nix image built from source
+with stripped group and other permissions.
+
 ## One-time setup
 
 1. Create the four secret files above on the collector host.
