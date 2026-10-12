@@ -1,0 +1,26 @@
+# Collector for the moog Antithesis dashboard. The only always-on piece on
+# the collector side: it loops collect-and-publish every 10 minutes and
+# pushes gh-pages over HTTPS. Create the secret files below (mode 0400),
+# flip the GHCR package to public once, then: docker compose up -d
+services:
+  collector:
+    image: ghcr.io/lambdasistemi/moog-antithesis-dashboard:main
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    environment:
+      DASHBOARD_CACHE: /cache
+    volumes:
+      - dashboard-cache:/cache
+      - /srv/moog-antithesis-dashboard/antithesis-key:/run/secrets/antithesis-key:ro
+      - /srv/moog-antithesis-dashboard/gh-read:/run/secrets/gh-read:ro
+      - /srv/moog-antithesis-dashboard/pages-push:/run/secrets/pages-push:ro
+      - /srv/moog-antithesis-dashboard/moog-read-env:/run/secrets/moog-read-env:ro
+      - /opt/moog:/opt/moog:ro
+
+volumes:
+  dashboard-cache:
