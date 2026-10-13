@@ -306,7 +306,7 @@ footer a { color: var(--muted); }
     <thead><tr><th scope="col">Testnet</th><th scope="col" class="hide-md">Commit · try</th><th scope="col" class="hide-sm">Started</th><th scope="col" class="hide-md">Hours</th><th scope="col">Antithesis</th><th scope="col">On chain</th></tr></thead>
     <tbody id="runs"><tr><td colspan="6" class="empty">Loading runs…</td></tr></tbody>
   </table></div>
-  <p class="section-note">Select a run for properties, counterexamples, and Docker Compose. On-chain records without an Antithesis run have no detail view.</p>
+  <p class="section-note">Select a run for properties, counterexamples, and Docker Compose. On-chain records without an Antithesis run have no detail view. Result counts include groups and events; they are not counts of distinct bugs.</p>
   </section>
 
   <footer>
@@ -435,12 +435,12 @@ function renderWallets(d) {
 
 function propsCell(p, status) {
   if (status === "in_progress") return `<span class="ignored">running</span>`;
-  if (!p || p.total === 0) return `<span class="ignored">no properties</span>`;
+  if (!p) return `<span class="ignored">results unavailable</span>`;
+  if (p.total === 0) return `<span class="ignored">no reported results</span>`;
   const real = p.failing.filter(n => !IGNORED.has(n)), ignored = p.failing.filter(n => IGNORED.has(n));
   const passing = p.total - real.length - ignored.length;
-  let html = real.length ? chip("bad", `${real.length} failing`) : chip("ok", `${passing}/${p.total - ignored.length} passing`);
-  if (ignored.length) html += `<div class="ignored">${ignored.length} outside pipeline control</div>`;
-  return html;
+  return chip(real.length ? "bad" : "ok", `${passing} passing · ${real.length} failing`)
+    + `<div class="ignored">${p.total} reported results${ignored.length ? ` · ${ignored.length} outside pipeline control` : ""}</div>`;
 }
 
 let testRows = []; // {run, fact}, either side may be missing
@@ -594,7 +594,7 @@ function ceHtml(c) {
 
 function detailHtml(d) {
   if (d.unavailable) return `<div class="empty">Detail for this run is not available yet; it appears once the collector has fetched it.</div>` + ComposeViewer.html(d);
-  const st = d.status === "completed" ? chip("ok", "completed") : d.status === "in_progress" ? chip("run", "running")
+  const st = d.status === "completed" ? chip("idle", "completed") : d.status === "in_progress" ? chip("run", "running")
     : chip("idle", d.status || "?");
   const params = Object.entries(d.parameters || {}).map(([k, v]) =>
     `<tr><td class="mono">${esc(k)}</td><td class="mono">${esc(v)}</td></tr>`).join("");

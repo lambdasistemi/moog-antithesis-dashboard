@@ -244,7 +244,7 @@ jobs:
           name: paolino
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
       - name: Check shell tools
-        run: nix develop --quiet -c bash -c 'command -v shellcheck && command -v shfmt && command -v jq && command -v just'
+        run: nix develop --quiet -c bash -c 'command -v bb && command -v shellcheck && command -v shfmt && command -v jq && command -v just'
 
   pr-preview-cleanup:
     name: CI PR preview cleanup

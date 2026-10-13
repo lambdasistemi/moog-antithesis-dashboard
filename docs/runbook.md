@@ -83,7 +83,7 @@ Dry-run commands (no token needed, nothing is sent or pushed):
 REPORTER_ROLE=oracle REPORT_DRY_RUN=1 ./reporter/report.sh
 REPORTER_ROLE=agent REPORT_DRY_RUN=1 ./reporter/report.sh
 echo "OK run_id=$id age=${age}s maximum=${max}s" | REPORT_DRY_RUN=1 ./reporter/push-verdict.sh
-DASHBOARD_DRY_RUN=1 ./deploy/publish.sh
+DASHBOARD_DRY_RUN=1 bb publish
 STATUS_ISSUE_ORACLE=27 STATUS_ISSUE_AGENT=28 STATUS_ISSUE_MONITOR=... \
   IMAGE=ghcr.io/lambdasistemi/moog-antithesis-dashboard:<merged-sha> \
   ./deploy/compare-live.sh

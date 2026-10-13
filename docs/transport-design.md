@@ -112,6 +112,20 @@ without any successful observation it is unavailable. Producer timestamps define
 host observation age. Koios observation time defines wallet age; rereading GitHub
 coordinates or republishing a snapshot cannot refresh a failed chain query.
 
+The central backend is native Babashka: source adapters, validation, cache,
+snapshot assembly, publication and the loop run in Clojure. External clients
+are invoked with argument vectors; credentials travel on stdin or only in the
+relevant child's environment. Compatibility shell files only launch bb.
+
+Antithesis property results follow every pagination cursor and share one complete
+population between summary and detail. A failed later page leaves the result
+unavailable, never complete with a truncated count. Completed nonempty property
+sets use the new cache generation; old partial property/detail caches are ignored.
+Counts include API groups and events, not distinct bugs. On-chain and nightly
+detail joins are refreshed from current observations even when Antithesis data
+is immutable. Last-good source values and timestamps form one atomic cache record;
+legacy records remain readable during the transition.
+
 The collector loops every ten minutes. Publication passes a secret gate before
 HTTPS push to gh-pages. The browser polls the snapshot every minute and warns
 when it is older than twenty-five minutes. Losing the cache loses last-good

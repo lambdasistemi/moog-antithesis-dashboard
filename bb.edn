@@ -1,0 +1,7 @@
+{:paths ["backend/src" "backend/test"]
+ :tasks {:requires ([dashboard.main :as main])
+         collect (main/-main "collect")
+         publish (main/-main "publish")
+         cycle (main/-main "cycle")
+         loop (main/-main "loop")
+         test {:requires ([dashboard.test-runner :as tests]) :task (tests/run)}}}

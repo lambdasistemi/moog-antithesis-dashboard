@@ -1,8 +1,9 @@
 const fs = require('fs');
 const vm = require('vm');
 const assert = require('assert/strict');
+const filters = {};
 const context = {
-  document: {getElementById: () => ({classList: {add() {}, remove() {}}, addEventListener() {}, value: ''}),
+  document: {getElementById: id => ({classList: {add() {}, remove() {}}, addEventListener() {}, value: filters[id] || ''}),
     querySelectorAll: () => [], querySelector: () => null},
   window: {addEventListener() {}}, location: {hash: ''},
   fetch: () => new Promise(() => {}), setInterval() {}, console, Date
@@ -14,11 +15,19 @@ context.run = {run_id: 'summary-test', status: 'completed', properties: {total: 
   failing: Array.from({length: 30}, (_, i) => `Praos latency failure ${i}`).concat('Recent software version provided')}};
 const row = vm.runInContext('testRowHtml({run, fact:null}, "owner/repo")', context);
 assert.match(row, /30 failing/);
+assert.match(row, /0 passing/);
+assert.match(row, /31 reported results/);
 assert.doesNotMatch(row, /Praos latency failure/, 'Failure names overwhelm the summary row');
 assert.match(row, /1 outside pipeline control/);
 context.detail = {run_id: context.run.run_id, status: 'completed', properties: context.run.properties.failing.map(name => ({name, status: 'Failing'}))};
 const detail = vm.runInContext('detailHtml(detail)', context);
 for (const name of context.run.properties.failing) assert.ok(detail.includes(name), `Expanded detail lost ${name}`);
+filters['flt-result'] = 'passing';
+context.run.properties = null;
+assert.equal(vm.runInContext('rowMatches({run, fact:null})', context), false, 'Unknown results appear as passing');
+context.run.properties = {total: 69, passing: 69, failing: []};
+assert.equal(vm.runInContext('rowMatches({run, fact:null})', context), true);
+assert.match(vm.runInContext('testRowHtml({run, fact:null}, "owner/repo")', context), /69 passing · 0 failing/);
 console.log('Run rows show counts and retain every failure in expanded details');
 
 context.document.getElementById = id => ({value: id === 'flt-result' ? 'passing' : ''});

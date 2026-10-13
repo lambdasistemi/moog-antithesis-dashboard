@@ -161,12 +161,12 @@ row_push_verdict_smoke() {
 row_schema_reject() {
     ROW=schema-reject
     green_check schema-reject 600 || return 1
-    apply_break collect/collect.sh '            or (.ok | type) != "boolean" or .ok != (.verdict | startswith("OK"))' '' || return 1
+    apply_break backend/src/dashboard/sources.clj '(= (:ok value) (str/starts-with? (:verdict value) "OK"))' 'true' || return 1
     red=$(red_check schema-reject 600 'monitor-ok-mismatch monitor accepted') || {
-        restore_files collect/collect.sh
+        restore_files backend/src/dashboard/sources.clj
         return 1
     }
-    restore_files collect/collect.sh || return 1
+    restore_files backend/src/dashboard/sources.clj || return 1
     green_check schema-reject 600 restore-green || return 1
     log "schema-reject | nix run --quiet .#schema-reject | green-exit=0 | break=ok-consistency-removed red-exit=$red red='monitor-ok-mismatch monitor accepted' | restore=git-checkout-clean | green-exit=0"
 }
@@ -202,16 +202,12 @@ row_host_stale() {
     ROW=host-stale
     green_check host-stale 600 || return 1
     # shellcheck disable=SC2016
-    apply_break collect/collect.sh '    if [[ $rep_epoch -lt $((now_epoch - 900)) ]]; then
-        echo "$source status: stale payload" >&2
-        return 1
-    fi
-' '' || return 1
+    apply_break backend/src/dashboard/sources.clj '(< (io/epoch (:reported_at value)) (- at 900))' 'false' || return 1
     red=$(red_check host-stale 600 'stopped fixture not stale') || {
-        restore_files collect/collect.sh
+        restore_files backend/src/dashboard/sources.clj
         return 1
     }
-    restore_files collect/collect.sh || return 1
+    restore_files backend/src/dashboard/sources.clj || return 1
     green_check host-stale 600 restore-green || return 1
     log "host-stale | nix run --quiet .#host-stale | green-exit=0 | break=freshness-block-removed red-exit=$red red='stopped fixture not stale' | restore=git-checkout-clean | green-exit=0"
 }
@@ -219,12 +215,12 @@ row_host_stale() {
 row_publish_gate() {
     ROW=publish-gate
     green_check publish-gate 600 || return 1
-    apply_break deploy/publish.sh "if grep -rqE 'https?://' \"\$STAGE/status\"; then" "if grep -rqE 'https?://unmatched-sentinel-f43d' \"\$STAGE/status\"; then" || return 1
+    apply_break backend/src/dashboard/publication.clj '(str/starts-with? path "status/")' 'false' || return 1
     red=$(red_check publish-gate 600 'let monitor URL through') || {
-        restore_files deploy/publish.sh
+        restore_files backend/src/dashboard/publication.clj
         return 1
     }
-    restore_files deploy/publish.sh || return 1
+    restore_files backend/src/dashboard/publication.clj || return 1
     green_check publish-gate 600 restore-green || return 1
     log "publish-gate | nix run --quiet .#publish-gate | green-exit=0 | break=url-gate-neutered red-exit=$red red='let monitor URL through' | restore=git-checkout-clean | green-exit=0"
 }
@@ -245,12 +241,12 @@ row_site_check() {
 row_loop_runtime() {
     ROW=loop-runtime
     green_check loop-runtime 300 || return 1
-    apply_break deploy/loop.sh 'cycle failed at' 'cycle borked at' || return 1
+    apply_break backend/src/dashboard/main.clj 'cycle failed at' 'cycle borked at' || return 1
     red=$(red_check loop-runtime 300 'want one failure line') || {
-        restore_files deploy/loop.sh
+        restore_files backend/src/dashboard/main.clj
         return 1
     }
-    restore_files deploy/loop.sh || return 1
+    restore_files backend/src/dashboard/main.clj || return 1
     green_check loop-runtime 300 restore-green || return 1
     log "loop-runtime | nix run --quiet .#loop-runtime | green-exit=0 | break=failure-line-renamed red-exit=$red red='want one failure line' | restore=git-checkout-clean | green-exit=0"
 }
@@ -258,15 +254,14 @@ row_loop_runtime() {
 row_container_smoke() {
     ROW=container-smoke
     green_check container-smoke 1500 || return 1
-    apply_break deploy/cycle.sh 'set -euo pipefail' 'set -euo pipefail
-exit 3' || return 1
+    apply_break backend/src/dashboard/main.clj '(do (collector/collect! config) (publication/publish! config))' '(collector/collect! config)' || return 1
     red=$(red_check container-smoke 1500 'clean cycle published nothing') || {
-        restore_files deploy/cycle.sh
+        restore_files backend/src/dashboard/main.clj
         return 1
     }
-    restore_files deploy/cycle.sh || return 1
+    restore_files backend/src/dashboard/main.clj || return 1
     green_check container-smoke 1500 restore-green || return 1
-    log "container-smoke | nix run --quiet .#container-smoke | green-exit=0 | break=cycle-exits-3 red-exit=$red red='clean cycle published nothing' | restore=git-checkout-clean | green-exit=0"
+    log "container-smoke | nix run --quiet .#container-smoke | green-exit=0 | break=publication-skipped red-exit=$red red='clean cycle published nothing' | restore=git-checkout-clean | green-exit=0"
 }
 
 row_image_clean() {
@@ -298,12 +293,12 @@ row_secrets_gate() {
 row_props_summary() {
     ROW=props-summary
     green_check props-summary 600 || return 1
-    apply_break collect/collect.sh '[.data[]]' '[.data[] | select(.is_group | not)]' || return 1
+    apply_break backend/src/dashboard/antithesis.clj '(into result rows)' '(into result (remove :is_group rows))' || return 1
     red=$(red_check props-summary 600 'props-summary: evidence total') || {
-        restore_files collect/collect.sh
+        restore_files backend/src/dashboard/antithesis.clj
         return 1
     }
-    restore_files collect/collect.sh || return 1
+    restore_files backend/src/dashboard/antithesis.clj || return 1
     green_check props-summary 600 restore-green || return 1
     log "props-summary | nix run --quiet .#props-summary | green-exit=0 | break=group-filter-readded red-exit=$red red='evidence total' | restore=git-checkout-clean | green-exit=0"
 }
