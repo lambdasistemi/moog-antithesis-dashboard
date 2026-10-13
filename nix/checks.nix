@@ -1322,6 +1322,9 @@ open(sys.argv[1], 'w').write('\n'.join(inline))
 PY
         node --check "$js_out"
         node --check site/compose.js
+        node --check site/preferences.js
+        node tests/preferences.js
+        node tests/run-summary.js
         python3 -c "
 import html.parser, sys
 

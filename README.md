@@ -7,7 +7,7 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
 
 ## Who this is for
 
-- **Someone checking the pipeline** opens the live page and sees, in one
+- **Someone checking the pipeline** selects the Pipeline tab and sees, in one
   screen, whether test requests are flowing, the oracle and agent are up,
   Antithesis runs are progressing, on-chain runs are settling, the proxy is
   ready, and the freshness monitor is happy. A stale source is labelled
@@ -18,6 +18,12 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   Download expose the same local-use file with `INTERNAL_NETWORK=true`. The
   source link identifies the repository commit. An unavailable source is labelled
   explicitly. Companion files and container images are not bundled.
+- **Someone returning to the dashboard** finds their selected tab and theme
+  restored from browser local storage. Test runs opens on a first visit; Pipeline,
+  MPFS and Accounts have separate panes. Theme offers System, Light and Dark.
+  Run rows show failure counts; expanding a run reveals the full property list.
+  A run link opens Test runs without changing the saved tab. When browser storage
+  is unavailable, controls still work for the current visit.
 - **The operator running the collector** starts one container with
   `docker compose up -d`, then checks the same page. When a source stops
   refreshing, a banner names it and its last success instead of silently
