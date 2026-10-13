@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Moog dashboard snapshot",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "As a dashboard consumer, read the published snapshot and inspect source status, last-success time and wallet address scope before using a value. This is a public static GET resource, not a live query API. Unavailable dependencies do not make the whole HTTP request fail."
   },
   "servers": [
@@ -264,6 +264,9 @@
                 "type": "null"
               }
             ]
+          },
+          "compose": {
+            "$ref": "#/components/schemas/ComposeAsset"
           }
         },
         "required": [
@@ -1096,6 +1099,99 @@
         "required": [
           "collector",
           "roles"
+        ]
+      },
+      "ComposeAsset": {
+        "type": "object",
+        "description": "Local-use Docker Compose generated from the public source revision recorded in the test description. Only INTERNAL_NETWORK is replaced with true. Companion files and container images are not bundled.",
+        "properties": {
+          "status": {
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "reason": {
+            "enum": [
+              null,
+              "missing_or_invalid_coordinates",
+              "source_unavailable",
+              "publication_refused"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^runs/[A-Za-z0-9_-]{1,200}/docker-compose\\.yaml$"
+          },
+          "source_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/blob/[0-9a-fA-F]{40}/"
+          },
+          "commit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-fA-F]{40}$"
+          },
+          "internal_network": {
+            "const": true
+          }
+        },
+        "required": [
+          "status",
+          "reason",
+          "url",
+          "source_url",
+          "commit",
+          "internal_network"
+        ],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "available"
+              },
+              "reason": {
+                "const": null
+              },
+              "url": {
+                "type": "string"
+              },
+              "source_url": {
+                "type": "string"
+              },
+              "commit": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "url": {
+                "const": null
+              },
+              "source_url": {
+                "const": null
+              },
+              "commit": {
+                "const": null
+              }
+            }
+          }
         ]
       }
     }

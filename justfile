@@ -13,7 +13,7 @@ format-check:
     nix run --quiet .#format-check
 
 format:
-    shfmt -i 4 -w collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh
+    shfmt -i 4 -w collect/compose.sh tests/compose-assets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh
 
 syntax:
     nix run --quiet .#syntax

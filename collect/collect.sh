@@ -464,7 +464,9 @@ if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
     jq -c '.[]' "$WORK/runs.json" | while read -r r; do
         rid=$(jq -r .run_id <<<"$r")
         st=$(jq -r .status <<<"$r")
-        jq -c --argjson p "$(props_for "$rid" "$st")" '. + { properties: $p }' <<<"$r"
+        compose=$(bash "$(dirname "$0")/compose.sh" "$r" "$CACHE" "$OUT_DIR")
+        jq -c --argjson p "$(props_for "$rid" "$st")" --argjson compose "$compose" \
+            '. + { properties: $p, compose: $compose }' <<<"$r"
     done | jq -s . >"$WORK/runs.with-props.json" && mv "$WORK/runs.with-props.json" "$WORK/runs.json"
 fi
 
@@ -474,7 +476,8 @@ if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
     jq -c '.[]' "$WORK/runs.json" | while read -r r; do
         rid=$(jq -r .run_id <<<"$r")
         st=$(jq -r .status <<<"$r")
-        detail_for "$rid" "$st" >"$OUT_DIR/runs/$rid.json"
+        detail_for "$rid" "$st" | jq --argjson compose "$(jq '.compose' <<<"$r")" \
+            '. + {compose:$compose}' >"$OUT_DIR/runs/$rid.json"
     done
     if [[ -s $WORK/descriptions.jsonl ]]; then
         jq -s 'reverse | map({(.name): .description}) | add // {}' \

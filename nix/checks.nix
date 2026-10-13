@@ -1,6 +1,14 @@
 { pkgs, src, images, reporterImages }:
 let
   scripts = {
+    compose-assets = {
+      inheritPath = false;
+      runtimeInputs = [ pkgs.bash pkgs.curl pkgs.jq pkgs.coreutils pkgs.gnused pkgs.gnugrep pkgs.diffutils pkgs.nodejs ];
+      text = ''
+        bash tests/compose-assets.sh
+        node tests/compose-view.js
+      '';
+    };
     mpfs-status = {
       runtimeInputs = [ pkgs.bash pkgs.jq pkgs.coreutils pkgs.ripgrep pkgs.diffutils pkgs.nodejs ];
       text = ''
@@ -31,14 +39,14 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
+        shellcheck collect/compose.sh tests/compose-assets.sh collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
+        shfmt -i 4 -d collect/compose.sh tests/compose-assets.sh collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
@@ -46,6 +54,8 @@ let
       runtimeInputs = [ pkgs.bash ];
       text = ''
         bash -n collect/wallets.sh
+        bash -n collect/compose.sh
+        bash -n tests/compose-assets.sh
         bash -n collect/collect.sh
         bash -n deploy/cycle.sh
         bash -n deploy/publish.sh
@@ -115,6 +125,8 @@ let
             >"$fixture/runs/probe.json"
           printf '{"reporter":"probe","verdict":"ok"}' \
             >"$fixture/status/probe.json"
+          mkdir -p "$fixture/runs/probe"
+          printf 'services:\n  node:\n    internal: true\n' >"$fixture/runs/probe/docker-compose.yaml"
           rm -f "$fixture/runs/case.json" "$fixture/runs/evil.json" "$fixture/status/case.json" "$fixture/status/monitor.json"
         }
         pushed_ref() {
@@ -150,6 +162,9 @@ let
         try_refuse 'planted key literal' "$key_value" data.json
         try_refuse 'planted key literal' "$key_value" runs/case.json
         try_refuse 'planted key literal' "$key_value" status/case.json
+        try_refuse 'planted key in Compose' "$key_value" runs/probe/docker-compose.yaml
+        try_refuse 'planted report link in Compose' \
+          'https://x.antithesis.com/report/a.html?auth=v2.public_probe' runs/probe/docker-compose.yaml
         try_refuse 'planted report link' \
           'https://x.antithesis.com/report/a.html?auth=v2.public_probe' runs/evil.json
         write_clean
@@ -157,6 +172,7 @@ let
         git --git-dir="$remote" show gh-pages:data.json | grep -q generated_at
         git --git-dir="$remote" show gh-pages:runs/probe.json | grep -q probe
         git --git-dir="$remote" show gh-pages:status/probe.json | grep -q probe
+        git --git-dir="$remote" show gh-pages:runs/probe/docker-compose.yaml | grep -q 'internal: true'
         git --git-dir="$remote" show gh-pages:data.json | grep -q '"last":"OK all green"'
         git --git-dir="$remote" show gh-pages:runs/probe.json | grep -q actions/runs/42
         ref_before=$(pushed_ref)
@@ -1305,6 +1321,7 @@ inline = [m.group(1) for m in re.finditer(r'<script>(.*?)</script>', html, re.S)
 open(sys.argv[1], 'w').write('\n'.join(inline))
 PY
         node --check "$js_out"
+        node --check site/compose.js
         python3 -c "
 import html.parser, sys
 
@@ -1847,9 +1864,9 @@ EOF
     };
   };
 
-  mkApp = name: { runtimeInputs, text }:
+  mkApp = name: { runtimeInputs, text, inheritPath ? true }:
     pkgs.writeShellApplication {
-      inherit name text runtimeInputs;
+      inherit name text runtimeInputs inheritPath;
     };
 
   mkCheck = name: spec:
@@ -1964,6 +1981,7 @@ EOF
   '';
 in
 {
+  compose-assets = mkCheck "compose-assets" scripts.compose-assets;
   mpfs-status = mkCheck "mpfs-status" scripts.mpfs-status;
   snapshot-schema = mkCheck "snapshot-schema" scripts.snapshot-schema;
   wallet-balances = mkCheck "wallet-balances" scripts.wallet-balances;

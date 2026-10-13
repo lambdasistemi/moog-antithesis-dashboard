@@ -622,6 +622,14 @@
         "failing": [
           "No Antithesis errors"
         ]
+      },
+      "compose": {
+        "status": "available",
+        "reason": null,
+        "source_url": "https://github.com/cardano-foundation/cardano-node-antithesis/blob/ae43745ed5e59d688830d2207649907c5d1a69c9/testnets/cardano_node_head/docker-compose.yaml",
+        "commit": "ae43745ed5e59d688830d2207649907c5d1a69c9",
+        "internal_network": true,
+        "url": "runs/fe222c247145a3186799298d5bd9a08b-62-14/docker-compose.yaml"
       }
     },
     {
@@ -642,6 +650,14 @@
         "failing": [
           "No Antithesis errors"
         ]
+      },
+      "compose": {
+        "status": "available",
+        "reason": null,
+        "source_url": "https://github.com/cardano-foundation/cardano-node-antithesis/blob/f3da6d4386bd27c1bed0f21f9d625c1c82da747c/testnets/cardano_node_master/docker-compose.yaml",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "internal_network": true,
+        "url": "runs/198bfff10e31159dfa8e967431d5ec5b-62-14/docker-compose.yaml"
       }
     }
   ],

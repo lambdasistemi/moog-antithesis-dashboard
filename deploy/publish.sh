@@ -46,6 +46,13 @@ if compgen -G "$OUT_DIR/runs/*.json" >/dev/null; then
     mkdir -p "$STAGE/runs"
     cp "$OUT_DIR"/runs/*.json "$STAGE"/runs/
 fi
+for asset in "$OUT_DIR"/runs/*/docker-compose.yaml; do
+    [[ -f $asset ]] || continue
+    run_id=$(basename "$(dirname "$asset")")
+    [[ $run_id =~ ^[A-Za-z0-9_-]{1,200}$ ]] || exit 2
+    mkdir -p "$STAGE/runs/$run_id"
+    cp "$asset" "$STAGE/runs/$run_id/docker-compose.yaml"
+done
 if compgen -G "$OUT_DIR/status/*.json" >/dev/null; then
     mkdir -p "$STAGE/status"
     cp "$OUT_DIR"/status/*.json "$STAGE"/status/

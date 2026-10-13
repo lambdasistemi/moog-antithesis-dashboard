@@ -23,6 +23,10 @@
       "pause": 300
     },
     {
+      "text": "Someone inspecting a test expands its run details, then opens the collapsed Docker Compose section. YAML services and nested sections fold. Copy and Download expose the same local-use file with INTERNAL_NETWORK set to true. The source link identifies the repository commit. An unavailable source is labelled explicitly. Companion files and container images are not bundled.",
+      "pause": 300
+    },
+    {
       "text": "The operator running the collector starts one container with docker compose up -d, then checks the same page. When a source stops refreshing, a banner names it and its last success instead of silently showing old numbers.",
       "pause": 300
     }
@@ -71,6 +75,10 @@
     {
       "text": "The page re-reads data.json every minute and warns when the snapshot is older than 25 minutes.",
       "pause": 400
+    },
+    {
+      "text": "Each run’s Compose metadata records a public GitHub source at its full commit. Only INTERNAL_NETWORK is replaced with true. Other placeholders stay intact. Successful files are cached and published beside run details. YAML loads in the browser on expansion.",
+      "pause": 300
     }
   ],
   "secrets": [
@@ -229,6 +237,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "c5b9be1a8339b9e49e89ce47c22c43f3cb2c7e9cdae78f818abd6e0dffb01421"
+    "sha256": "25a26e9035ed2f0564407ad14902f1c335cbe4c72c9e431277677c239b016fbb"
   }
 }
