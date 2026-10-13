@@ -93,10 +93,14 @@
       "pause": 400
     }
   ],
-  "public-wallet-configuration-and-koios-collection-planned": [
+  "public-wallet-configuration-and-koios-collection": [
     {
-      "text": "Public wallet configuration and Koios collection (planned).",
+      "text": "Public wallet configuration and Koios collection.",
       "pause": 500
+    },
+    {
+      "text": "The collector reads config/wallets.json from the source repository at one commit per cycle, defaulting to main. WALLET_CONFIG_REF can pin a preview to a specific source commit. The deployed balance source supports verified preprod addresses. Provider endpoints are fixed by the application, not configurable in the JSON.",
+      "pause": 400
     },
     {
       "text": "GitHub holds wallet query coordinates, not a balance issue supplied by a second publisher. Configure role, verified network, active public addresses and historical address scope in a versioned public document. Record the deployed wallet-to-role mapping evidence; never copy wallet files or private keys into the collector or repository. A testnet address alone does not determine which testnet to query.",
@@ -127,12 +131,12 @@
       "pause": 500
     },
     {
-      "text": "Oracle and agent issue reporting is deployed. Monitor reporting is merged but installation and fresh production verdict evidence remain open. MPFS reporting and direct Koios wallet collection are not installed; the previous sections state their approved contract and recovery behavior, not executable setup commands. The funds tickets retain balance and historical accounting as distinct acceptance requirements. See the system design and issues MPFS, agent/oracle and requester.",
+      "text": "Oracle and agent issue reporting is deployed. Monitor reporting is merged but installation and fresh production verdict evidence remain open. MPFS reporting remains uninstalled. Current Koios balance collection and the ADA account cards are implemented; their installation uses the same collector image and publication path. Configure its GitHub read access to the source repository. Expense history, locked-fund accounting and provider observations bound to an exact chain point remain open. The funds tickets retain balance and historical accounting as distinct acceptance requirements. See the system design and issues MPFS, agent/oracle and requester.",
       "pause": 400
     }
   ],
   "_source": {
     "file": "runbook.md",
-    "sha256": "a55cb4b956fab97e5a895764000fca58aa985c256cf114ef5ce24141abdc8378"
+    "sha256": "886582758e65b7fd841b3f61380cd21476f387aecf083ec4c57cd24341de3b20"
   }
 }

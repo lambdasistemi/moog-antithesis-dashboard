@@ -415,7 +415,10 @@ src_nightly() {
     done | jq -s .
 }
 
-for s in runs chain token oracle agent proxy monitor nightly; do
+# shellcheck source=collect/wallets.sh
+source "$(dirname "${BASH_SOURCE[0]}")/wallets.sh"
+
+for s in runs chain token oracle agent proxy monitor nightly wallets; do
     run_source "$s" "src_$s"
 done
 
@@ -455,7 +458,7 @@ if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
     fi
 fi
 
-sources=$(for s in runs chain token oracle agent proxy monitor nightly; do
+sources=$(for s in runs chain token oracle agent proxy monitor nightly wallets; do
     jq -n --arg n "$s" --arg st "${SRC_STATUS[$s]}" --arg e "${SRC_ERR[$s]}" --arg at "${SRC_LAST[$s]}" \
         '{ ($n): { status: $st, error: (if $e == "" then null else $e end),
                    last_success: (if $at == "" then null else $at end) } }'
@@ -466,13 +469,14 @@ jq -n \
     --argjson sources "$sources" \
     --slurpfile runs "$WORK/runs.json" --slurpfile chain "$WORK/chain.json" \
     --slurpfile token "$WORK/token.json" --slurpfile hosts "$WORK/hosts.json" \
+    --slurpfile wallets "$WORK/wallets.json" \
     --slurpfile proxy "$WORK/proxy.json" --slurpfile monitor "$WORK/monitor.json" \
     --slurpfile nightly "$WORK/nightly.json" \
     '{ generated_at: $generated_at, started_at: $started_at, refresh_seconds: 600,
        tenant: "'"$TENANT"'", repository: "'"$CNA_REPO"'",
        sources: $sources,
        runs: $runs[0], chain: $chain[0], token: $token[0], hosts: $hosts[0],
-       proxy: $proxy[0],
+       wallets: $wallets[0], proxy: $proxy[0],
        monitor: ($monitor[0] | if type == "object" then {last, ok} else . end),
        nightly: $nightly[0],
        nightly_stages: ["head-resolution", "runner-preflight", "day-claim", "resolve-upstream",
@@ -481,4 +485,4 @@ jq -n \
          "launch-cap", "launch"] }' >"$OUT_DIR/data.json.new" &&
     mv "$OUT_DIR/data.json.new" "$OUT_DIR/data.json"
 
-echo "collected: $(for s in runs chain token oracle agent proxy monitor nightly; do printf '%s=%s ' "$s" "${SRC_STATUS[$s]}"; done)"
+echo "collected: $(for s in runs chain token oracle agent proxy monitor nightly wallets; do printf '%s=%s ' "$s" "${SRC_STATUS[$s]}"; done)"

@@ -1,6 +1,12 @@
 { pkgs, src, images, reporterImages }:
 let
   scripts = {
+    wallet-balances = {
+      runtimeInputs = [ pkgs.bash pkgs.jq pkgs.coreutils pkgs.gnused ];
+      text = ''
+        bash tests/wallet-balances.sh
+      '';
+    };
     docs-presentation = {
       runtimeInputs = [ pkgs.python3 ];
       text = ''
@@ -11,20 +17,21 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
+        shellcheck collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
+        shfmt -i 4 -d collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
       '';
     };
 
     syntax = {
       runtimeInputs = [ pkgs.bash ];
       text = ''
+        bash -n collect/wallets.sh
         bash -n collect/collect.sh
         bash -n deploy/cycle.sh
         bash -n deploy/publish.sh
@@ -1356,15 +1363,24 @@ const driver =
   ' hosts: {oracle:[],agent:[{name:"agent-moog-agent-1",image:"moog-agent:v0.6",status:"Up 3 days"}],' +
   '  agent_errors_6h:4,agent_published_24h:9},' +
   ' proxy: {ready:true,http_code:200}, monitor: null };' +
-  'renderChain(d); renderHeader(d);' +
+  'd.monitor={ok:true,last:"OK cached"};' +
+  'd.sources.wallets={status:"stale",last_success:agots};' +
+  'd.wallets={config_revision:"0000000000000000000000000000000000000001",accounts:[{id:"oracle",role:"oracle",network:"preprod",addresses:["addr_test1fixture"],balance_lovelace:"9007199254740995",observed_at:agots}]};' +
+  'renderChain(d); renderHeader(d); renderWallets(d);' +
+  'globalThis.__wallets=captured.wallets || "";' +
   'globalThis.__chain = captured.chain || "";' +
   'globalThis.__banner = captured.banner || "";';
 eval(m[1] + driver);
 function fail(msg) { console.error('render test: ' + msg); process.exit(1); }
-if (global.__chain.indexOf('stale') < 0) fail('agent card not marked stale');
+const agentCard=global.__chain.match(/data-service="agent"[\s\S]*?<\/article>/)?.[0] || "";
+if (!agentCard.includes('class="chip warn">stale')) fail('agent card not marked stale');
 if (global.__chain.indexOf('10 min ago') < 0) fail('agent card lacks last success');
 if (global.__chain.indexOf('9 results published in 24 h') < 0) fail('agent card lacks last good published count');
 if (global.__chain.indexOf('4 errors in 6 h') < 0) fail('agent card lacks last good error count');
+const monitorCard=global.__chain.match(/data-service="monitor"[\s\S]*?<\/article>/)?.[0] || "";
+if (!monitorCard.includes('class="chip warn">stale')) fail('cached monitor displayed healthy');
+if (!global.__wallets.includes('9,007,199,254.740995')) fail('wallet ADA lost integer precision');
+if (!global.__wallets.includes('class="chip warn">stale')) fail('stale wallet displayed current');
 if (global.__banner.indexOf('agent') < 0) fail('banner does not name agent');
 console.log('render test ok');
 DRIVER_EOF
@@ -1929,6 +1945,7 @@ EOF
   '';
 in
 {
+  wallet-balances = mkCheck "wallet-balances" scripts.wallet-balances;
   docs-presentation = mkCheck "docs-presentation" scripts.docs-presentation;
   shellcheck = mkCheck "shellcheck" scripts.shellcheck;
   format-check = mkCheck "format-check" scripts.format-check;

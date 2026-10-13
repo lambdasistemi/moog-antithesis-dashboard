@@ -106,7 +106,12 @@ option), and on-chain facts (barred: the dashboard never writes chain
 data). The per-issue edit won: no listening service and the smallest token
 blast radius.
 
-## Public wallet configuration and Koios collection (planned)
+## Public wallet configuration and Koios collection
+
+The collector reads config/wallets.json from the source repository at one commit
+per cycle, defaulting to main. WALLET_CONFIG_REF can pin a preview to a specific
+source commit. The deployed balance source supports verified preprod addresses.
+Provider endpoints are fixed by the application, not configurable in the JSON.
 
 GitHub holds wallet query coordinates, not a balance issue supplied by a second
 publisher. Configure role, verified network, active public addresses and historical
@@ -141,9 +146,11 @@ chain synchronization; synchronization remains unmeasured until supported.
 ## Delivery progress
 
 Oracle and agent issue reporting is deployed. Monitor reporting is merged but
-installation and fresh production verdict evidence remain open. MPFS reporting
-and direct Koios wallet collection are not installed; the previous sections state
-their approved contract and recovery behavior, not executable setup commands.
+installation and fresh production verdict evidence remain open. MPFS reporting remains uninstalled. Current Koios balance collection and the
+ADA account cards are implemented; their installation uses the same collector
+image and publication path. Configure its GitHub read access to the source
+repository. Expense history, locked-fund accounting and provider observations
+bound to an exact chain point remain open.
 The funds tickets retain balance and historical accounting as distinct acceptance
 requirements. See the [system design](transport-design.md) and issues
 [MPFS](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29),
