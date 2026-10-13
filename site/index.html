@@ -43,11 +43,17 @@ header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content:
 .ok { color: var(--ok); background: var(--ok-bg); } .bad { color: var(--bad); background: var(--bad-bg); }
 .warn { color: var(--warn); background: var(--warn-bg); } .run { color: var(--run); background: var(--run-bg); }
 .idle { color: var(--idle); background: var(--idle-bg); }
-.chain { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.node { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; position: relative; }
-.node .name { font-weight: 600; }
-.node .detail { color: var(--muted); font-size: 12.5px; margin-top: 4px; overflow-wrap: anywhere; }
-.node .chip { margin-top: 8px; }
+.chain, .wallet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.node { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.node .name { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
+.node .detail { margin-top: 12px; font-size: 15px; }
+.node .age, .section-note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+.node details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+.node summary { cursor: pointer; }
+.node .technical { margin-top: 6px; overflow-wrap: anywhere; }
+.wallet-balance { font-size: 25px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 14px; }
+.wallet-balance small { font-size: 14px; color: var(--muted); }
+@media (max-width: 560px) { .chain { grid-template-columns: repeat(2, minmax(0, 1fr)); } .node { padding: 12px; } .node .name { flex-wrap: wrap; } .wallet-grid { grid-template-columns: 1fr; } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -86,6 +92,10 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
 
   <h2>Pipeline</h2>
   <div class="chain" id="chain"></div>
+
+  <h2>ADA accounts</h2>
+  <div class="wallet-grid" id="wallets"></div>
+  <p class="section-note">On-chain ADA at the configured wallet addresses · preprod test network. Spending history and locked funds are not collected yet.</p>
 
   <h2>Test runs</h2>
   <div class="counts" id="phases"></div>
@@ -176,44 +186,51 @@ function monitorDetail(m) {
   return kv.age ? `primary run ${kv.status || "?"} · ${h(kv.age)} h old of ${h(kv.maximum)} h allowed` : m.last.split(" ")[0];
 }
 
+function sourceState(source, value, state) {
+  if (!value) return ["idle", "unavailable"];
+  if (!source || source.status !== "ok" || !source.last_success || Date.now() - Date.parse(source.last_success) > 15 * 60 * 1000) return ["warn", "stale"];
+  return state;
+}
+
 function renderChain(d) {
-  const runs = d.runs || [], h = d.hosts || {}, ph = (d.chain && d.chain.phases) || {};
-  const src = d.sources || {};
+  const runs = d.runs || [], h = d.hosts || {}, ph = d.chain?.phases || {}, src = d.sources || {};
   const running = runs.filter(r => r.status === "in_progress").length;
   const lastDone = runs.find(r => r.status === "completed");
-  const img = xs => (xs && xs[0]) ? xs[0].image.replace(/^moog-(oracle|agent):/, "") : "–";
-  const up = xs => xs && xs.length && /^Up/.test(xs[0].status);
-  // Hosts cards go stale when their source is not ok, showing the
-  // source's last-success time with the existing warn (stale) styling.
-  // Source chips in the banner already come from `sources`.
-  const oracleSrc = src.oracle;
-  const oracleStale = !oracleSrc || oracleSrc.status !== "ok";
-  const oracleDetail = oracleStale
-    ? `${img(h.oracle)} · ${h.oracle?.[0]?.status ?? "–"} · stale, last success ${oracleSrc?.last_success ? ago(oracleSrc.last_success) : "never"}`
-    : `${img(h.oracle)} · ${h.oracle?.[0]?.status ?? "–"}`;
-  const oracleState = oracleStale ? ["warn", "stale"] : up(h.oracle) ? ["ok", "up"] : ["bad", "down"];
-  const agentSrc = src.agent;
-  const agentStale = !agentSrc || agentSrc.status !== "ok";
-  const agentDetail = agentStale
-    ? `${img(h.agent)} · ${h.agent_published_24h ?? "?"} results published in 24 h · ${h.agent_errors_6h ?? "?"} errors in 6 h · stale, last success ${agentSrc?.last_success ? ago(agentSrc.last_success) : "never"}`
-    : `${img(h.agent)} · ${h.agent_published_24h ?? "?"} results published in 24 h · ${h.agent_errors_6h ?? "?"} errors in 6 h`;
-  const agentState = agentStale ? ["warn", "stale"] : !up(h.agent) ? ["bad", "down"] : h.agent_errors_6h > 0 ? ["warn", "errors"] : ["ok", "up"];
+  const service = (xs, role) => (xs || []).find(c => c.name.includes("moog-" + role) && !c.name.includes("reporter"));
+  const oracle = service(h.oracle, "oracle"), agent = service(h.agent, "agent");
+  const up = c => c && /^Up/.test(c.status);
   const nodes = [
-    {name: "Requests", detail: `${d.token?.pending_requests ?? "?"} pending on the token`,
-     state: d.token ? (d.token.pending_requests > 0 ? ["run", "queued"] : ["ok", "drained"]) : ["bad", "unknown"]},
-    {name: "Oracle", detail: oracleDetail, state: oracleState},
-    {name: "Agent", detail: agentDetail, state: agentState},
-    {name: "Antithesis", detail: `${running} running · last completed ${lastDone ? ago(lastDone.created_at) : "–"}`,
-     state: running ? ["run", "running"] : ["idle", "idle"]},
-    {name: "On chain", detail: `${ph.accepted ?? 0} accepted · ${ph.pending ?? 0} pending`,
-     state: (ph.pending || ph.accepted) ? ["run", "in flight"] : ["ok", "settled"]},
-    {name: "Proxy", detail: `readiness ${d.proxy?.http_code ?? "?"}`,
-     state: d.proxy?.ready ? ["ok", "ready"] : ["bad", "not ready"]},
-    {name: "Freshness monitor", detail: monitorDetail(d.monitor),
-     state: d.monitor ? (d.monitor.ok ? ["ok", "ok"] : ["bad", "alerting"]) : ["bad", "unknown"]},
+    {id:"token", name:"Requests", value:d.token, state:d.token?.pending_requests > 0 ? ["run","queued"] : ["ok","drained"], detail:d.token ? d.token.pending_requests + " pending requests" : "No observation"},
+    {id:"oracle", name:"Oracle", value:oracle, state:up(oracle) ? ["ok","up"] : ["bad","down"], detail:oracle?.status || "Service container not reported", technical:oracle?.image},
+    {id:"agent", name:"Agent", value:agent, state:!up(agent) ? ["bad","down"] : h.agent_errors_6h > 0 ? ["warn","errors"] : ["ok","up"], detail:h.agent_published_24h == null ? "No publication count" : h.agent_published_24h + " published · 24 h", technical:(agent?.image || "") + " · " + (h.agent_published_24h ?? "?") + " results published in 24 h · " + (h.agent_errors_6h ?? "?") + " errors in 6 h"},
+    {id:"runs", name:"Antithesis", value:d.runs, state:running ? ["run","running"] : ["idle","idle"], detail:running + " running", technical:"Last completed run started " + (lastDone ? ago(lastDone.created_at) : "never")},
+    {id:"chain", name:"On chain", value:d.chain, state:(ph.pending || ph.accepted) ? ["run","in flight"] : ["ok","settled"], detail:(d.chain ? (ph.accepted ?? 0) : "?") + " accepted · " + (d.chain ? (ph.pending ?? 0) : "?") + " pending"},
+    {id:"proxy", name:"Proxy", value:d.proxy, state:d.proxy?.ready ? ["ok","ready"] : ["bad","not ready"], detail:"Readiness HTTP " + (d.proxy?.http_code ?? "?")},
+    {id:"monitor", name:"Freshness monitor", value:d.monitor, state:d.monitor?.ok ? ["ok","ok"] : ["bad","alerting"], detail:src.monitor?.status === "ok" ? monitorDetail(d.monitor) : "No fresh verdict", technical:d.monitor ? "Last recorded verdict: " + monitorDetail(d.monitor) : "No verdict recorded"},
   ];
-  $("chain").innerHTML = nodes.map(n =>
-    `<div class="node"><div class="name">${esc(n.name)} ${chip(...n.state)}</div><div class="detail">${esc(n.detail)}</div></div>`).join("");
+  $("chain").innerHTML = nodes.map(n => {
+    const state = sourceState(src[n.id], n.value, n.state);
+    const age = src[n.id]?.last_success;
+    return '<article class="node" data-service="' + n.id + '"><div class="name">' + esc(n.name) + chip(...state) + '</div><div class="detail">' + esc(n.detail) + '</div><div class="age">' + (age ? "Observed " + ago(age) : "Never observed") + '</div>' + (n.technical ? '<details><summary>Details</summary><div class="technical">' + esc(n.technical) + '</div></details>' : '') + '</article>';
+  }).join("");
+}
+
+function ada(lovelace) {
+  const n = BigInt(lovelace), whole = (n / 1000000n).toLocaleString("en-US");
+  const fraction = (n % 1000000n).toString().padStart(6,"0").replace(/0+$/,"");
+  return whole + (fraction ? "." + fraction : "");
+}
+
+function renderWallets(d) {
+  const snapshot=d.wallets, src=d.sources?.wallets;
+  const accounts=snapshot?.accounts || [];
+  if (!accounts.length) { $("wallets").innerHTML='<div class="empty">Wallet balances unavailable. Waiting for a successful Koios collection.</div>'; return; }
+  $("wallets").innerHTML=accounts.map(a => {
+    const state=sourceState(src,a,["ok","observed"]);
+    const shared=accounts.some(b=>b.id!==a.id && b.addresses.some(address=>a.addresses.includes(address)));
+    const title=a.role==="requester" ? a.id + " · requester" : a.role[0].toUpperCase()+a.role.slice(1);
+    return '<article class="node"><div class="name">' + esc(title) + chip(...state) + '</div><div class="wallet-balance">' + esc(ada(a.balance_lovelace)) + ' <small>ADA</small></div><div class="age">' + esc(a.network) + ' · observed ' + ago(a.observed_at) + (shared ? ' · shared address scope' : '') + '</div><details><summary>Wallet addresses</summary><div class="technical mono">' + a.addresses.map(esc).join('<br>') + '</div><div class="technical">Koios · configuration ' + esc(snapshot.config_revision.slice(0,8)) + (state[1]==="stale" ? ' · last successful address scope' : '') + '</div></details></article>';
+  }).join("");
 }
 
 function propsCell(p, status) {
@@ -481,7 +498,7 @@ window.addEventListener("hashchange", routeFromHash);
 let last = null;
 function render(d) {
   last = d;
-  for (const f of [renderHeader, renderChain, renderRuns, renderPhaseCounts]) {
+  for (const f of [renderHeader, renderChain, renderWallets, renderRuns, renderPhaseCounts]) {
     try { f(d); } catch (e) { console.error(f.name, e); }
   }
 }

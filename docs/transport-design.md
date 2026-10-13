@@ -10,11 +10,16 @@ unavailable wallet is never displayed as a zero balance.
 
 This revision records the operator's corrected design. Oracle and agent issue
 reporting is deployed. Monitor reporting is merged but production cutover is
-unverified. Dedicated MPFS reporting and Koios wallet collection are planned,
+unverified. Dedicated MPFS reporting and historical wallet accounting remain open,
 tracked in [MPFS status](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29),
 [agent/oracle funds](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23)
 and [requester funds](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24).
-The diagram is the target architecture, not a deployment receipt.
+Current Koios balance collection uses config/wallets.json, read through the
+GitHub API at a recorded commit, and renders oracle, agent and cfhal account
+cards. It supports preprod, validates provider address coverage, and sums
+integer lovelace without floating-point arithmetic. A null chain_point records
+that address_info responses are not bound to a known exact chain point.
+The diagrams describe the data flow, not a production deployment receipt.
 
 ## System context
 
@@ -146,7 +151,8 @@ Wallet collection requires public configuration controls, verified production
 role mapping and network, exact balance fixtures, pagination and accounting
 controls, independent provider reconciliation and final hosted checks.
 
-This design change does not claim these future collection paths are implemented.
+Current balances are implemented; historical accounting and the MPFS reporter
+remain future collection paths.
 Existing direct Moog reads remain visible; their replacement needs its own scope
 and verification. Monitor cutover, MPFS reporting and historical wallet coverage
 stay open until their production evidence is recorded.

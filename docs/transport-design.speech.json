@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "This revision records the operator's corrected design. Oracle and agent issue reporting is deployed. Monitor reporting is merged but production cutover is unverified. Dedicated MPFS reporting and Koios wallet collection are planned, tracked in MPFS status, agent/oracle funds and requester funds. The diagram is the target architecture, not a deployment receipt.",
+      "text": "This revision records the operator's corrected design. Oracle and agent issue reporting is deployed. Monitor reporting is merged but production cutover is unverified. Dedicated MPFS reporting and historical wallet accounting remain open, tracked in MPFS status, agent/oracle funds and requester funds. Current Koios balance collection uses config/wallets.json, read through the GitHub API at a recorded commit, and renders oracle, agent and cfhal account cards. It supports preprod, validates provider address coverage, and sums integer lovelace without floating-point arithmetic. A null chain_point records that address_info responses are not bound to a known exact chain point. The diagrams describe the data flow, not a production deployment receipt.",
       "pause": 400
     }
   ],
@@ -115,12 +115,12 @@
       "pause": 400
     },
     {
-      "text": "This design change does not claim these future collection paths are implemented. Existing direct Moog reads remain visible; their replacement needs its own scope and verification. Monitor cutover, MPFS reporting and historical wallet coverage stay open until their production evidence is recorded.",
+      "text": "Current balances are implemented; historical accounting and the MPFS reporter remain future collection paths. Existing direct Moog reads remain visible; their replacement needs its own scope and verification. Monitor cutover, MPFS reporting and historical wallet coverage stay open until their production evidence is recorded.",
       "pause": 400
     }
   ],
   "_source": {
     "file": "transport-design.md",
-    "sha256": "88bcd92b8f9f19577d240cda93259a59fbc85326ca43fc984b54c64b4c29a8d5"
+    "sha256": "66512bdb04efe275c076fa6527fee342785295532a47100519cd3bbe698ffc10"
   }
 }

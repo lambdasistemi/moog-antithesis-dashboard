@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "wallets": [
+    {
+      "id": "oracle", "role": "oracle", "network": "preprod",
+      "addresses": ["addr_test1vq04e6lvknx3ettppz5xq9x7nk8j87w5gaammke7z2ymyfqtkl4vv"],
+      "scope_evidence": "Deployed oracle wallet-info public address; MPFS node networkMagic1. Discovery receipt in issue23."
+    },
+    {
+      "id": "agent", "role": "agent", "network": "preprod",
+      "addresses": ["addr_test1vzupzdprwu94m5xlurzcycy89dxcw45s43tw406dxqfl79cq3szdc"],
+      "scope_evidence": "Deployed agent wallet-info public address; MPFS node networkMagic1. Discovery receipt in issue23."
+    },
+    {
+      "id": "cfhal", "role": "requester", "network": "preprod",
+      "addresses": ["addr_test1vz6zuvdm0gu3q54pk50wjfjwyt4mwj6uaelzdfh9extxgnqyycgv0"],
+      "scope_evidence": "Wallet public key matches the deployed cfhal register-user fact. Discovery receipt in issue24. Historical address census incomplete."
+    }
+  ]
+}
