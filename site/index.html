@@ -80,6 +80,27 @@ tr.prop-row[data-prop-index]:hover td { background: var(--run-bg); }
 .empty { padding: 16px; color: var(--muted); }
 footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
 @media (max-width: 640px) { .hide-sm { display: none; } th, td { padding: 6px 8px; } }
+.compose-viewer { width: min(100%, calc(100vw - 64px)); max-width: calc(100vw - 64px); white-space: normal; margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.compose-viewer > summary { cursor: pointer; font-weight: 600; }
+.compose-viewer > summary .ignored { font-weight: 400; font-size: 12px; margin-left: 8px; }
+.compose-toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 12px; }
+.compose-toolbar button { color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 4px 8px; cursor: pointer; }
+.compose-toolbar button:disabled { opacity: .5; cursor: default; }
+.compose-note, .compose-message, .compose-unavailable { color: var(--muted); font-size: 12px; }
+.compose-code { max-height: 480px; max-width: 100%; overflow: auto; margin-top: 8px; border-radius: 6px; background: var(--bg); }
+.compose-code:empty { display: none; }
+.compose-code > * { min-width: max-content; }
+.yaml-line { display: flex; white-space: pre; line-height: 1.7; padding-right: 12px; }
+.yaml-line code { white-space: pre; }
+.yaml-number { color: var(--muted); min-width: 48px; padding: 0 8px 0 18px; text-align: right; user-select: none; }
+.yaml-key { color: var(--run); }
+.yaml-value { color: var(--ok); }
+.yaml-comment { color: var(--muted); }
+.yaml-block { margin: 0; }
+.yaml-block > summary { list-style: none; cursor: pointer; position: relative; }
+.yaml-block > summary::-webkit-details-marker { display: none; }
+.yaml-block > summary::before { content: '▸'; position: absolute; left: 4px; color: var(--muted); }
+.yaml-block[open] > summary::before { content: '▾'; }
 </style>
 </head>
 <body>
@@ -141,6 +162,7 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
     The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
   </footer>
 </main>
+<script src="compose.js"></script>
 <script>
 const IGNORED = new Set(["Recent software version provided"]);
 const STALE_AFTER_S = 25 * 60;
@@ -403,7 +425,7 @@ function ceHtml(c) {
 }
 
 function detailHtml(d) {
-  if (d.unavailable) return `<div class="empty">Detail for this run is not available yet; it appears once the collector has fetched it.</div>`;
+  if (d.unavailable) return `<div class="empty">Detail for this run is not available yet; it appears once the collector has fetched it.</div>` + ComposeViewer.html(d);
   const st = d.status === "completed" ? chip("ok", "completed") : d.status === "in_progress" ? chip("run", "running")
     : chip("idle", d.status || "?");
   const params = Object.entries(d.parameters || {}).map(([k, v]) =>
@@ -435,6 +457,7 @@ function detailHtml(d) {
       <dt>repository</dt><dd>${esc(d.repository || "–")}</dd>
       <dt>on chain</dt><dd>${chain}</dd>
     </dl>
+    ${ComposeViewer.html(d)}
     <h3 style="font-size:13px;margin:16px 0 4px">Nightly Amaru integration</h3><div>${nightly}</div>
     <h3 style="font-size:13px;margin:16px 0 4px">Parameters</h3>
     <div class="panel"><table><tbody>${params}</tbody></table></div>
@@ -480,6 +503,7 @@ async function expandRow(id, propName, scroll = true) {
       }
     }
     detailTr.firstChild.innerHTML = detailHtml(d);
+    ComposeViewer.mount(detailTr.firstChild);
     if (scroll) tr.scrollIntoView({block: "nearest"});
     if (propName) expandProp(detailTr, d, propName);
     else detailTr.querySelectorAll("tr.ce-row").forEach(n => n.remove());

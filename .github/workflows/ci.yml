@@ -23,6 +23,7 @@ jobs:
       - name: Build all derivations
         run: >-
           nix build --quiet
+          .#checks.x86_64-linux.compose-assets
           .#checks.x86_64-linux.mpfs-status
           .#checks.x86_64-linux.snapshot-schema
           .#checks.x86_64-linux.wallet-balances
@@ -43,6 +44,19 @@ jobs:
           .#reporter-image
           .#checks.x86_64-linux.image-source-shape
           .#devShells.x86_64-linux.default.inputDerivation
+
+  compose-assets:
+    name: CI Compose assets
+    needs: build-gate
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Check Compose collection and viewer
+        run: nix run --quiet .#compose-assets
 
   shellcheck:
     name: CI shellcheck
@@ -206,10 +220,10 @@ jobs:
         run: |
           rm -rf preview-site
           mkdir -p preview-site/runs
-          cp site/index.html preview-site/
+          cp site/* preview-site/
           cp preview-sample/data.json preview-site/
           cp preview-sample/property-descriptions.json preview-site/
-          cp preview-sample/runs/*.json preview-site/runs/
+          cp -r preview-sample/runs/. preview-site/runs/
       - name: Smoke test preview on localhost
         run: nix run --quiet .#preview-smoke
       - id: preview

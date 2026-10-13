@@ -9,6 +9,18 @@ for schema in spec['components']['schemas'].values():
 v=Draft202012Validator({'$ref':'#/components/schemas/Snapshot','components':spec['components']})
 sample=json.loads(Path('tests/snapshot.example.json').read_text())
 v.validate(sample)
+compose=copy.deepcopy(sample)
+compose['runs'][0]['compose']={
+    'status':'available','reason':None,'url':'runs/compose-test/docker-compose.yaml',
+    'source_url':'https://github.com/public-owner/public-repo/blob/'+'0'*40+'/testnets/local/docker-compose.yaml',
+    'commit':'0'*40,'internal_network':True}
+v.validate(compose)
+for field,value in [('url','https://external.invalid/compose.yaml'),('internal_network',False),('commit',None)]:
+    broken=copy.deepcopy(compose)
+    broken['runs'][0]['compose'][field]=value
+    assert list(v.iter_errors(broken)), 'schema accepted malformed Compose '+field
+compose['runs'][0]['compose'].update(status='unavailable',reason='source_unavailable',url=None,source_url=None,commit=None)
+v.validate(compose)
 missing=copy.deepcopy(sample)
 for key in ['runs','chain','token','wallets','proxy','monitor','nightly']:
     missing[key]=None

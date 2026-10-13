@@ -511,5 +511,13 @@
     "outcome": "failure",
     "slot": 135503176
   },
-  "nightly": []
+  "nightly": [],
+  "compose": {
+    "status": "available",
+    "reason": null,
+    "source_url": "https://github.com/cardano-foundation/cardano-node-antithesis/blob/ae43745ed5e59d688830d2207649907c5d1a69c9/testnets/cardano_node_head/docker-compose.yaml",
+    "commit": "ae43745ed5e59d688830d2207649907c5d1a69c9",
+    "internal_network": true,
+    "url": "runs/fe222c247145a3186799298d5bd9a08b-62-14/docker-compose.yaml"
+  }
 }

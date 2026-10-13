@@ -13,6 +13,11 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   ready, and the freshness monitor is happy. A stale source is labelled
   `stale` instead of blanking the page, and a snapshot older than 25 minutes
   raises a banner that the collector may be stopped.
+- **Someone inspecting a test** expands its run details, then opens the collapsed
+  Docker Compose section. YAML services and nested sections fold; Copy and
+  Download expose the same local-use file with `INTERNAL_NETWORK=true`. The
+  source link identifies the repository commit. An unavailable source is labelled
+  explicitly. Companion files and container images are not bundled.
 - **The operator running the collector** starts one container with
   `docker compose up -d`, then checks the same page. When a source stops
   refreshing, a banner names it and its last success instead of silently
@@ -73,6 +78,10 @@ flowchart TB
    also writes one detail file per run (`runs/<run_id>.json`), status
    payloads (`status/<reporter>.json`), and the
    shared `property-descriptions.json`.
+   Each run's Compose metadata records a public GitHub source at its full commit.
+   Only `${INTERNAL_NETWORK}` is replaced, with `true`; other placeholders stay
+   intact. Successful files are cached and published as
+   `runs/<run_id>/docker-compose.yaml`. YAML loads in the browser on expansion.
 2. `deploy/publish.sh` runs a secrets gate and force-pushes `site/` plus
    `data.json` and the detail files as a single orphan commit to `gh-pages`
    over HTTPS, authenticating with a push token read from a file.
