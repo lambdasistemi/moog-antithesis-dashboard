@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Moog Antithesis Pipeline</title>
+<script src="preferences.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141413'/%3E%3Cpath d='M5 18h5l3-8 5 14 3-6h6' fill='none' stroke='%235cc28f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
+  color-scheme: light;
   --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a65; --line: #e2e0d8;
   --ok: #1f7a4d; --ok-bg: #e3f2ea; --bad: #b3261e; --bad-bg: #fbe6e4;
   --warn: #8a5a00; --warn-bg: #fdf0d5; --run: #1f5fa8; --run-bg: #e3edf9;
@@ -16,6 +18,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2f2e2b;
     --ok: #5cc28f; --ok-bg: #173325; --bad: #f08a80; --bad-bg: #3a1a17;
     --warn: #e6b450; --warn-bg: #3a2c10; --run: #7fb0ec; --run-bg: #16273d;
@@ -23,6 +26,7 @@
   }
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #141413; --panel: #1d1d1b; --ink: #ecebe6; --muted: #9a998f; --line: #2f2e2b;
   --ok: #5cc28f; --ok-bg: #173325; --bad: #f08a80; --bad-bg: #3a1a17;
   --warn: #e6b450; --warn-bg: #3a2c10; --run: #7fb0ec; --run-bg: #16273d;
@@ -36,6 +40,19 @@ h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacin
 code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
 a { color: var(--run); }
 header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+.header-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.theme-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.theme-control select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.tabs { display: flex; gap: 4px; margin-top: 24px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; max-width: 180px; font: inherit; font-weight: 500; padding: 10px 8px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--run); background: var(--run-bg); border-color: var(--run); }
+:focus-visible { outline: 2px solid var(--run); outline-offset: 3px; }
+[role="tabpanel"] { display: none; }
+:root:not([data-pane]) #pane-tests,
+:root[data-pane="tests"] #pane-tests,
+:root[data-pane="pipeline"] #pane-pipeline,
+:root[data-pane="mpfs"] #pane-mpfs,
+:root[data-pane="accounts"] #pane-accounts { display: block; }
 .meta { color: var(--muted); font-size: 13px; }
 .banner { margin-top: 16px; padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); display: none; }
 .banner.show { display: block; }
@@ -107,21 +124,40 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
 <main>
   <header>
     <h1>Moog → Antithesis pipeline</h1>
-    <div class="meta"><span id="generated">loading…</span> · <span id="next"></span></div>
+    <div class="header-controls">
+      <div class="meta"><span id="generated">loading…</span> · <span id="next"></span></div>
+      <label class="theme-control" for="theme">Theme
+        <select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
+      </label>
+    </div>
   </header>
   <div class="banner" id="banner"></div>
 
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button id="tab-tests" type="button" role="tab" aria-controls="pane-tests" aria-selected="true" tabindex="0" data-pane="tests">Test runs</button>
+    <button id="tab-pipeline" type="button" role="tab" aria-controls="pane-pipeline" aria-selected="false" tabindex="-1" data-pane="pipeline">Pipeline</button>
+    <button id="tab-mpfs" type="button" role="tab" aria-controls="pane-mpfs" aria-selected="false" tabindex="-1" data-pane="mpfs">MPFS</button>
+    <button id="tab-accounts" type="button" role="tab" aria-controls="pane-accounts" aria-selected="false" tabindex="-1" data-pane="accounts">Accounts</button>
+  </nav>
+
+  <section id="pane-pipeline" role="tabpanel" aria-labelledby="tab-pipeline" tabindex="0">
   <h2>Pipeline</h2>
   <div class="chain" id="chain"></div>
+  </section>
 
+  <section id="pane-mpfs" role="tabpanel" aria-labelledby="tab-mpfs" tabindex="0">
   <h2>MPFS services</h2>
   <div class="wallet-grid" id="mpfs"></div>
   <p class="section-note">Two separate legacy preprod services. Indexer lag is measured in slots against each backend's own network tip; it is not an independent network check. Container and API availability do not establish synchronization.</p>
+  </section>
 
+  <section id="pane-accounts" role="tabpanel" aria-labelledby="tab-accounts" tabindex="0">
   <h2>ADA accounts</h2>
   <div class="wallet-grid" id="wallets"></div>
   <p class="section-note">On-chain ADA at the configured wallet addresses · preprod test network. Spending history and locked funds are not collected yet.</p>
+  </section>
 
+  <section id="pane-tests" role="tabpanel" aria-labelledby="tab-tests" tabindex="0">
   <h2>Test runs</h2>
   <div class="counts" id="phases"></div>
   <div class="filters" id="run-filters" style="margin-top:10px">
@@ -151,6 +187,8 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
     <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Antithesis</th><th>On chain</th></tr></thead>
     <tbody id="runs"></tbody>
   </table></div>
+  <p class="section-note">Select a run to see its properties, counterexamples and Docker Compose.</p>
+  </section>
 
   <footer>
     <a href="swagger.html">Snapshot API documentation</a> · <a href="openapi.json">OpenAPI schema</a><br>
@@ -283,8 +321,7 @@ function propsCell(p, status) {
   const real = p.failing.filter(n => !IGNORED.has(n)), ignored = p.failing.filter(n => IGNORED.has(n));
   const passing = p.total - real.length - ignored.length;
   let html = real.length ? chip("bad", `${real.length} failing`) : chip("ok", `${passing}/${p.total - ignored.length} passing`);
-  if (real.length) html += `<div class="failing">${real.map(esc).join("<br>")}</div>`;
-  if (ignored.length) html += `<div class="ignored">${ignored.map(esc).join("<br>")} (not ours)</div>`;
+  if (ignored.length) html += `<div class="ignored">${ignored.length} outside pipeline control</div>`;
   return html;
 }
 
@@ -536,7 +573,10 @@ function toggleProp(detailTr, d, propTr) {
 
 function routeFromHash() {
   const [id, prop] = parseHash();
-  if (id) expandRow(id, prop);
+  if (id) {
+    globalThis.DashboardPreferences?.openPane("tests", false);
+    expandRow(id, prop);
+  }
   else collapseAll();
 }
 window.addEventListener("hashchange", routeFromHash);

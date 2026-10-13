@@ -19,11 +19,15 @@
       "pause": 500
     },
     {
-      "text": "Someone checking the pipeline opens the live page and sees, in one screen, whether test requests are flowing, the oracle and agent are up, Antithesis runs are progressing, on-chain runs are settling, the proxy is ready, and the freshness monitor is happy. A stale source is labelled stale instead of blanking the page, and a snapshot older than 25 minutes raises a banner that the collector may be stopped.",
+      "text": "Someone checking the pipeline selects the Pipeline tab and sees, in one screen, whether test requests are flowing, the oracle and agent are up, Antithesis runs are progressing, on-chain runs are settling, the proxy is ready, and the freshness monitor is happy. A stale source is labelled stale instead of blanking the page, and a snapshot older than 25 minutes raises a banner that the collector may be stopped.",
       "pause": 300
     },
     {
       "text": "Someone inspecting a test expands its run details, then opens the collapsed Docker Compose section. YAML services and nested sections fold. Copy and Download expose the same local-use file with INTERNAL_NETWORK set to true. The source link identifies the repository commit. An unavailable source is labelled explicitly. Companion files and container images are not bundled.",
+      "pause": 300
+    },
+    {
+      "text": "Someone returning to the dashboard finds their selected tab and theme restored from browser local storage. Test runs opens on a first visit. Pipeline, MPFS and Accounts have separate panes. Theme offers System, Light and Dark. Run rows show failure counts; expanding a run reveals the full property list. A run link opens Test runs without changing the saved tab. When browser storage is unavailable, controls still work for the current visit.",
       "pause": 300
     },
     {
@@ -237,6 +241,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "25a26e9035ed2f0564407ad14902f1c335cbe4c72c9e431277677c239b016fbb"
+    "sha256": "b45937e736e642e7d0226a77ee55236a4fffa2279415c4c24c7710f04aa28c4a"
   }
 }
