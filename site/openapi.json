@@ -761,8 +761,8 @@
           },
           "schema_url": {
             "type": "string",
-            "const": "openapi.json",
-            "description": "Relative URL of the OpenAPI contract; resolve against the data.json URL."
+            "const": "https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json",
+            "description": "Public URL of the OpenAPI contract for this snapshot."
           }
         },
         "required": [

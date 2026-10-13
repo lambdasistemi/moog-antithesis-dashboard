@@ -1149,5 +1149,5 @@
     "launch-cap",
     "launch"
   ],
-  "schema_url": "openapi.json"
+  "schema_url": "https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json"
 }
