@@ -133,6 +133,10 @@
     {
       "text": "Property descriptions repeat verbatim across runs, so they publish once in property-descriptions.json instead of inside every detail file.",
       "pause": 300
+    },
+    {
+      "text": "A run's property chip counts every property node the API returns — group nodes included — so any failing property at any level turns the chip non-green and is named. The per-run detail file embeds the same node population, so chip and detail cannot disagree.",
+      "pause": 300
     }
   ],
   "status-reporters-oracle-agent-monitor": [
@@ -215,6 +219,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "9cb3220f89f097738aa65cfa54a5b2e1d51fee27c1f67a673f44f657bd394020"
+    "sha256": "35aea2b17a78fc03f6cd357d90c6cb77d0605d20c8d5d93744cbe77d6c351d80"
   }
 }
