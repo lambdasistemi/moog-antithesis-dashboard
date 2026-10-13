@@ -69,15 +69,15 @@
       "pause": 500
     },
     {
-      "text": "One always-on collector container loops deploy/cycle.sh every 10 minutes (deploy/loop.sh, DASHBOARD_INTERVAL, default 600). Each cycle collects one snapshot and publishes it. A failing cycle logs one line and the loop continues; overlapping cycles are skipped by the existing lock. The container stops promptly on SIGTERM.",
+      "text": "One always-on collector container runs the native Babashka loop every 10 minutes, with DASHBOARD_INTERVAL defaulting to 600. Each cycle collects one snapshot and publishes it. A failing cycle logs one line and the loop continues; overlapping cycles are skipped by the existing lock. The container stops promptly on SIGTERM.",
       "pause": 400
     },
     {
-      "text": "collect/collect.sh fetches seven independent sources into one data.json: Antithesis runs and their properties, on-chain test-run facts and pending requests, oracle and agent status (live, via their status issues), proxy readiness, the freshness monitor verdict (via its status issue), and nightly Amaru integration runs with their receipts. It also writes one detail file per run (runs/<run_id>.json), status payloads (status/<reporter>.json), and the shared property-descriptions.json.",
+      "text": "bb collect fetches eleven independent sources into one data.json: Antithesis runs and their properties, on-chain test-run facts and pending requests, oracle and agent status (live, via their status issues), proxy readiness, the freshness monitor verdict (via its status issue), nightly Amaru integration runs with their receipts, Koios balances and both MPFS observations. It also writes one detail file per run (runs/<run_id>.json) and the shared property-descriptions.json.",
       "pause": 300
     },
     {
-      "text": "deploy/publish.sh runs a secrets gate and force-pushes site/ plus data.json and the detail files as a single orphan commit to gh-pages over HTTPS, authenticating with a push token read from a file.",
+      "text": "bb publish runs a secrets gate and force-pushes site/ plus data.json and the detail files as a single orphan commit to gh-pages over HTTPS, authenticating with a push token read from a file.",
       "pause": 300
     },
     {
@@ -87,6 +87,10 @@
     {
       "text": "Each run’s Compose metadata records a public GitHub source at its full commit. Only INTERNAL_NETWORK is replaced with true. Other placeholders stay intact. Successful files are cached and published beside run details. YAML loads in the browser on expansion.",
       "pause": 300
+    },
+    {
+      "text": "The backend uses native Babashka for source reads, validation, cache transitions, assembly, publication and scheduling. Shell entry points only launch Babashka for existing callers. Antithesis property results follow every page and are shared by summaries and details. Failed pages cannot create a partial permanent result. Versioned caches replace truncated entries, and source values and timestamps are saved atomically together.",
+      "pause": 400
     }
   ],
   "secrets": [
@@ -149,7 +153,7 @@
       "pause": 300
     },
     {
-      "text": "Properties of completed Antithesis runs, per-run detail files, and receipts of concluded nightly runs never change, so they are fetched once and kept in the dashboard-cache volume (/cache in the container).",
+      "text": "Completed Antithesis property sets and run metadata, plus receipts of concluded nightly runs, are fetched once and cached. On-chain and nightly detail joins are rebuilt from current observations.",
       "pause": 300
     },
     {
@@ -235,6 +239,10 @@
     {
       "text": "Decisions.",
       "pause": 500
+    },
+    {
+      "text": "Native Babashka replaces the Bash backend. External clients remain process boundaries, and commit-SHA images identify the source revision and rollback artifact.",
+      "pause": 300
     }
   ],
   "license": [
@@ -249,6 +257,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "2d9552b5dcbd9d0519b9206079c096619ecef8983ac9958635e237bdeb4e0656"
+    "sha256": "045db72f6539cac78bf91ddb6803017dda2921749bc77c575684aef85122e2ae"
   }
 }

@@ -4,12 +4,14 @@ let
     root = src;
     fileset = pkgs.lib.fileset.unions [
       (src + "/collect") (src + "/deploy") (src + "/site") (src + "/schema")
+      (src + "/backend/src") (src + "/bb.edn")
     ];
   };
   # Only public application files enter the image; never copy a checkout.
   mkRoot = source: pkgs.runCommand "collector-root" { } ''
     mkdir -p $out/app $out/etc $out/cache $out/home/collector $out/tmp
     cp -r ${source}/collect ${source}/deploy ${source}/site ${source}/schema $out/app/
+    cp -r ${source}/backend ${source}/bb.edn $out/app/
     chmod -R u+w $out/app
     find $out/app -type d -exec chmod 0755 {} +
     find $out/app -type f -exec chmod 0644 {} +
@@ -18,7 +20,7 @@ let
   tools = pkgs.buildEnv {
     name = "collector-tools";
     paths = with pkgs; [
-      bash coreutils curl gh gitMinimal jq gnugrep gnused findutils
+      babashka-unwrapped bash coreutils curl gh gitMinimal jq gnugrep gnused findutils
       gawk util-linux unzip cacert
     ];
     pathsToLink = [ "/bin" "/etc" ];
@@ -40,7 +42,7 @@ let
     config = {
       User = "1000:1000";
       WorkingDir = "/app";
-      Cmd = [ "/app/deploy/loop.sh" ];
+      Cmd = [ "/bin/bb" "--main" "dashboard.main" "loop" ];
       Env = [
         "PATH=/bin"
         "HOME=/home/collector"
@@ -52,6 +54,7 @@ let
   stripped = pkgs.runCommand "collector-stripped-source" { } ''
     mkdir -p $out
     cp -r ${applicationSrc}/collect ${applicationSrc}/deploy ${applicationSrc}/site ${applicationSrc}/schema $out/
+    cp -r ${applicationSrc}/backend ${applicationSrc}/bb.edn $out/
     chmod -R u+rwX,go-rwx $out
   '';
 in {

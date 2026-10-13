@@ -33,7 +33,7 @@ else
 fi
 case "$url" in
     *'/runs?limit='*) jq '{data:[.]}' "$COMPOSE_FIXTURE/run" ;;
-    *'/properties') printf '{"data":[]}' ;;
+    *'/properties'*) printf '{"data":[]}' ;;
     *'/runs/compose-test') cat "$COMPOSE_FIXTURE/run" ;;
     https://raw.githubusercontent.com/*)
         [[ " $* " != *' -K '* && " $* " != *' --header '* && " $* " != *' -H '* ]] || exit 1

@@ -1,4 +1,4 @@
-import copy,json,os,subprocess,tempfile
+import copy,json,os,subprocess,tempfile,sys
 from pathlib import Path
 from jsonschema import Draft202012Validator
 spec=json.loads(Path('site/openapi.json').read_text())
@@ -59,3 +59,6 @@ with tempfile.TemporaryDirectory(prefix='snapshot-contract-') as directory:
     subprocess.run(['bash','collect/collect.sh'],env=environment,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     v.validate(json.loads((root/'out/data.json').read_text()))
 print('actual collector output conforms to the snapshot contract')
+for path in sys.argv[1:]:
+    v.validate(json.loads(Path(path).read_text()))
+    print('supplied snapshot conforms to the contract: '+path)

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Moog dashboard snapshot",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "As a dashboard consumer, read the published snapshot and inspect source status, last-success time and wallet address scope before using a value. This is a public static GET resource, not a live query API. Unavailable dependencies do not make the whole HTTP request fail."
   },
   "servers": [
@@ -157,7 +157,7 @@
           "failing"
         ],
         "additionalProperties": false,
-        "description": "Counts all returned property nodes, including groups. This is not the number of leaf assertions."
+        "description": "Counts all API property result entries after collecting every page, including groups and events. This is not a count of distinct bugs or leaf assertions."
       },
       "Run": {
         "type": "object",

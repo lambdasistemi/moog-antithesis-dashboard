@@ -20,7 +20,7 @@ let
     snapshot-schema = {
       runtimeInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) pkgs.bash pkgs.jq pkgs.coreutils pkgs.gnused pkgs.gnugrep pkgs.findutils ];
       text = ''
-        python3 tests/snapshot-schema.py
+        python3 tests/snapshot-schema.py "$@"
       '';
     };
     wallet-balances = {
@@ -39,21 +39,21 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/compose.sh tests/compose-assets.sh collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
+        shellcheck collect/compose.sh tests/compose-assets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/compose.sh tests/compose-assets.sh collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
+        shfmt -i 4 -d collect/compose.sh tests/compose-assets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
     syntax = {
       runtimeInputs = [ pkgs.bash ];
       text = ''
-        bash -n collect/wallets.sh
+        bb --config bb.edn -e "(require 'dashboard.main)"
         bash -n collect/compose.sh
         bash -n tests/compose-assets.sh
         bash -n collect/collect.sh
@@ -278,6 +278,7 @@ let
           >"$fixture/status/monitor.json"
         bash deploy/publish.sh
         git --git-dir="$remote" show gh-pages:status/monitor.json | grep -q 'OK all green'
+        bb --config bb.edn --main dashboard.test-runner publication
         echo "publish gate ok"
       '';
     };
@@ -1306,6 +1307,7 @@ EOF
           echo "loop took ''${elapsed}s after TERM" >&2
           exit 1
         }
+        bb --config bb.edn --main dashboard.test-runner loop
         echo "loop runtime ok"
       '';
     };
@@ -1768,7 +1770,7 @@ DRIVER_EOF
 #!/bin/sh
 url=$(grep '^url = ' | ${pkgs.gnused}/bin/sed 's/^url = "//;s/"$//')
 case "$url" in
-  *"/properties") cat "$FIXTURE_PROPS" ;;
+  *"/properties"*) cat "$FIXTURE_PROPS" ;;
   *"runs?limit="*) cat "$RUNS_FIX" ;;
   *"/runs/"*) cat "$RUNOBJ_FIX" ;;
   *) echo "fake curl: unknown url" >&2; exit 1 ;;
@@ -1809,7 +1811,7 @@ EOF
           echo "props-summary: failing group name missing" >&2
           exit 1
         }
-        [[ -s "$c1/props/v2-RID-evidence-1.json" ]] || {
+        [[ -s "$c1/props/v3-RID-evidence-1.json" ]] || {
           echo "props-summary: new-namespace cache not written" >&2
           exit 1
         }
@@ -1862,6 +1864,7 @@ EOF
           echo "props-summary: in-progress response was cached" >&2
           exit 1
         fi
+        bb --config bb.edn --main dashboard.test-runner properties
         echo "props summary ok"
       '';
     };
@@ -1869,7 +1872,8 @@ EOF
 
   mkApp = name: { runtimeInputs, text, inheritPath ? true }:
     pkgs.writeShellApplication {
-      inherit name text runtimeInputs inheritPath;
+      inherit name text inheritPath;
+      runtimeInputs = runtimeInputs ++ [ pkgs.babashka-unwrapped ];
     };
 
   mkCheck = name: spec:
@@ -1898,7 +1902,7 @@ EOF
     config=$(jq -r '.[0].Config' archive/manifest.json)
     jq -e '.config.User == "1000:1000" and
       .config.WorkingDir == "/app" and
-      .config.Cmd == ["/app/deploy/loop.sh"] and
+      .config.Cmd == ["/bin/bb", "--main", "dashboard.main", "loop"] and
       (.config.Env | sort) == (["PATH=/bin", "HOME=/home/collector",
         "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt",
         "GIT_SSL_CAINFO=/etc/ssl/certs/ca-bundle.crt"] | sort)' "archive/$config"
