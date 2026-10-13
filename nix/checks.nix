@@ -2,7 +2,7 @@
 let
   scripts = {
     snapshot-schema = {
-      runtimeInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) ];
+      runtimeInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) pkgs.bash pkgs.jq pkgs.coreutils pkgs.gnused pkgs.gnugrep pkgs.findutils ];
       text = ''
         python3 tests/snapshot-schema.py
       '';

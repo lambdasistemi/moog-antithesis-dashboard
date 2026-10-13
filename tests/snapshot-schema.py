@@ -1,4 +1,4 @@
-import copy,json
+import copy,json,os,subprocess,tempfile
 from pathlib import Path
 from jsonschema import Draft202012Validator
 spec=json.loads(Path('site/openapi.json').read_text())
@@ -27,3 +27,22 @@ for name,mutate in [
     if not list(v.iter_errors(broken)):
         raise AssertionError('schema accepted '+name)
 print('snapshot schema accepts observed and unavailable states; malformed claims refused')
+
+# Bind the contract to real collector output, not only a recorded example.
+with tempfile.TemporaryDirectory(prefix='snapshot-contract-') as directory:
+    root=Path(directory)
+    binaries=root/'bin'
+    binaries.mkdir()
+    for name in ['curl','moog']:
+        command=binaries/name
+        command.write_text('#!/bin/sh\nexit 1\n')
+        command.chmod(0o755)
+    environment=os.environ.copy()
+    environment.update(PATH=str(binaries)+os.pathsep+environment['PATH'],
+        DASHBOARD_CACHE=str(root/'cache'),DASHBOARD_OUT=str(root/'out'),
+        ANTITHESIS_API_KEY_FILE=str(root/'absent-key'),GH_READ_TOKEN_FILE=str(root/'absent-read'),
+        MOOG_READ_ENV_FILE=str(root/'absent-moog'),MOOG_DIR=str(binaries),
+        STATUS_ISSUE_ORACLE='',STATUS_ISSUE_AGENT='',STATUS_ISSUE_MONITOR='')
+    subprocess.run(['bash','collect/collect.sh'],env=environment,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    v.validate(json.loads((root/'out/data.json').read_text()))
+print('actual collector output conforms to the snapshot contract')
