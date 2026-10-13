@@ -41,6 +41,16 @@
       "pause": 400
     }
   ],
+  "snapshot-api": [
+    {
+      "text": "Snapshot API.",
+      "pause": 500
+    },
+    {
+      "text": "As a dashboard consumer, inspect the published state and its freshness before using an account balance or service verdict. Open Swagger UI for field descriptions and a same-origin read-only request, or download the OpenAPI schema. Null sources are unavailable; cached values marked stale are not current health. Wallet amounts are integer lovelace strings and history remains uncollected.",
+      "pause": 400
+    }
+  ],
   "how-it-runs": [
     {
       "text": "How it runs.",
@@ -219,6 +229,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "ab9a044ac8cae6497bb76ffa71977ae32e8152f3aa268eaba5e0be6b216de1f3"
+    "sha256": "8c4cd16d4ea6eb82f3e5f2a6582385e5c1b2f8dec51153c0efd7bbaefd3eef6f"
   }
 }

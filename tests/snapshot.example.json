@@ -1,0 +1,1152 @@
+{
+  "generated_at": "2026-10-13T09:24:40Z",
+  "started_at": "2026-10-13T09:24:27Z",
+  "refresh_seconds": 600,
+  "tenant": "amaru-cardano",
+  "repository": "cardano-foundation/cardano-node-antithesis",
+  "sources": {
+    "runs": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:24:28Z"
+    },
+    "chain": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:24:30Z"
+    },
+    "token": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:24:30Z"
+    },
+    "oracle": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:20:05Z"
+    },
+    "agent": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:21:28Z"
+    },
+    "proxy": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:24:32Z"
+    },
+    "monitor": {
+      "status": "stale",
+      "error": "monitor status: no issue number",
+      "last_success": "2026-10-12T11:29:24Z"
+    },
+    "nightly": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:24:34Z"
+    },
+    "wallets": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T09:24:36Z"
+    }
+  },
+  "runs": [
+    {
+      "run_id": "6074f15a16ea573a3618f154e82860cf-62-14",
+      "status": "in_progress",
+      "created_at": "2026-10-13T07:38:24Z",
+      "started_at": "2026-10-13T07:38:24Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 47,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": null
+    },
+    {
+      "run_id": "f6ef038c02400c36c6a230fafc1fae46-62-14",
+      "status": "completed",
+      "created_at": "2026-10-13T05:35:31Z",
+      "started_at": "2026-10-13T05:35:31Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+      "commit": "c442b4b5032bfdb6fd125392b75baf1aca4fe62b",
+      "try": 1,
+      "requester": "wolf31o2",
+      "repository": "blinklabs-io/cardano-compose-stacks",
+      "properties": {
+        "total": 50,
+        "passing": 49,
+        "failing": [
+          "Customer output volume"
+        ]
+      }
+    },
+    {
+      "run_id": "3f09d5e04a7e61f1a43369a93597a3f3-62-14",
+      "status": "completed",
+      "created_at": "2026-10-13T03:01:07Z",
+      "started_at": "2026-10-13T03:01:07Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_head",
+      "commit": "c5f1427cb219b282687604a1a508d549fd8a717a",
+      "try": 1,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "ecd551f701bf18150c1fdb3f5e8978a6-62-14",
+      "status": "completed",
+      "created_at": "2026-10-13T01:48:12Z",
+      "started_at": "2026-10-13T01:48:12Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 46,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "e0e035bf2823ab31bffa5a70624a4d27-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T19:22:01Z",
+      "started_at": "2026-10-12T19:22:01Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 45,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 47,
+        "failing": [
+          "No Antithesis errors",
+          "systemd-journald",
+          "container: p3, exit code: 1"
+        ]
+      }
+    },
+    {
+      "run_id": "84894c33e560cf8494b0b78ac8fbaba9-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T19:10:46Z",
+      "started_at": "2026-10-12T19:10:46Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "testnets/cardano_amaru",
+      "commit": "7c5803f6203732d70504cf644e47be6d86da17e6",
+      "try": 1,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 36,
+        "passing": 34,
+        "failing": [
+          "container: amaru-relay-2, exit code: 1",
+          "cluster fork depth < k"
+        ]
+      }
+    },
+    {
+      "run_id": "7b1390a31e70ba440c1d08c5693c5f0b-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T17:32:39Z",
+      "started_at": "2026-10-12T17:32:39Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+      "commit": "5b787fff19ad108f4db9039de6dc2cd9a8d78ea0",
+      "try": 1,
+      "requester": "wolf31o2",
+      "repository": "blinklabs-io/cardano-compose-stacks",
+      "properties": {
+        "total": 50,
+        "passing": 49,
+        "failing": [
+          "Customer output volume"
+        ]
+      }
+    },
+    {
+      "run_id": "a8252428abb56ba25b13ccaad3a2e13f-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T14:31:24Z",
+      "started_at": "2026-10-12T14:31:24Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_governance",
+      "commit": "616a99e83110711fd4bdeaa980b32dfbf5206546",
+      "try": 1,
+      "requester": "saratomaz",
+      "repository": "input-output-hk/cardano-node-tests-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "c4b63ba5acf932ebbfe9c2e873b69b02-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T13:45:43Z",
+      "started_at": "2026-10-12T13:45:43Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 44,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 49,
+        "failing": [
+          "systemd-journald"
+        ]
+      }
+    },
+    {
+      "run_id": "b20e6027bf61471fe58b718f46697f85-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T07:54:46Z",
+      "started_at": "2026-10-12T07:54:46Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 43,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "45a8e4553640438bece4522931ee95d1-62-14",
+      "status": "incomplete",
+      "created_at": "2026-10-12T05:38:58Z",
+      "started_at": "2026-10-12T05:38:58Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+      "commit": "e4d8b194a366a061864d21e663ed05b08df2700f",
+      "try": 1,
+      "requester": "wolf31o2",
+      "repository": "blinklabs-io/cardano-compose-stacks",
+      "properties": {
+        "total": 0,
+        "passing": 0,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "89cc199d0f64cd66c76215ca90a8bae4-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T03:04:10Z",
+      "started_at": "2026-10-12T03:04:10Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_head",
+      "commit": "86f5f29bb9d5c551eb0bb531a8a89a184f4e37db",
+      "try": 1,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "de761584ad655e918b338dfc652dfcaf-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T01:55:14Z",
+      "started_at": "2026-10-12T01:55:14Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 42,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 48,
+        "failing": [
+          "cardano-node",
+          "container: p3, exit code: 139"
+        ]
+      }
+    },
+    {
+      "run_id": "7dd3f9ccb2a398c76e2aa465b7b4bfe0-62-14",
+      "status": "completed",
+      "created_at": "2026-10-12T01:54:54Z",
+      "started_at": "2026-10-12T01:54:54Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_governance",
+      "commit": "47dd8e8bbbc4bf5f397aafe7c0fb8421f1072c94",
+      "try": 1,
+      "requester": "saratomaz",
+      "repository": "input-output-hk/cardano-node-tests-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "a6405487d129676f5a85fb08f4f656bd-62-14",
+      "status": "completed",
+      "created_at": "2026-10-11T21:41:38Z",
+      "started_at": "2026-10-11T21:41:38Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/testnets/leios-devnet",
+      "commit": "1ec0d368e7c9c9d48a25f85ea058d37ac826898a",
+      "try": 1,
+      "requester": "wolf31o2",
+      "repository": "input-output-hk/ouroboros-leios",
+      "properties": {
+        "total": 50,
+        "passing": 20,
+        "failing": [
+          "container: pool1, exit code: 1",
+          "container: pool2, exit code: 1",
+          "No pool produces more than 60% of blocks",
+          "Praos block diffusion p95 latency (100045.9ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (100156.1ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (100761.1ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (101721.7ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (102735.8ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (102994.5ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (10308.2ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (103328.8ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (103677.8ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (103997.7ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (104033.7ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (104478.1ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (104911.1ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (105436.0ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (105629.6ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (106048.0ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (106409.5ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (106537.7ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (106538.2ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (106841.0ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (106933.0ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (106968.1ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (108706.8ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (108707.4ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (108847.4ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (109196.5ms) < 5000.0ms",
+          "Praos block diffusion p95 latency (110033.1ms) < 5000.0ms"
+        ]
+      }
+    },
+    {
+      "run_id": "b751dd6069ea2e3dab5098fb138fc8fc-62-14",
+      "status": "completed",
+      "created_at": "2026-10-11T19:21:13Z",
+      "started_at": "2026-10-11T19:21:13Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 41,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "eca9020066758e248caf6d16c7672ced-62-14",
+      "status": "completed",
+      "created_at": "2026-10-11T17:27:09Z",
+      "started_at": "2026-10-11T17:27:09Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+      "commit": "6652eef877b3ca85b849c876e686069adb1cddb2",
+      "try": 2,
+      "requester": "wolf31o2",
+      "repository": "blinklabs-io/cardano-compose-stacks",
+      "properties": {
+        "total": 50,
+        "passing": 49,
+        "failing": [
+          "Customer output volume"
+        ]
+      }
+    },
+    {
+      "run_id": "e3225f2dfcc9d9568f307db9d7b6ef89-62-14",
+      "status": "completed",
+      "created_at": "2026-10-11T13:24:27Z",
+      "started_at": "2026-10-11T13:24:27Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 40,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "21237c32f693891c268ca7e332543ac9-62-14",
+      "status": "completed",
+      "created_at": "2026-10-11T07:31:00Z",
+      "started_at": "2026-10-11T07:31:00Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 39,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 48,
+        "failing": [
+          "No Antithesis errors",
+          "container: relay2, exit code: 1"
+        ]
+      }
+    },
+    {
+      "run_id": "364d37284083b9279e5a1ff62d122f05-62-14",
+      "status": "incomplete",
+      "created_at": "2026-10-11T05:32:17Z",
+      "started_at": "2026-10-11T05:32:17Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+      "commit": "6652eef877b3ca85b849c876e686069adb1cddb2",
+      "try": 1,
+      "requester": "wolf31o2",
+      "repository": "blinklabs-io/cardano-compose-stacks",
+      "properties": {
+        "total": 0,
+        "passing": 0,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "ea5813e04ef5245fced6d73fed6e3a86-62-14",
+      "status": "completed",
+      "created_at": "2026-10-11T02:58:18Z",
+      "started_at": "2026-10-11T02:58:18Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_head",
+      "commit": "27ebdc434285f2d9e6d9a5083daf6f241acc27a8",
+      "try": 1,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "10ef717cddb7946e341cc758e5554001-62-14",
+      "status": "completed",
+      "created_at": "2026-10-11T01:45:10Z",
+      "started_at": "2026-10-11T01:45:10Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 38,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "f8deb4cc45a45bbb83c8cfe04891e892-62-14",
+      "status": "completed",
+      "created_at": "2026-10-10T19:19:55Z",
+      "started_at": "2026-10-10T19:19:55Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 180,
+      "directory": "testnets/cardano_node_master",
+      "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+      "try": 37,
+      "requester": "cfhal",
+      "repository": "cardano-foundation/cardano-node-antithesis",
+      "properties": {
+        "total": 50,
+        "passing": 50,
+        "failing": []
+      }
+    },
+    {
+      "run_id": "b338765a4f7cd2e3c1eb437ad62fc79b-62-14",
+      "status": "completed",
+      "created_at": "2026-10-10T17:28:47Z",
+      "started_at": "2026-10-10T17:28:47Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+      "commit": "9f58729fb70b24fb14e7224ca9f85365ebb868eb",
+      "try": 1,
+      "requester": "wolf31o2",
+      "repository": "blinklabs-io/cardano-compose-stacks",
+      "properties": {
+        "total": 50,
+        "passing": 49,
+        "failing": [
+          "Customer output volume"
+        ]
+      }
+    },
+    {
+      "run_id": "b149b5f34a997074c9d877aea615f804-62-14",
+      "status": "completed",
+      "created_at": "2026-10-10T14:48:53Z",
+      "started_at": "2026-10-10T14:48:53Z",
+      "test_name": "amaru-v2",
+      "duration_minutes": 60,
+      "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+      "commit": "3aa170e7d30846510491f238d42276c6da954e55",
+      "try": 1,
+      "requester": "wolf31o2",
+      "repository": "blinklabs-io/cardano-compose-stacks",
+      "properties": {
+        "total": 50,
+        "passing": 49,
+        "failing": [
+          "Customer output volume"
+        ]
+      }
+    }
+  ],
+  "chain": {
+    "phases": {
+      "accepted": 1,
+      "finished": 1478,
+      "rejected": 32
+    },
+    "recent": [
+      {
+        "directory": "testnets/cardano_node_head",
+        "commit": "c5f1427cb219b282687604a1a508d549fd8a717a",
+        "try": 1,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136194650
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 47,
+        "phase": "accepted",
+        "outcome": null,
+        "duration": null,
+        "slot": 136194037
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 46,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136190171
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 45,
+        "phase": "finished",
+        "outcome": "failure",
+        "duration": 3,
+        "slot": 136167020
+      },
+      {
+        "directory": "testnets/cardano_amaru",
+        "commit": "7c5803f6203732d70504cf644e47be6d86da17e6",
+        "try": 1,
+        "phase": "finished",
+        "outcome": "failure",
+        "duration": 1,
+        "slot": 136154326
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 44,
+        "phase": "finished",
+        "outcome": "failure",
+        "duration": 3,
+        "slot": 136141499
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 43,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136120445
+      },
+      {
+        "directory": "testnets/cardano_node_head",
+        "commit": "86f5f29bb9d5c551eb0bb531a8a89a184f4e37db",
+        "try": 1,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136102890
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 42,
+        "phase": "finished",
+        "outcome": "failure",
+        "duration": 3,
+        "slot": 136099226
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 41,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136080514
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 40,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136053791
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 39,
+        "phase": "finished",
+        "outcome": "failure",
+        "duration": 3,
+        "slot": 136037911
+      },
+      {
+        "directory": "testnets/cardano_node_head",
+        "commit": "27ebdc434285f2d9e6d9a5083daf6f241acc27a8",
+        "try": 1,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136016164
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 38,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 136012013
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 37,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135988733
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 36,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135967300
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 35,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135946096
+      },
+      {
+        "directory": "testnets/cardano_node_head",
+        "commit": "69596ac511de4ba0d7537e8c2f3aabc2835d0ed9",
+        "try": 1,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135929553
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 34,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135925345
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 33,
+        "phase": "finished",
+        "outcome": "failure",
+        "duration": 3,
+        "slot": 135902445
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 32,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135881308
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 31,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135859997
+      },
+      {
+        "directory": "testnets/cardano_node_head",
+        "commit": "37c3239647b6c3151854648125cb7247948ed5b3",
+        "try": 1,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135848577
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 30,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135844465
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 29,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135821563
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 28,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135794927
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 27,
+        "phase": "finished",
+        "outcome": "failure",
+        "duration": 3,
+        "slot": 135778965
+      },
+      {
+        "directory": "testnets/cardano_node_head",
+        "commit": "ee078976e62cccfe034f9823fc8421e75c7ed974",
+        "try": 1,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135756716
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 26,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135752636
+      },
+      {
+        "directory": "testnets/cardano_node_master",
+        "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+        "try": 25,
+        "phase": "finished",
+        "outcome": "success",
+        "duration": 3,
+        "slot": 135729706
+      }
+    ]
+  },
+  "token": {
+    "pending_requests": 0
+  },
+  "hosts": {
+    "oracle": [
+      {
+        "name": "moog-status-reporter-reporter-1",
+        "image": "lambdasistemi/moog-antithesis-dashboard-reporter:15db52e9574c8c8905b587a6d8e1e77d9aa8bc00",
+        "status": "Up 20 hours"
+      },
+      {
+        "name": "oracle-moog-oracle-1",
+        "image": "cardano-foundation/moog/moog-oracle:v0.5.1.5",
+        "status": "Up 12 days"
+      }
+    ],
+    "agent": [
+      {
+        "name": "agent-moog-agent-1",
+        "image": "cardano-foundation/moog/moog-agent:v0.5.1.5",
+        "status": "Up 12 days"
+      },
+      {
+        "name": "moog-status-reporter-reporter-1",
+        "image": "lambdasistemi/moog-antithesis-dashboard-reporter:15db52e9574c8c8905b587a6d8e1e77d9aa8bc00",
+        "status": "Up 20 hours"
+      }
+    ],
+    "agent_errors_6h": 0,
+    "agent_published_24h": 9
+  },
+  "wallets": {
+    "config_revision": "31e550219036103a557bbed2a248b187b8eec0ec",
+    "provider": "Koios",
+    "network": "preprod",
+    "reported_at": "2026-10-13T09:24:36Z",
+    "chain_point": null,
+    "history_status": "not_collected",
+    "accounts": [
+      {
+        "id": "oracle",
+        "role": "oracle",
+        "network": "preprod",
+        "addresses": [
+          "addr_test1vq04e6lvknx3ettppz5xq9x7nk8j87w5gaammke7z2ymyfqtkl4vv"
+        ],
+        "balance_lovelace": "23476265065",
+        "observed_at": "2026-10-13T09:24:36Z"
+      },
+      {
+        "id": "agent",
+        "role": "agent",
+        "network": "preprod",
+        "addresses": [
+          "addr_test1vzupzdprwu94m5xlurzcycy89dxcw45s43tw406dxqfl79cq3szdc"
+        ],
+        "balance_lovelace": "2316738438",
+        "observed_at": "2026-10-13T09:24:36Z"
+      },
+      {
+        "id": "cfhal",
+        "role": "requester",
+        "network": "preprod",
+        "addresses": [
+          "addr_test1vz6zuvdm0gu3q54pk50wjfjwyt4mwj6uaelzdfh9extxgnqyycgv0"
+        ],
+        "balance_lovelace": "17337394798",
+        "observed_at": "2026-10-13T09:24:36Z"
+      }
+    ]
+  },
+  "proxy": {
+    "ready": true,
+    "http_code": 200
+  },
+  "monitor": {
+    "last": "OK run_id=b20e6027bf61471fe58b718f46697f85-62-14 status=completed age=12497s maximum=28800s repository=cardano-foundation/cardano-node-antithesis directory=testnets/cardano_node_master",
+    "ok": true
+  },
+  "nightly": [
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-13T04:38:46Z",
+      "databaseId": 38347443858,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/38347443858",
+      "receipt": {
+        "day": "2026-10-13",
+        "stage": "bootstrap-proposal",
+        "outcome": "FAILED",
+        "error": "peer-snapshot-resolution-failed",
+        "upstream_sha": "9a4273855972f9efcfbb84579a3f63084d030eda"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-12T04:42:59Z",
+      "databaseId": 38204913804,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/38204913804",
+      "receipt": {
+        "day": "2026-10-12",
+        "stage": "launch-attempt",
+        "outcome": "FAILED",
+        "error": "unchanged-head",
+        "upstream_sha": "dfd5a21d1d424b3dc0659c8efd2b29d928ee26d5"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-11T04:34:04Z",
+      "databaseId": 38111994808,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/38111994808",
+      "receipt": {
+        "day": "2026-10-11",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "dfd5a21d1d424b3dc0659c8efd2b29d928ee26d5",
+        "bootstrap_candidate_sha": "0968c647e034356cbd82b5128b64ae50443c6e4b"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-10T04:33:07Z",
+      "databaseId": 38024464589,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/38024464589",
+      "receipt": {
+        "day": "2026-10-10",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "e3141b0cffe8265876a457178bac1e3ba78fddb2",
+        "bootstrap_candidate_sha": "d2aba8981fa1dae6540d5414fb30060387f006a4"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-09T04:35:29Z",
+      "databaseId": 37884596712,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/37884596712",
+      "receipt": {
+        "day": "2026-10-09",
+        "stage": "launch-attempt",
+        "outcome": "FAILED",
+        "error": "unchanged-head",
+        "upstream_sha": "34a453005bcaaf837ee73bd996b99eab8ef92961"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-08T04:34:21Z",
+      "databaseId": 37728124928,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/37728124928",
+      "receipt": {
+        "day": "2026-10-08",
+        "stage": "launch-attempt",
+        "outcome": "FAILED",
+        "error": "unchanged-head",
+        "upstream_sha": "34a453005bcaaf837ee73bd996b99eab8ef92961"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-07T04:34:08Z",
+      "databaseId": 37572085179,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/37572085179",
+      "receipt": {
+        "day": "2026-10-07",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "34a453005bcaaf837ee73bd996b99eab8ef92961",
+        "bootstrap_candidate_sha": "8c489da6e314fcc542bd52690d7d118306881d69"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-06T04:33:03Z",
+      "databaseId": 37414238319,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/37414238319",
+      "receipt": {
+        "day": "2026-10-06",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "cacffba3540a8a0149307374418e73d6ca614af7",
+        "bootstrap_candidate_sha": "d3b4b4e966fae48c64236e605b3b44c1a55e6f16"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-05T04:44:45Z",
+      "databaseId": 37264848536,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/37264848536",
+      "receipt": {
+        "day": "2026-10-05",
+        "stage": "launch-attempt",
+        "outcome": "FAILED",
+        "error": "unchanged-head",
+        "upstream_sha": "41856e3fb1bca32e6564b141e59a0bfd1566e048"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-04T05:56:53Z",
+      "databaseId": 37181340658,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/37181340658",
+      "receipt": {
+        "day": "2026-10-04",
+        "stage": "launch-attempt",
+        "outcome": "FAILED",
+        "error": "unchanged-head",
+        "upstream_sha": "41856e3fb1bca32e6564b141e59a0bfd1566e048"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-03T04:34:09Z",
+      "databaseId": 37096975654,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/37096975654",
+      "receipt": {
+        "day": "2026-10-03",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "41856e3fb1bca32e6564b141e59a0bfd1566e048",
+        "bootstrap_candidate_sha": "2ad922adbdc9c6e5766c46c5cb83e54f33861e7b"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-02T04:32:29Z",
+      "databaseId": 36964999867,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/36964999867",
+      "receipt": {
+        "day": "2026-10-02",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "7ade59e33a5ab9c6c90da96733a4fb7a30792fb2",
+        "bootstrap_candidate_sha": "84115ee0fcec6d1410f8265d494aebc5ebe05bf6"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-10-01T04:33:35Z",
+      "databaseId": 36815683040,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/36815683040",
+      "receipt": {
+        "day": "2026-10-01",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "1987cdf9bad886ee741cec868a71ddfa08e1c906",
+        "bootstrap_candidate_sha": "967b006f90c97e521ef6089e523a7c8caed7aaed"
+      }
+    },
+    {
+      "conclusion": "failure",
+      "createdAt": "2026-09-30T04:33:23Z",
+      "databaseId": 36669371042,
+      "event": "schedule",
+      "status": "completed",
+      "url": "https://github.com/cardano-foundation/cardano-node-antithesis/actions/runs/36669371042",
+      "receipt": {
+        "day": "2026-09-30",
+        "stage": "bootstrap-checks",
+        "outcome": "FAILED",
+        "error": "exact-head-checks-failed",
+        "upstream_sha": "4e977b47954a83d2136450d52e58ba0d35d38645",
+        "bootstrap_candidate_sha": "757e753cdd96d06444b23242bfc7d7cb7189dbc2"
+      }
+    }
+  ],
+  "nightly_stages": [
+    "head-resolution",
+    "runner-preflight",
+    "day-claim",
+    "resolve-upstream",
+    "launch-attempt",
+    "bootstrap-proposal",
+    "bootstrap-checks",
+    "image-resolution",
+    "consumer-repin",
+    "consumer-checks",
+    "producer-check",
+    "supervised-integration",
+    "launch-cap",
+    "launch"
+  ]
+}

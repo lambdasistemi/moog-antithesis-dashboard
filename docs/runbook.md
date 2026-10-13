@@ -158,3 +158,24 @@ requirements. See the [system design](transport-design.md) and issues
 [MPFS](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29),
 [agent/oracle](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23)
 and [requester](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24).
+
+## Monitor publication and snapshot API
+
+The existing Antithesis freshness producer publishes a sanitized verdict through
+the Nix reporter image to status issue34. Its production wrapper preserves the
+existing notification behavior, publishes failure as a generic verdict and
+retains a five-minute producer interval. File-mounted status credentials stay
+on the producing host. The collector reads STATUS_ISSUE_MONITOR=34; inspect the
+issue timestamp and next producer execution when recovering a stale source.
+
+On NixOS the wrapper explicitly invokes /run/wrappers/bin/sudo for the Docker
+command: the service PATH excludes the setuid wrapper directory. A non-setuid
+sudo from the system profile fails in the scheduled service even when an
+interactive operator invocation succeeds. Production receipt records this live
+boundary check. Host unit drop-ins must be retained when rebuilding NixOS.
+
+Swagger UI lives at swagger.html beside openapi.json and data.json. The schema
+describes the public snapshot, not the external provider APIs. Try it out reads
+the same directory snapshot. CDN assets are version-pinned with integrity hashes;
+the specification is not sent to an external validation service. Schema CI
+checks recorded actual and unavailable snapshots and refuses malformed claims.
