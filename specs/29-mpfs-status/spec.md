@@ -20,13 +20,13 @@ Two legacy preprod services, existing Nix reporter image and GitHub collection b
 
 ```mermaid
 flowchart TB
-    CS[Collector MPFS] --> CR[Local reporter]
-    RS[Oracle and agent MPFS] --> RR[Local reporter]
-    CR --> CI[GitHub issue 30]
-    RR --> RI[GitHub issue 37]
-    CI --> C[Independent source validation]
-    RI --> C
-    C --> S[Public snapshot and MPFS cards]
+    CS[Collector<br/>MPFS] -->|Observe| CR[Local<br/>reporter]
+    RS[Role<br/>MPFS] -->|Observe| RR[Local<br/>reporter]
+    CR -->|Push| CI[GitHub issue 30]
+    RR -->|Push| RI[GitHub issue 37]
+    CI -->|Read| C[Validate and age<br/>each feed]
+    RI -->|Read| C
+    C -->|Publish| S[Snapshot and<br/>MPFS cards]
 ```
 
 Each reporter publishes only its bound service. The collector validates and
