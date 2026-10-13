@@ -8,7 +8,7 @@
   "servers": [
     {
       "url": ".",
-      "description": "Same directory as this schema and Swagger UI"
+      "description": "This deployment"
     }
   ],
   "paths": {
@@ -31,7 +31,10 @@
           "404": {
             "description": "No snapshot has been published at this address."
           }
-        }
+        },
+        "tags": [
+          "Dashboard snapshot"
+        ]
       }
     }
   },
@@ -778,5 +781,11 @@
         "description": "Published collector snapshot, refreshed approximately every ten minutes. Each source is collected independently, so this is not an atomic cross-provider observation. Null means no usable value; stale sources may carry older last-good values. generated_at is publication assembly time, not each source observation time."
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Dashboard snapshot",
+      "description": "Published state and source freshness"
+    }
+  ]
 }
