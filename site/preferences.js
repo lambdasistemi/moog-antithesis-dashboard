@@ -5,14 +5,17 @@
   const read = key => { try { return localStorage.getItem(`moog-dashboard.${key}`); } catch { return null; } };
   const save = (key, value) => { try { localStorage.setItem(`moog-dashboard.${key}`, value); } catch {} };
   const storedTheme = read("theme"), storedPane = read("pane");
-  const theme = themes.includes(storedTheme) ? storedTheme : "system";
+  let theme = themes.includes(storedTheme) ? storedTheme : "system";
+  const systemTheme = matchMedia("(prefers-color-scheme: dark)");
   root.dataset.pane = panes.includes(storedPane) ? storedPane : "tests";
 
   function applyTheme(value) {
     if (value === "system") delete root.dataset.theme;
     else root.dataset.theme = value;
+    root.classList.toggle("wa-dark", value === "dark" || (value === "system" && systemTheme.matches));
   }
   applyTheme(theme);
+  systemTheme.addEventListener("change", () => applyTheme(theme));
 
   function openPane(pane, persist = true) {
     if (!panes.includes(pane)) return;
@@ -31,8 +34,9 @@
     control.value = theme;
     control.addEventListener("change", () => {
       if (!themes.includes(control.value)) return;
-      applyTheme(control.value);
-      save("theme", control.value);
+      theme = control.value;
+      applyTheme(theme);
+      save("theme", theme);
     });
     openPane(root.dataset.pane, false);
     const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
