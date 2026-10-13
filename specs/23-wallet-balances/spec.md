@@ -10,10 +10,10 @@ I can expand technical details without long image names crowding the summary.
 
 ```mermaid
 flowchart TB
-    G[GitHub public wallet coordinates] -->|Read pinned commit| C[Collector]
+    G[GitHub public wallet coordinates] -->|Read pinned commit| C[Collector validates coordinates]
     C -->|Query public addresses| K[Koios preprod]
-    K -->|Validated balances| C
-    C -->|Publish snapshot| D[Dashboard balance cards]
+    K -->|Return balances| B[Collector validates and sums]
+    B -->|Publish snapshot| D[Dashboard balance cards]
 ```
 
 This slice implements current balances, public coordinates, provider validation,
