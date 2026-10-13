@@ -39,6 +39,16 @@ remain open. Current wallet balances are implemented; spending history, locked
 funds and complete historical address coverage are pending. Existing legacy
 Moog reads remain in place.
 
+## Snapshot API
+
+As a dashboard consumer, inspect the published state and its freshness before
+using an account balance or service verdict. Open [Swagger UI](https://lambdasistemi.github.io/moog-antithesis-dashboard/swagger.html)
+for field descriptions and a same-origin read-only request, or download the
+[OpenAPI schema](https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json).
+Each data.json includes schema_url with the full public URL of its OpenAPI contract.
+Null sources are unavailable; cached values marked stale are not current health.
+Wallet amounts are integer lovelace strings and history remains uncollected.
+
 ## How it runs
 
 One always-on collector container loops `deploy/cycle.sh` every 10 minutes

@@ -1,6 +1,12 @@
 { pkgs, src, images, reporterImages }:
 let
   scripts = {
+    snapshot-schema = {
+      runtimeInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) pkgs.bash pkgs.jq pkgs.coreutils pkgs.gnused pkgs.gnugrep pkgs.findutils ];
+      text = ''
+        python3 tests/snapshot-schema.py
+      '';
+    };
     wallet-balances = {
       runtimeInputs = [ pkgs.bash pkgs.jq pkgs.coreutils pkgs.gnused ];
       text = ''
@@ -1947,6 +1953,7 @@ EOF
   '';
 in
 {
+  snapshot-schema = mkCheck "snapshot-schema" scripts.snapshot-schema;
   wallet-balances = mkCheck "wallet-balances" scripts.wallet-balances;
   docs-presentation = mkCheck "docs-presentation" scripts.docs-presentation;
   shellcheck = mkCheck "shellcheck" scripts.shellcheck;

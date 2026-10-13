@@ -135,8 +135,26 @@
       "pause": 400
     }
   ],
+  "monitor-publication-and-snapshot-api": [
+    {
+      "text": "Monitor publication and snapshot API.",
+      "pause": 500
+    },
+    {
+      "text": "The existing Antithesis freshness producer publishes a sanitized verdict through the Nix reporter image to status issue34. Its production wrapper preserves the existing notification behavior, publishes failure as a generic verdict and retains a five-minute producer interval. File-mounted status credentials stay on the producing host. The collector reads STATUS_ISSUE_MONITOR=34; inspect the issue timestamp and next producer execution when recovering a stale source.",
+      "pause": 400
+    },
+    {
+      "text": "On NixOS the wrapper explicitly invokes /run/wrappers/bin/sudo for the Docker command: the service PATH excludes the setuid wrapper directory. A non-setuid sudo from the system profile fails in the scheduled service even when an interactive operator invocation succeeds. Production receipt records this live boundary check. Host unit drop-ins must be retained when rebuilding NixOS.",
+      "pause": 400
+    },
+    {
+      "text": "Swagger UI lives at swagger.html beside openapi.json and data.json. The schema describes the public snapshot, not the external provider APIs. Try it out reads the same directory snapshot. CDN assets are version-pinned with integrity hashes; the specification is not sent to an external validation service. Schema CI checks recorded actual and unavailable snapshots and refuses malformed claims.",
+      "pause": 400
+    }
+  ],
   "_source": {
     "file": "runbook.md",
-    "sha256": "033ff47983d11be6df48591354b9831a340ec7a5548885a3bf0102518aba5b70"
+    "sha256": "50ede8c2aff63b940d23733f8acb650de3bb6ec673376e9de40392a2a685fa0d"
   }
 }
