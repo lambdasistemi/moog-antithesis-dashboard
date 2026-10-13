@@ -23,6 +23,7 @@ jobs:
       - name: Build all derivations
         run: >-
           nix build --quiet
+          .#checks.x86_64-linux.mpfs-status
           .#checks.x86_64-linux.snapshot-schema
           .#checks.x86_64-linux.wallet-balances
           .#checks.x86_64-linux.docs-presentation

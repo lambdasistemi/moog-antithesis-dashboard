@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "This revision records the operator's corrected design. Oracle and agent issue reporting is deployed. Monitor reporting is merged but production cutover is unverified. Dedicated MPFS reporting and historical wallet accounting remain open, tracked in MPFS status, agent/oracle funds and requester funds. Current Koios balance collection uses config/wallets.json, read through the GitHub API at a recorded commit, and renders oracle, agent and cfhal account cards. It supports preprod, validates provider address coverage, and sums integer lovelace without floating-point arithmetic. A null chain_point records that address_info responses are not bound to a known exact chain point. The diagrams describe the data flow, not a production deployment receipt.",
+      "text": "This revision records the operator's corrected design. Oracle, agent and monitor issue reporting is deployed. Dedicated MPFS reporting follows the independent-instance contract below. Historical wallet accounting remains open, tracked in MPFS status, agent/oracle funds and requester funds. Current Koios balance collection uses config/wallets.json, read through the GitHub API at a recorded commit, and renders oracle, agent and cfhal account cards. It supports preprod, validates provider address coverage, and sums integer lovelace without floating-point arithmetic. A null chain_point records that address_info responses are not bound to a known exact chain point. The diagrams describe the data flow, not a production deployment receipt.",
       "pause": 400
     }
   ],
@@ -59,7 +59,7 @@
       "pause": 500
     },
     {
-      "text": "Oracle, agent, monitor and MPFS publish allowlisted JSON to dedicated status issues. Oracle and agent sample every minute and write only on meaningful changes or a five-minute heartbeat. MPFS must follow that contract. The monitor's one-shot push hook must be invoked by its existing producer within the freshness window.",
+      "text": "Oracle, agent, monitor and MPFS publish allowlisted JSON to dedicated status issues. Oracle and agent sample every minute and write only on meaningful changes or a five-minute heartbeat. Each MPFS instance follows that contract with its own status issue and report timestamp. The monitor's one-shot push hook must be invoked by its existing producer within the freshness window.",
       "pause": 400
     },
     {
@@ -121,6 +121,6 @@
   ],
   "_source": {
     "file": "transport-design.md",
-    "sha256": "66512bdb04efe275c076fa6527fee342785295532a47100519cd3bbe698ffc10"
+    "sha256": "a6592f4156701e4d2d07d2ce3a27a657bd3a8224ae9ed35e16cc142a33996310"
   }
 }

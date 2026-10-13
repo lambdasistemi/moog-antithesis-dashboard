@@ -8,9 +8,9 @@ and the public configuration that tells the collector which wallets to query.
 When a source fails, I see its last successful observation and its age; an
 unavailable wallet is never displayed as a zero balance.
 
-This revision records the operator's corrected design. Oracle and agent issue
-reporting is deployed. Monitor reporting is merged but production cutover is
-unverified. Dedicated MPFS reporting and historical wallet accounting remain open,
+This revision records the operator's corrected design. Oracle, agent and monitor issue
+reporting is deployed. Dedicated MPFS reporting follows the independent-instance
+contract below. Historical wallet accounting remains open,
 tracked in [MPFS status](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29),
 [agent/oracle funds](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23)
 and [requester funds](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24).
@@ -90,7 +90,7 @@ mapping, network and provider observation have been verified.
 
 Oracle, agent, monitor and MPFS publish allowlisted JSON to dedicated status
 issues. Oracle and agent sample every minute and write only on meaningful changes
-or a five-minute heartbeat. MPFS must follow that contract. The monitor's one-shot
+or a five-minute heartbeat. Each MPFS instance follows that contract with its own status issue and report timestamp. The monitor's one-shot
 push hook must be invoked by its existing producer within the freshness window.
 
 The MPFS reporter records the configured service's container state, image and

@@ -3,13 +3,13 @@ let
   applicationSrc = pkgs.lib.fileset.toSource {
     root = src;
     fileset = pkgs.lib.fileset.unions [
-      (src + "/collect") (src + "/deploy") (src + "/site")
+      (src + "/collect") (src + "/deploy") (src + "/site") (src + "/schema")
     ];
   };
   # Only public application files enter the image; never copy a checkout.
   mkRoot = source: pkgs.runCommand "collector-root" { } ''
     mkdir -p $out/app $out/etc $out/cache $out/home/collector $out/tmp
-    cp -r ${source}/collect ${source}/deploy ${source}/site $out/app/
+    cp -r ${source}/collect ${source}/deploy ${source}/site ${source}/schema $out/app/
     chmod -R u+w $out/app
     find $out/app -type d -exec chmod 0755 {} +
     find $out/app -type f -exec chmod 0644 {} +
@@ -51,7 +51,7 @@ let
   };
   stripped = pkgs.runCommand "collector-stripped-source" { } ''
     mkdir -p $out
-    cp -r ${applicationSrc}/collect ${applicationSrc}/deploy ${applicationSrc}/site $out/
+    cp -r ${applicationSrc}/collect ${applicationSrc}/deploy ${applicationSrc}/site ${applicationSrc}/schema $out/
     chmod -R u+rwX,go-rwx $out
   '';
 in {

@@ -48,71 +48,74 @@ REPORT_HEARTBEAT_SECONDS=${REPORT_HEARTBEAT_SECONDS:-300}
     exit 1
 }
 
-agent_mode=0
-if [[ $ROLE == "agent" ]]; then
-    agent_mode=1
-elif [[ $ROLE != "oracle" ]]; then
-    echo "reporter: unsupported REPORTER_ROLE: $ROLE (want oracle or agent)" >&2
-    exit 1
-fi
-
-[[ -S $DOCKER_SOCKET || -e $DOCKER_SOCKET ]] || {
-    echo "reporter: no Docker socket in $DOCKER_SOCKET" >&2
-    exit 1
-}
-
-# Demultiplex one Docker container log window to stdout as text.
-# Arguments: container id, `since` epoch. The /logs stream is a sequence of
-# 8-byte-header frames (1 type byte, 3 padding, 4 big-endian size bytes)
-# framing arbitrary chunks of the text, so headers can split lines; frames
-# are reassembled here before any line is examined. Everything stays in
-# memory and pipes: logs never touch disk. Streams over 2 MiB are refused
-# rather than decoded. Fails on fetch, corrupt or oversize streams.
-fetch_logs_text() {
-    local id=$1 since=$2 hex payload_hex="" pos len size
-    hex=$(curl -sS --fail --max-time 30 --unix-socket "$DOCKER_SOCKET" \
-        "http://localhost/containers/$id/logs?stdout=1&stderr=1&since=$since" |
-        od -An -tx1 -v | tr -d ' \n') || return 1
-    len=${#hex}
-    if ((len > 4194304)); then
-        return 1
+if [[ $ROLE == "mpfs" ]]; then
+    payload=$(bash "$(dirname "${BASH_SOURCE[0]}")/mpfs.sh") || exit 1
+else
+    agent_mode=0
+    if [[ $ROLE == "agent" ]]; then
+        agent_mode=1
+    elif [[ $ROLE != "oracle" ]]; then
+        echo "reporter: unsupported REPORTER_ROLE: $ROLE (want oracle or agent)" >&2
+        exit 1
     fi
-    pos=0
-    while ((pos + 16 <= len)); do
-        size=$((16#${hex:$pos+8:8})) || return 1
-        if ((size < 0 || size > 16777216)); then
+
+    [[ -S $DOCKER_SOCKET || -e $DOCKER_SOCKET ]] || {
+        echo "reporter: no Docker socket in $DOCKER_SOCKET" >&2
+        exit 1
+    }
+
+    # Demultiplex one Docker container log window to stdout as text.
+    # Arguments: container id, `since` epoch. The /logs stream is a sequence of
+    # 8-byte-header frames (1 type byte, 3 padding, 4 big-endian size bytes)
+    # framing arbitrary chunks of the text, so headers can split lines; frames
+    # are reassembled here before any line is examined. Everything stays in
+    # memory and pipes: logs never touch disk. Streams over 2 MiB are refused
+    # rather than decoded. Fails on fetch, corrupt or oversize streams.
+    fetch_logs_text() {
+        local id=$1 since=$2 hex payload_hex="" pos len size
+        hex=$(curl -sS --fail --max-time 30 --unix-socket "$DOCKER_SOCKET" \
+            "http://localhost/containers/$id/logs?stdout=1&stderr=1&since=$since" |
+            od -An -tx1 -v | tr -d ' \n') || return 1
+        len=${#hex}
+        if ((len > 4194304)); then
             return 1
         fi
-        pos=$((pos + 16))
-        if ((size > 0)); then
-            if ((pos + size * 2 > len)); then
-                break
+        pos=0
+        while ((pos + 16 <= len)); do
+            size=$((16#${hex:$pos+8:8})) || return 1
+            if ((size < 0 || size > 16777216)); then
+                return 1
             fi
-            payload_hex+=${hex:$pos:$((size * 2))}
-            pos=$((pos + size * 2))
+            pos=$((pos + 16))
+            if ((size > 0)); then
+                if ((pos + size * 2 > len)); then
+                    break
+                fi
+                payload_hex+=${hex:$pos:$((size * 2))}
+                pos=$((pos + size * 2))
+            fi
+        done
+        if [[ -z $payload_hex ]]; then
+            return 0
         fi
-    done
-    if [[ -z $payload_hex ]]; then
-        return 0
-    fi
-    local esc
-    esc=$(printf '%s' "$payload_hex" | fold -w2 | sed 's/^/\\x/' | tr -d '\n') || return 1
-    printf '%b' "$esc"
-}
+        local esc
+        esc=$(printf '%s' "$payload_hex" | fold -w2 | sed 's/^/\\x/' | tr -d '\n') || return 1
+        printf '%b' "$esc"
+    }
 
-reported_at=$(date -u +%FT%TZ)
+    reported_at=$(date -u +%FT%TZ)
 
-# Docker Engine API on the unix socket: GET /containers/json.
-# Names look like ["/oracle-moog-oracle-1"]; Image like
-# "ghcr.io/org/moog-oracle:main" or "moog-oracle:v0.5.1.5"; Status like
-# "Up 5 days". Keep those whose name matches `moog`, drop the registry
-# prefix from the image, keep the API Status string verbatim.
-docker_json=$(curl -sS --fail --max-time 15 --unix-socket "$DOCKER_SOCKET" http://localhost/containers/json) || {
-    echo "reporter: failed to list containers from $DOCKER_SOCKET" >&2
-    exit 1
-}
+    # Docker Engine API on the unix socket: GET /containers/json.
+    # Names look like ["/oracle-moog-oracle-1"]; Image like
+    # "ghcr.io/org/moog-oracle:main" or "moog-oracle:v0.5.1.5"; Status like
+    # "Up 5 days". Keep those whose name matches `moog`, drop the registry
+    # prefix from the image, keep the API Status string verbatim.
+    docker_json=$(curl -sS --fail --max-time 15 --unix-socket "$DOCKER_SOCKET" http://localhost/containers/json) || {
+        echo "reporter: failed to list containers from $DOCKER_SOCKET" >&2
+        exit 1
+    }
 
-payload=$(jq -c --arg reported_at "$reported_at" '
+    payload=$(jq -c --arg reported_at "$reported_at" '
     def strip_registry:
         if test("/") and ((split("/")[0] | test("[.:]"))) then
             (split("/")[1:] | join("/"))
@@ -130,55 +133,62 @@ payload=$(jq -c --arg reported_at "$reported_at" '
                and (.image | length <= 200) and (.status | length <= 200))
     ] | sort_by(.name)
 ' <<<"$docker_json") || {
-    echo "reporter: failed to build payload from Docker API output" >&2
-    exit 1
-}
+        echo "reporter: failed to build payload from Docker API output" >&2
+        exit 1
+    }
 
-if ((agent_mode)); then
-    agent_id=$(jq -r '[.[] | select((((.Names[0] // "") | ltrimstr("/")) | test("moog-agent")))] | .[0].Id // empty' <<<"$docker_json") || {
-        echo "reporter: failed to read containers from Docker API output" >&2
-        exit 1
-    }
-    [[ -n $agent_id ]] || {
-        echo "reporter: no moog-agent container" >&2
-        exit 1
-    }
-    now_epoch=$(date +%s)
-    log6=$(fetch_logs_text "$agent_id" "$((now_epoch - 21600))") || {
-        echo "reporter: failed to fetch agent logs" >&2
-        exit 1
-    }
-    errors_6h=0
-    while IFS= read -r line; do
-        lower=${line,,}
-        if [[ $lower == *error* || $lower == *exception* ]]; then
-            errors_6h=$((errors_6h + 1))
-        fi
-    done <<<"$log6"
-    log24=$(fetch_logs_text "$agent_id" "$((now_epoch - 86400))") || {
-        echo "reporter: failed to fetch agent logs" >&2
-        exit 1
-    }
-    published_24h=0
-    while IFS= read -r line; do
-        if [[ $line == *"Published result"* ]]; then
-            published_24h=$((published_24h + 1))
-        fi
-    done <<<"$log24"
-    payload=$(jq -n -c --arg role "$ROLE" --arg reported_at "$reported_at" \
-        --argjson errors_6h "$errors_6h" --argjson published_24h "$published_24h" \
-        --argjson containers "$payload" \
-        '{role: $role, containers: $containers, errors_6h: $errors_6h, published_24h: $published_24h, reported_at: $reported_at}') || {
-        echo "reporter: failed to build payload from Docker API output" >&2
-        exit 1
-    }
-else
-    payload=$(jq -n -c --arg role "$ROLE" --arg reported_at "$reported_at" \
-        --argjson containers "$payload" \
-        '{role: $role, containers: $containers, reported_at: $reported_at}') || {
-        echo "reporter: failed to build payload from Docker API output" >&2
-        exit 1
-    }
+    if ((agent_mode)); then
+        agent_id=$(jq -r '[.[] | select((((.Names[0] // "") | ltrimstr("/")) | test("moog-agent")))] | .[0].Id // empty' <<<"$docker_json") || {
+            echo "reporter: failed to read containers from Docker API output" >&2
+            exit 1
+        }
+        [[ -n $agent_id ]] || {
+            echo "reporter: no moog-agent container" >&2
+            exit 1
+        }
+        now_epoch=$(date +%s)
+        log6=$(fetch_logs_text "$agent_id" "$((now_epoch - 21600))") || {
+            echo "reporter: failed to fetch agent logs" >&2
+            exit 1
+        }
+        errors_6h=0
+        while IFS= read -r line; do
+            lower=${line,,}
+            if [[ $lower == *error* || $lower == *exception* ]]; then
+                errors_6h=$((errors_6h + 1))
+            fi
+        done <<<"$log6"
+        log24=$(fetch_logs_text "$agent_id" "$((now_epoch - 86400))") || {
+            echo "reporter: failed to fetch agent logs" >&2
+            exit 1
+        }
+        published_24h=0
+        while IFS= read -r line; do
+            if [[ $line == *"Published result"* ]]; then
+                published_24h=$((published_24h + 1))
+            fi
+        done <<<"$log24"
+        payload=$(jq -n -c --arg role "$ROLE" --arg reported_at "$reported_at" \
+            --argjson errors_6h "$errors_6h" --argjson published_24h "$published_24h" \
+            --argjson containers "$payload" \
+            '{role: $role, containers: $containers, errors_6h: $errors_6h, published_24h: $published_24h, reported_at: $reported_at}') || {
+            echo "reporter: failed to build payload from Docker API output" >&2
+            exit 1
+        }
+    else
+        payload=$(jq -n -c --arg role "$ROLE" --arg reported_at "$reported_at" \
+            --argjson containers "$payload" \
+            '{role: $role, containers: $containers, reported_at: $reported_at}') || {
+            echo "reporter: failed to build payload from Docker API output" >&2
+            exit 1
+        }
+    fi
+
+fi
+
+if [[ $ROLE == "mpfs" && -s $STATUS_TOKEN_FILE ]] && [[ $payload == *"$(cat "$STATUS_TOKEN_FILE")"* ]]; then
+    echo 'reporter: mounted credential found in MPFS observation' >&2
+    exit 1
 fi
 
 if [[ ${REPORT_DRY_RUN:-0} == "1" ]]; then
@@ -203,7 +213,7 @@ comparison=$(jq -cS '
         elif test("^(Exited|Restarting) \\([0-9]+\\)") then
             capture("^(?<state>(Exited|Restarting) \\([0-9]+\\))").state
         else . end;
-    del(.reported_at) | .containers |= map(.status |= stable_status)
+    del(.reported_at) | if has("containers") then .containers |= map(.status |= stable_status) else . end
 ' <<<"$payload")
 now_epoch=$(date +%s)
 if [[ -r $REPORT_STATE_FILE ]] && jq -e \

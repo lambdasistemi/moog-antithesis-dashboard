@@ -49,6 +49,16 @@
       "status": "ok",
       "error": null,
       "last_success": "2026-10-13T09:24:36Z"
+    },
+    "mpfs_collector": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T11:20:33Z"
+    },
+    "mpfs_roles": {
+      "status": "ok",
+      "error": null,
+      "last_success": "2026-10-13T11:20:43Z"
     }
   },
   "runs": [
@@ -1149,5 +1159,58 @@
     "launch-cap",
     "launch"
   ],
-  "schema_url": "https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json"
+  "schema_url": "https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json",
+  "mpfs": {
+    "collector": {
+      "role": "mpfs",
+      "service_id": "collector-legacy-mpfs",
+      "used_by": [
+        "dashboard-collector"
+      ],
+      "network": "preprod",
+      "container": {
+        "name": "mpfs-compose-mpfs-1",
+        "image": "ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.0",
+        "status": "running"
+      },
+      "api": {
+        "reachable": true,
+        "http_status": 200
+      },
+      "synchronization": {
+        "status": "observed",
+        "ready": true,
+        "network_tip_slot": 136207229,
+        "indexer_tip_slot": 136207229,
+        "lag_slots": 0
+      },
+      "reported_at": "2026-10-13T11:20:33Z"
+    },
+    "roles": {
+      "role": "mpfs",
+      "service_id": "moog-role-legacy-mpfs",
+      "used_by": [
+        "oracle",
+        "agent"
+      ],
+      "network": "preprod",
+      "container": {
+        "name": "mpfs-mpfs-1",
+        "image": "ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.0",
+        "status": "running"
+      },
+      "api": {
+        "reachable": true,
+        "http_status": 200
+      },
+      "synchronization": {
+        "status": "observed",
+        "ready": true,
+        "network_tip_slot": 136207241,
+        "indexer_tip_slot": 136207241,
+        "lag_slots": 0
+      },
+      "reported_at": "2026-10-13T11:20:43Z"
+    }
+  }
 }

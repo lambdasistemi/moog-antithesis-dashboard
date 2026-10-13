@@ -1,6 +1,14 @@
 { pkgs, src, images, reporterImages }:
 let
   scripts = {
+    mpfs-status = {
+      runtimeInputs = [ pkgs.bash pkgs.jq pkgs.coreutils pkgs.ripgrep pkgs.diffutils pkgs.nodejs ];
+      text = ''
+        bash tests/mpfs-status.sh
+        bash tests/mpfs-collection.sh
+        node tests/mpfs-view.js
+      '';
+    };
     snapshot-schema = {
       runtimeInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) pkgs.bash pkgs.jq pkgs.coreutils pkgs.gnused pkgs.gnugrep pkgs.findutils ];
       text = ''
@@ -16,21 +24,21 @@ let
     docs-presentation = {
       runtimeInputs = [ pkgs.python3 ];
       text = ''
-        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md
+        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md specs/29-mpfs-status/spec.md
       '';
     };
 
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
+        shellcheck collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh
+        shfmt -i 4 -d collect/wallets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
@@ -44,6 +52,9 @@ let
         bash -n deploy/loop.sh
         bash -n deploy/compare-live.sh
         bash -n reporter/report.sh
+        bash -n reporter/mpfs.sh
+        bash -n tests/mpfs-status.sh
+        bash -n tests/mpfs-collection.sh
         bash -n reporter/loop.sh
         bash -n reporter/push-verdict.sh
         bash -n verify/reproduce.sh
@@ -1953,6 +1964,7 @@ EOF
   '';
 in
 {
+  mpfs-status = mkCheck "mpfs-status" scripts.mpfs-status;
   snapshot-schema = mkCheck "snapshot-schema" scripts.snapshot-schema;
   wallet-balances = mkCheck "wallet-balances" scripts.wallet-balances;
   docs-presentation = mkCheck "docs-presentation" scripts.docs-presentation;

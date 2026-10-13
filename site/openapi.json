@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Moog dashboard snapshot",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "As a dashboard consumer, read the published snapshot and inspect source status, last-success time and wallet address scope before using a value. This is a public static GET resource, not a live query API. Unavailable dependencies do not make the whole HTTP request fail."
   },
   "servers": [
@@ -110,6 +110,12 @@
           },
           "wallets": {
             "$ref": "#/components/schemas/Source"
+          },
+          "mpfs_collector": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "mpfs_roles": {
+            "$ref": "#/components/schemas/Source"
           }
         },
         "required": [
@@ -121,7 +127,9 @@
           "proxy",
           "monitor",
           "nightly",
-          "wallets"
+          "wallets",
+          "mpfs_collector",
+          "mpfs_roles"
         ],
         "additionalProperties": false
       },
@@ -763,6 +771,9 @@
             "type": "string",
             "const": "https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json",
             "description": "Public URL of the OpenAPI contract for this snapshot."
+          },
+          "mpfs": {
+            "$ref": "#/components/schemas/Mpfs"
           }
         },
         "required": [
@@ -781,10 +792,311 @@
           "proxy",
           "monitor",
           "nightly",
-          "nightly_stages"
+          "nightly_stages",
+          "mpfs"
         ],
         "additionalProperties": false,
         "description": "Published collector snapshot, refreshed approximately every ten minutes. Each source is collected independently, so this is not an atomic cross-provider observation. Null means no usable value; stale sources may carry older last-good values. generated_at is publication assembly time, not each source observation time."
+      },
+      "MpfsObservation": {
+        "type": "object",
+        "description": "One independently refreshed GitHub status feed. Producer reports expire after fifteen minutes; collector errors retain the previous value without refreshing its timestamp.",
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "const": "mpfs"
+          },
+          "service_id": {
+            "enum": [
+              "collector-legacy-mpfs",
+              "moog-role-legacy-mpfs"
+            ]
+          },
+          "used_by": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "dashboard-collector",
+                "oracle",
+                "agent"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          },
+          "network": {
+            "const": "preprod"
+          },
+          "container": {
+            "type": "object",
+            "description": "Exact service container, including stopped and missing states; availability does not prove synchronization.",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "enum": [
+                  "mpfs-compose-mpfs-1",
+                  "mpfs-mpfs-1"
+                ]
+              },
+              "image": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 200,
+                    "pattern": "^ghcr.io/cardano-foundation/mpfs/mpfs:[A-Za-z0-9_.-]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "enum": [
+                  "created",
+                  "running",
+                  "paused",
+                  "restarting",
+                  "removing",
+                  "exited",
+                  "dead",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "image",
+              "status"
+            ]
+          },
+          "api": {
+            "type": "object",
+            "description": "Read-only GET /tokens response status. No token records or response bodies are published.",
+            "additionalProperties": false,
+            "properties": {
+              "reachable": {
+                "type": "boolean"
+              },
+              "http_status": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 599
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "reachable",
+              "http_status"
+            ]
+          },
+          "synchronization": {
+            "type": "object",
+            "description": "Slot lag against this backend's reported network tip, not an independent network observation. Unavailable or invalid tips are unmeasured.",
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "enum": [
+                  "observed",
+                  "unmeasured"
+                ]
+              },
+              "ready": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "network_tip_slot": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "indexer_tip_slot": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "lag_slots": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "ready",
+              "network_tip_slot",
+              "indexer_tip_slot",
+              "lag_slots"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "unmeasured"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "ready": {
+                      "type": "null"
+                    },
+                    "network_tip_slot": {
+                      "type": "null"
+                    },
+                    "indexer_tip_slot": {
+                      "type": "null"
+                    },
+                    "lag_slots": {
+                      "type": "null"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "ready": {
+                      "type": "boolean"
+                    },
+                    "network_tip_slot": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "indexer_tip_slot": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "lag_slots": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "role",
+          "service_id",
+          "used_by",
+          "network",
+          "container",
+          "api",
+          "synchronization",
+          "reported_at"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "service_id": {
+                  "const": "collector-legacy-mpfs"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "used_by": {
+                  "const": [
+                    "dashboard-collector"
+                  ]
+                },
+                "container": {
+                  "properties": {
+                    "name": {
+                      "const": "mpfs-compose-mpfs-1"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "used_by": {
+                  "const": [
+                    "oracle",
+                    "agent"
+                  ]
+                },
+                "container": {
+                  "properties": {
+                    "name": {
+                      "const": "mpfs-mpfs-1"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Mpfs": {
+        "type": "object",
+        "description": "Independent collector and oracle/agent legacy instances. One instance's report does not establish the other's availability.",
+        "additionalProperties": false,
+        "properties": {
+          "collector": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MpfsObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "roles": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MpfsObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "collector",
+          "roles"
+        ]
       }
     }
   },

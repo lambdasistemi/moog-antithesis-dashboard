@@ -15,3 +15,19 @@ The legacy read-only tokens endpoint can supply network and indexer slots. Lag i
 ## Scope
 
 Two legacy preprod services, existing Nix reporter image and GitHub collection boundary. No migration, wallet changes, on-chain writes, SSH in reporter or collector, or additional worker seats. This existing seat implements and verifies; no independent audit claim.
+
+## Reporting flow
+
+```mermaid
+flowchart TB
+    CS[Collector MPFS] --> CR[Local reporter]
+    RS[Oracle and agent MPFS] --> RR[Local reporter]
+    CR --> CI[GitHub issue 30]
+    RR --> RI[GitHub issue 37]
+    CI --> C[Independent source validation]
+    RI --> C
+    C --> S[Public snapshot and MPFS cards]
+```
+
+Each reporter publishes only its bound service. The collector validates and
+ages the two feeds independently before the browser renders their observations.

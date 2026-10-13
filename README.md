@@ -31,13 +31,13 @@ observations, marks provider failures stale and retains their original scope.
 See the [system design](docs/transport-design.md) for the target flow and the
 [operator runbook](docs/runbook.md) for setup and recovery.
 
-Oracle and agent status issues are deployed. Monitor code is merged; production
-cutover is unverified. [MPFS status](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29)
-and historical wallet accounting ([agent/oracle](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23),
-[requester](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24))
-remain open. Current wallet balances are implemented; spending history, locked
-funds and complete historical address coverage are pending. Existing legacy
-Moog reads remain in place.
+Oracle, agent and monitor status issues are deployed. [MPFS status](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/29)
+tracks independent reporters for the collector and oracle/agent legacy services.
+Historical wallet accounting remains open for [agent/oracle](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/23)
+and [requester](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/24).
+Current wallet balances are implemented; spending history, locked funds and
+complete historical address coverage are pending. Existing legacy Moog reads
+remain in place.
 
 ## Snapshot API
 
