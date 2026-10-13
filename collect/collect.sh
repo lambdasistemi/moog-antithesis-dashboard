@@ -30,6 +30,8 @@ STATUS_REPOSITORY=${STATUS_REPOSITORY:-lambdasistemi/moog-antithesis-dashboard}
 STATUS_ISSUE_ORACLE=${STATUS_ISSUE_ORACLE:-}
 STATUS_ISSUE_AGENT=${STATUS_ISSUE_AGENT:-}
 STATUS_ISSUE_MONITOR=${STATUS_ISSUE_MONITOR:-}
+STATUS_ISSUE_MPFS_COLLECTOR=${STATUS_ISSUE_MPFS_COLLECTOR:-}
+STATUS_ISSUE_MPFS_ROLES=${STATUS_ISSUE_MPFS_ROLES:-}
 # Test seams for checks only: STATUS_BODY_CMD_ORACLE (else legacy
 # STATUS_BODY_CMD) and STATUS_BODY_CMD_AGENT supply the issue bodies instead
 # of calling the GitHub API. Production leaves them unset and uses gh_auth.
@@ -415,10 +417,34 @@ src_nightly() {
     done | jq -s .
 }
 
+fetch_mpfs() {
+    local source=$1 issue=$2 service=$3 seam=$4 body
+    if [[ -n $seam ]]; then
+        body=$(bash -c "$seam") || {
+            echo 'MPFS status: fetch failed' >&2
+            return 1
+        }
+    else
+        body=$(status_body_default "$source" "$issue") || return 1
+    fi
+    [[ ${#body} -le 32768 ]] || {
+        echo 'MPFS status: invalid payload' >&2
+        return 1
+    }
+    printf '%s' "$body" | jq -ec --arg service "$service" --argjson now "$(date +%s)" \
+        -f "$(dirname "${BASH_SOURCE[0]}")/../schema/mpfs.jq" 2>/dev/null || {
+        echo 'MPFS status: invalid or expired payload' >&2
+        return 1
+    }
+}
+
+src_mpfs_collector() { fetch_mpfs mpfs_collector "$STATUS_ISSUE_MPFS_COLLECTOR" collector-legacy-mpfs "${STATUS_BODY_CMD_MPFS_COLLECTOR:-}"; }
+src_mpfs_roles() { fetch_mpfs mpfs_roles "$STATUS_ISSUE_MPFS_ROLES" moog-role-legacy-mpfs "${STATUS_BODY_CMD_MPFS_ROLES:-}"; }
+
 # shellcheck source=collect/wallets.sh
 source "$(dirname "${BASH_SOURCE[0]}")/wallets.sh"
 
-for s in runs chain token oracle agent proxy monitor nightly wallets; do
+for s in runs chain token oracle agent proxy monitor nightly wallets mpfs_collector mpfs_roles; do
     run_source "$s" "src_$s"
 done
 
@@ -458,7 +484,7 @@ if [[ $(jq 'type' "$WORK/runs.json") == '"array"' ]]; then
     fi
 fi
 
-sources=$(for s in runs chain token oracle agent proxy monitor nightly wallets; do
+sources=$(for s in runs chain token oracle agent proxy monitor nightly wallets mpfs_collector mpfs_roles; do
     jq -n --arg n "$s" --arg st "${SRC_STATUS[$s]}" --arg e "${SRC_ERR[$s]}" --arg at "${SRC_LAST[$s]}" \
         '{ ($n): { status: $st, error: (if $e == "" then null else $e end),
                    last_success: (if $at == "" then null else $at end) } }'
@@ -470,12 +496,14 @@ jq -n \
     --slurpfile runs "$WORK/runs.json" --slurpfile chain "$WORK/chain.json" \
     --slurpfile token "$WORK/token.json" --slurpfile hosts "$WORK/hosts.json" \
     --slurpfile wallets "$WORK/wallets.json" \
+    --slurpfile mpfs_collector "$WORK/mpfs_collector.json" --slurpfile mpfs_roles "$WORK/mpfs_roles.json" \
     --slurpfile proxy "$WORK/proxy.json" --slurpfile monitor "$WORK/monitor.json" \
     --slurpfile nightly "$WORK/nightly.json" \
     '{ schema_url: "https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json", generated_at: $generated_at, started_at: $started_at, refresh_seconds: 600,
        tenant: "'"$TENANT"'", repository: "'"$CNA_REPO"'",
        sources: $sources,
        runs: $runs[0], chain: $chain[0], token: $token[0], hosts: $hosts[0],
+       mpfs: {collector:$mpfs_collector[0], roles:$mpfs_roles[0]},
        wallets: $wallets[0], proxy: $proxy[0],
        monitor: ($monitor[0] | if type == "object" then {last, ok} else . end),
        nightly: $nightly[0],
@@ -485,4 +513,4 @@ jq -n \
          "launch-cap", "launch"] }' >"$OUT_DIR/data.json.new" &&
     mv "$OUT_DIR/data.json.new" "$OUT_DIR/data.json"
 
-echo "collected: $(for s in runs chain token oracle agent proxy monitor nightly wallets; do printf '%s=%s ' "$s" "${SRC_STATUS[$s]}"; done)"
+echo "collected: $(for s in runs chain token oracle agent proxy monitor nightly wallets mpfs_collector mpfs_roles; do printf '%s=%s ' "$s" "${SRC_STATUS[$s]}"; done)"

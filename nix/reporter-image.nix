@@ -4,12 +4,13 @@ let
     root = src;
     fileset = pkgs.lib.fileset.unions [
       (src + "/reporter")
+      (src + "/schema")
     ];
   };
   # Only public application files enter the image; never copy a checkout.
   mkRoot = source: pkgs.runCommand "reporter-root" { } ''
     mkdir -p $out/app $out/etc $out/cache $out/home/reporter $out/tmp
-    cp -r ${source}/reporter $out/app/
+    cp -r ${source}/reporter ${source}/schema $out/app/
     chmod -R u+w $out/app
     find $out/app -type d -exec chmod 0755 {} +
     find $out/app -type f -exec chmod 0644 {} +
@@ -51,7 +52,7 @@ let
   };
   stripped = pkgs.runCommand "reporter-stripped-source" { } ''
     mkdir -p $out
-    cp -r ${applicationSrc}/reporter $out/
+    cp -r ${applicationSrc}/reporter ${applicationSrc}/schema $out/
     chmod -R u+rwX,go-rwx $out
   '';
 in {

@@ -93,6 +93,10 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
   <h2>Pipeline</h2>
   <div class="chain" id="chain"></div>
 
+  <h2>MPFS services</h2>
+  <div class="wallet-grid" id="mpfs"></div>
+  <p class="section-note">Two separate legacy preprod services. Indexer lag is measured in slots against each backend's own network tip; it is not an independent network check. Container and API availability do not establish synchronization.</p>
+
   <h2>ADA accounts</h2>
   <div class="wallet-grid" id="wallets"></div>
   <p class="section-note">On-chain ADA at the configured wallet addresses · preprod test network. Spending history and locked funds are not collected yet.</p>
@@ -213,6 +217,23 @@ function renderChain(d) {
     const state = sourceState(src[n.id], n.value, n.state);
     const age = src[n.id]?.last_success;
     return '<article class="node" data-service="' + n.id + '"><div class="name">' + esc(n.name) + chip(...state) + '</div><div class="detail">' + esc(n.detail) + '</div><div class="age">' + (age ? "Observed " + ago(age) : "Never observed") + '</div>' + (n.technical ? '<details><summary>Details</summary><div class="technical">' + esc(n.technical) + '</div></details>' : '') + '</article>';
+  }).join("");
+}
+
+function renderMpfs(d) {
+  const services=[
+    {key:"collector",source:"mpfs_collector",title:"MPFS · collector",users:"Dashboard facts and pending-request reads",issue:30},
+    {key:"roles",source:"mpfs_roles",title:"MPFS · oracle and agent",users:"Oracle and agent backend",issue:37}
+  ];
+  $("mpfs").innerHTML=services.map(service => {
+    const value=d.mpfs?.[service.key], source=d.sources?.[service.source];
+    const available=value?.container.status==="running" && value?.api.reachable;
+    const state=sourceState(source,value,available ? ["ok","available"] : ["bad","unavailable"]);
+    const previous=state[1]==="stale" ? "Last observed · " : "";
+    const sync=value?.synchronization;
+    const detail=value ? previous + "Container " + value.container.status + " · " + (value.api.reachable ? "API HTTP " : "API unreachable · HTTP ") + (value.api.http_status ?? "no response") : "No accepted observation";
+    const lag=sync?.status==="observed" ? "Indexer lag: " + sync.lag_slots + " slots against backend network tip" : "Synchronization unmeasured";
+    return '<article class="node" data-service="' + service.source + '"><div class="name">' + esc(service.title) + chip(...state) + '</div><div class="detail">' + esc(detail) + '</div><div class="detail">' + esc(lag) + '</div><div class="age">' + (source?.last_success ? "Observed " + ago(source.last_success) : "Never observed") + '</div><details><summary>Service details</summary><div class="technical">' + esc(service.users) + '<br>' + esc(value?.container.name || "") + '<br>' + esc(value?.container.image || "") + (sync?.status==="observed" ? '<br>Network slot ' + esc(sync.network_tip_slot) + ' · indexer slot ' + esc(sync.indexer_tip_slot) + '<br>Backend readiness ' + esc(sync.ready) : '') + '</div></details><div class="age"><a href="https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/' + service.issue + '">GitHub status feed</a></div></article>';
   }).join("");
 }
 
@@ -499,7 +520,7 @@ window.addEventListener("hashchange", routeFromHash);
 let last = null;
 function render(d) {
   last = d;
-  for (const f of [renderHeader, renderChain, renderWallets, renderRuns, renderPhaseCounts]) {
+  for (const f of [renderHeader, renderChain, renderMpfs, renderWallets, renderRuns, renderPhaseCounts]) {
     try { f(d); } catch (e) { console.error(f.name, e); }
   }
 }

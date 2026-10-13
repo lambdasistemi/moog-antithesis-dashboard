@@ -1,0 +1,13 @@
+# One independent reporter project per MPFS instance.
+services:
+  reporter:
+    extends:
+      file: compose.yaml
+      service: reporter
+    environment:
+      REPORTER_ROLE: mpfs
+      MPFS_SERVICE_ID: ${MPFS_SERVICE_ID:?set the bound MPFS service identity}
+      MPFS_PROBE_URL: ${MPFS_PROBE_URL:?set the read-only tokens endpoint}
+
+volumes:
+  reporter-state:

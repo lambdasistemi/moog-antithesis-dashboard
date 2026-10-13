@@ -37,7 +37,7 @@
       "pause": 400
     },
     {
-      "text": "Oracle and agent status issues are deployed. Monitor code is merged; production cutover is unverified. MPFS status and historical wallet accounting (agent/oracle, requester) remain open. Current wallet balances are implemented; spending history, locked funds and complete historical address coverage are pending. Existing legacy Moog reads remain in place.",
+      "text": "Oracle, agent and monitor status issues are deployed. MPFS status tracks independent reporters for the collector and oracle/agent legacy services. Historical wallet accounting remains open for agent/oracle and requester. Current wallet balances are implemented; spending history, locked funds and complete historical address coverage are pending. Existing legacy Moog reads remain in place.",
       "pause": 400
     }
   ],
@@ -229,6 +229,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "df8a82ff222cfd700c86d7d41c7e14ef7513b1cf8f55e0b4a2f8306eb8715bfd"
+    "sha256": "c5b9be1a8339b9e49e89ce47c22c43f3cb2c7e9cdae78f818abd6e0dffb01421"
   }
 }

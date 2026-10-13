@@ -136,19 +136,75 @@ the old scope and remain stale until the new scope is queried successfully.
 Unavailable data is never zero ADA. Complete history is never inferred from one
 page of transactions. Fee attribution and locked funds need transaction evidence.
 
-## MPFS status publication (planned)
+## MPFS status publication
 
-MPFS needs its own reporter and status issue. Bind it to the legacy service used
-by the collector; do not substitute umpfs or use the Antithesis proxy readiness
-probe. Publish container/image identity and bounded API probe outcome. Inspect
-that issue first when the MPFS source is stale, then verify reporter execution,
-GitHub write access and producer timestamps. Running and reachable do not imply
-chain synchronization; synchronization remains unmeasured until supported.
+As the operator, I inspect two independent MPFS cards and their GitHub feeds.
+Issue30 reports collector-legacy-mpfs (container mpfs-compose-mpfs-1), used by the
+dashboard collector. Issue37 reports moog-role-legacy-mpfs (container mpfs-mpfs-1),
+used by the oracle and agent. Both are legacy v1.3.0 on preprod. Matching image
+versions never establish that these are the same deployment. Do not substitute
+umpfs or use the Antithesis proxy readiness probe as MPFS evidence.
+
+Each reporter samples every minute, publishes meaningful changes and sends a
+five-minute heartbeat. Container state, image, API response, readiness and slot
+observations are meaningful; elapsed uptime and reported_at alone are excluded
+from comparison. Failed writes retain the previous successful comparison and
+retry on the next sample. The collector reads STATUS_ISSUE_MPFS_COLLECTOR=30
+and STATUS_ISSUE_MPFS_ROLES=37 separately and retains each last-good value with
+its own timestamp. Reports more than fifteen minutes old are stale.
+
+The read-only GET /tokens response supplies indexerStatus. The reporter discards
+token records and other response fields. Synchronization is observed only when
+ready is boolean and both tips are nonnegative safe integer slots with the
+network tip at least as large as the indexer tip. Otherwise it is unmeasured.
+Lag is networkTip minus indexerTip against this backend's own Ogmios observation;
+it does not establish independently verified network freshness. API availability
+and a running container are displayed separately from indexer synchronization.
+
+The [legacy v1.3.0 API](https://github.com/cardano-foundation/mpfs/blob/fb8786967e7e7e21d46a7ca0ba90789dd5903f65/off_chain/src/service/signingless/public/openapi.json)
+exposes these fields. Its block-height wording conflicts with the
+[indexer implementation](https://github.com/cardano-foundation/mpfs/blob/fb8786967e7e7e21d46a7ca0ba90789dd5903f65/off_chain/src/indexer/indexer.ts),
+which assigns Ogmios slot values. The dashboard therefore labels them as slots,
+without converting them into seconds or inventing a readiness threshold.
+
+### Install, update and rollback
+
+Use reporter/mpfs-compose.yaml with reporter/compose.yaml beside it. Provision
+the existing repository-scoped issue-write credential as a mounted file at
+/srv/moog-status-reporter/status-token, owner UID1000, mode0400; never copy it
+into the Compose environment. Obtain DOCKER_GID from getent group docker. Set
+STATUS_ISSUE_NUMBER, MPFS_SERVICE_ID and MPFS_PROBE_URL in the host-local .env.
+The collector reporter uses https://mpfs.plutimus.com/tokens. The role reporter
+uses http://127.0.0.1:3000/tokens with network_mode: host in its override. Neither
+private endpoint coordinates nor response bodies enter its published snapshot.
+
+Pin a merged Nix image in deployed-image.yaml. Retain the previous override for
+rollback. From the reporter service directory, run these same commands for an
+install or an image update; the named project keeps its comparison cache.
+
+~~~sh
+docker compose -p moog-mpfs-reporter -f mpfs-compose.yaml -f deployed-image.yaml pull
+docker compose -p moog-mpfs-reporter -f mpfs-compose.yaml -f deployed-image.yaml up -d
+docker compose -p moog-mpfs-reporter -f mpfs-compose.yaml -f deployed-image.yaml ps
+~~~
+
+Verify the expected service_id, container image and reported_at in that host's
+GitHub feed, then the corresponding public data.json source. Capture the running
+reporter image ID, merged revision and public observation together. A successful
+PATCH does not establish public dashboard publication until Pages is checked.
+
+To roll back an update, restore the previous deployed-image.yaml and run up -d
+with the same project and files. To undo the first installation, run down with
+those files; retain the comparison cache and let the last report expire visibly.
+When a source is stale, inspect its own issue timestamp, reporter execution,
+file credential access and GitHub write outcome. Do not refresh an old verdict
+or manually relabel a stopped reporter as healthy.
 
 ## Delivery progress
 
-Oracle and agent issue reporting is deployed. Monitor reporting is merged but
-installation and fresh production verdict evidence remain open. MPFS reporting remains uninstalled. Current Koios balance collection and the
+Oracle, agent and monitor issue reporting is deployed. MPFS has separate
+reporter and collector paths for the two legacy instances; production evidence
+is attached to its delivery ticket. Current Koios balance collection and the
 ADA account cards are implemented; their installation uses the same collector
 image and publication path. Configure its GitHub read access to the source
 repository. Expense history, locked-fund accounting and provider observations

@@ -12,6 +12,7 @@ v.validate(sample)
 missing=copy.deepcopy(sample)
 for key in ['runs','chain','token','wallets','proxy','monitor','nightly']:
     missing[key]=None
+missing['mpfs']={'collector':None,'roles':None}
 for source in missing['sources'].values():
     source.update(status='error',error='unavailable',last_success=None)
 missing['hosts']={'oracle':[],'agent':[],'agent_errors_6h':None,'agent_published_24h':None}
