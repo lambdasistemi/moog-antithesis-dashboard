@@ -1148,5 +1148,6 @@
     "supervised-integration",
     "launch-cap",
     "launch"
-  ]
+  ],
+  "schema_url": "openapi.json"
 }

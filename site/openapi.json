@@ -758,9 +758,15 @@
             "items": {
               "type": "string"
             }
+          },
+          "schema_url": {
+            "type": "string",
+            "const": "openapi.json",
+            "description": "Relative URL of the OpenAPI contract; resolve against the data.json URL."
           }
         },
         "required": [
+          "schema_url",
           "generated_at",
           "started_at",
           "refresh_seconds",

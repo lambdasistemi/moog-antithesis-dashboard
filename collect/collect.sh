@@ -472,7 +472,7 @@ jq -n \
     --slurpfile wallets "$WORK/wallets.json" \
     --slurpfile proxy "$WORK/proxy.json" --slurpfile monitor "$WORK/monitor.json" \
     --slurpfile nightly "$WORK/nightly.json" \
-    '{ generated_at: $generated_at, started_at: $started_at, refresh_seconds: 600,
+    '{ schema_url: "openapi.json", generated_at: $generated_at, started_at: $started_at, refresh_seconds: 600,
        tenant: "'"$TENANT"'", repository: "'"$CNA_REPO"'",
        sources: $sources,
        runs: $runs[0], chain: $chain[0], token: $token[0], hosts: $hosts[0],

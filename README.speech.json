@@ -47,7 +47,7 @@
       "pause": 500
     },
     {
-      "text": "As a dashboard consumer, inspect the published state and its freshness before using an account balance or service verdict. Open Swagger UI for field descriptions and a same-origin read-only request, or download the OpenAPI schema. Null sources are unavailable; cached values marked stale are not current health. Wallet amounts are integer lovelace strings and history remains uncollected.",
+      "text": "As a dashboard consumer, inspect the published state and its freshness before using an account balance or service verdict. Open Swagger UI for field descriptions and a same-origin read-only request, or download the OpenAPI schema. Each data.json includes schema_url pointing to openapi.json in the same directory. Null sources are unavailable; cached values marked stale are not current health. Wallet amounts are integer lovelace strings and history remains uncollected.",
       "pause": 400
     }
   ],
@@ -229,6 +229,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "8c4cd16d4ea6eb82f3e5f2a6582385e5c1b2f8dec51153c0efd7bbaefd3eef6f"
+    "sha256": "bbed99da56962d44168d5abe288b9b68f08b1d67be8ca76cd5d5064050dc3212"
   }
 }

@@ -45,6 +45,7 @@ As a dashboard consumer, inspect the published state and its freshness before
 using an account balance or service verdict. Open [Swagger UI](https://lambdasistemi.github.io/moog-antithesis-dashboard/swagger.html)
 for field descriptions and a same-origin read-only request, or download the
 [OpenAPI schema](https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json).
+Each data.json includes schema_url pointing to openapi.json in the same directory.
 Null sources are unavailable; cached values marked stale are not current health.
 Wallet amounts are integer lovelace strings and history remains uncollected.
 
