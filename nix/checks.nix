@@ -1360,7 +1360,7 @@ const driver =
   '  monitor: {status:"error",error:"x",last_success:null},' +
   '  nightly: {status:"ok",error:null,last_success:nownow} },' +
   ' runs: [], chain: {phases:{}}, token: {pending_requests:0},' +
-  ' hosts: {oracle:[],agent:[{name:"agent-moog-agent-1",image:"moog-agent:v0.6",status:"Up 3 days"}],' +
+  ' hosts: {oracle:[{name:"moog-status-reporter-reporter-1",image:"reporter:full-hash",status:"Up 2 hours"},{name:"oracle-moog-oracle-1",image:"oracle:v1",status:"Exited (1)"}],agent:[{name:"agent-moog-agent-1",image:"moog-agent:v0.6",status:"Up 3 days"}],' +
   '  agent_errors_6h:4,agent_published_24h:9},' +
   ' proxy: {ready:true,http_code:200}, monitor: null };' +
   'd.monitor={ok:true,last:"OK cached"};' +
@@ -1381,6 +1381,8 @@ const monitorCard=global.__chain.match(/data-service="monitor"[\s\S]*?<\/article
 if (!monitorCard.includes('class="chip warn">stale')) fail('cached monitor displayed healthy');
 if (!global.__wallets.includes('9,007,199,254.740995')) fail('wallet ADA lost integer precision');
 if (!global.__wallets.includes('class="chip warn">stale')) fail('stale wallet displayed current');
+const oracleCard=global.__chain.match(/data-service="oracle"[\s\S]*?<\/article>/)?.[0] || "";
+if (!oracleCard.includes('class="chip bad">down') || oracleCard.includes('full-hash')) fail('oracle uses reporter instead of service');
 if (global.__banner.indexOf('agent') < 0) fail('banner does not name agent');
 console.log('render test ok');
 DRIVER_EOF

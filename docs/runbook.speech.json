@@ -111,7 +111,7 @@
       "pause": 400
     },
     {
-      "text": "During recovery, distinguish a GitHub configuration failure from a Koios provider failure. The source must show its last successful query time, configured address scope and revision, network and history coverage. Rereading coordinates cannot refresh a stale balance. After address rotation, old cached observations retain the old scope and remain stale until the new scope is queried successfully. Unavailable data is never zero ADA. Complete history is never inferred from one page of transactions. Fee attribution and locked funds need transaction evidence.",
+      "text": "During recovery, distinguish a GitHub configuration failure from a Koios provider failure. The source must show its last successful query time, configured address scope and revision, network and history coverage. Rereading coordinates cannot refresh a stale balance. Pipeline and wallet cards also refuse a healthy/current label when their source is stale or its last observation is over fifteen minutes old, even if a cached boolean verdict still says OK. After address rotation, old cached observations retain the old scope and remain stale until the new scope is queried successfully. Unavailable data is never zero ADA. Complete history is never inferred from one page of transactions. Fee attribution and locked funds need transaction evidence.",
       "pause": 400
     }
   ],
@@ -137,6 +137,6 @@
   ],
   "_source": {
     "file": "runbook.md",
-    "sha256": "886582758e65b7fd841b3f61380cd21476f387aecf083ec4c57cd24341de3b20"
+    "sha256": "033ff47983d11be6df48591354b9831a340ec7a5548885a3bf0102518aba5b70"
   }
 }

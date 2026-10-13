@@ -23,7 +23,10 @@ wallet_query() {
 }
 run_source wallets src_wallets
 [[ ${SRC_STATUS[wallets]} == ok ]]
-jq -e '.accounts[0].balance_lovelace=="9007199254740995" and .chain_point==null and .history_status=="not_collected"' "$WORK/wallets.json" >/dev/null
+jq -e '.accounts[0].balance_lovelace=="9007199254740995" and .chain_point==null and .history_status=="not_collected"' "$WORK/wallets.json" >/dev/null || {
+    echo "wallet balance lost exact lovelace total" >&2
+    exit 1
+}
 at=${SRC_LAST[wallets]}
 query_fail=1
 run_source wallets src_wallets

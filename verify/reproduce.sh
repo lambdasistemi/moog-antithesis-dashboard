@@ -232,7 +232,7 @@ row_publish_gate() {
 row_site_check() {
     ROW=site-check
     green_check site-check 300 || return 1
-    apply_break site/index.html '  if (!source || source.status !== "ok") return ["warn", "stale"];' '  if (false) return ["warn", "stale"];' || return 1
+    apply_break site/index.html '  if (!source || source.status !== "ok" || !source.last_success || Date.now() - Date.parse(source.last_success) > 15 * 60 * 1000) return ["warn", "stale"];' '  if (false) return ["warn", "stale"];' || return 1
     red=$(red_check site-check 300 'not marked stale') || {
         restore_files site/index.html
         return 1

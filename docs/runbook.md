@@ -129,7 +129,9 @@ not part of this design.
 During recovery, distinguish a GitHub configuration failure from a Koios provider
 failure. The source must show its last successful query time, configured address
 scope and revision, network and history coverage. Rereading coordinates cannot
-refresh a stale balance. After address rotation, old cached observations retain
+refresh a stale balance. Pipeline and wallet cards also refuse a healthy/current
+label when their source is stale or its last observation is over fifteen minutes
+old, even if a cached boolean verdict still says OK. After address rotation, old cached observations retain
 the old scope and remain stale until the new scope is queried successfully.
 Unavailable data is never zero ADA. Complete history is never inferred from one
 page of transactions. Fee attribution and locked funds need transaction evidence.

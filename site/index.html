@@ -188,7 +188,7 @@ function monitorDetail(m) {
 
 function sourceState(source, value, state) {
   if (!value) return ["idle", "unavailable"];
-  if (!source || source.status !== "ok") return ["warn", "stale"];
+  if (!source || source.status !== "ok" || !source.last_success || Date.now() - Date.parse(source.last_success) > 15 * 60 * 1000) return ["warn", "stale"];
   return state;
 }
 
@@ -204,7 +204,7 @@ function renderChain(d) {
     {id:"oracle", name:"Oracle", value:oracle, state:up(oracle) ? ["ok","up"] : ["bad","down"], detail:oracle?.status || "Service container not reported", technical:oracle?.image},
     {id:"agent", name:"Agent", value:agent, state:!up(agent) ? ["bad","down"] : h.agent_errors_6h > 0 ? ["warn","errors"] : ["ok","up"], detail:h.agent_published_24h == null ? "No publication count" : h.agent_published_24h + " published · 24 h", technical:(agent?.image || "") + " · " + (h.agent_published_24h ?? "?") + " results published in 24 h · " + (h.agent_errors_6h ?? "?") + " errors in 6 h"},
     {id:"runs", name:"Antithesis", value:d.runs, state:running ? ["run","running"] : ["idle","idle"], detail:running + " running", technical:"Last completed run started " + (lastDone ? ago(lastDone.created_at) : "never")},
-    {id:"chain", name:"On chain", value:d.chain, state:(ph.pending || ph.accepted) ? ["run","in flight"] : ["ok","settled"], detail:(ph.accepted ?? "?") + " accepted · " + (ph.pending ?? "?") + " pending"},
+    {id:"chain", name:"On chain", value:d.chain, state:(ph.pending || ph.accepted) ? ["run","in flight"] : ["ok","settled"], detail:(d.chain ? (ph.accepted ?? 0) : "?") + " accepted · " + (d.chain ? (ph.pending ?? 0) : "?") + " pending"},
     {id:"proxy", name:"Proxy", value:d.proxy, state:d.proxy?.ready ? ["ok","ready"] : ["bad","not ready"], detail:"Readiness HTTP " + (d.proxy?.http_code ?? "?")},
     {id:"monitor", name:"Freshness monitor", value:d.monitor, state:d.monitor?.ok ? ["ok","ok"] : ["bad","alerting"], detail:src.monitor?.status === "ok" ? monitorDetail(d.monitor) : "No fresh verdict", technical:d.monitor ? "Last recorded verdict: " + monitorDetail(d.monitor) : "No verdict recorded"},
   ];
