@@ -7,6 +7,13 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
 
 ## Who this is for
 
+- **Someone reviewing runs on a phone or desktop** searches by testnet, commit,
+  or requester, then narrows by status or testnet. Filters reveals result and
+  on-chain phase options; Clear filters resets them together. Runs and property
+  details stack on small screens, without horizontal pane scrolling. Refresh
+  checks for a new snapshot; metadata and parameters expand on demand. Summary
+  counts describe Antithesis runs in the snapshot, while the list also includes
+  unmatched on-chain records. All collected phase totals live in Pipeline.
 - **Someone checking the pipeline** selects the Pipeline tab and sees, in one
   screen, whether test requests are flowing, the oracle and agent are up,
   Antithesis runs are progressing, on-chain runs are settling, the proxy is
@@ -20,7 +27,8 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   explicitly. Companion files and container images are not bundled.
 - **Someone returning to the dashboard** finds their selected tab and theme
   restored from browser local storage. Test runs opens on a first visit; Pipeline,
-  MPFS and Accounts have separate panes. Theme offers System, Light and Dark.
+  MPFS and Accounts have separate panes. A Web Awesome button group offers
+  Light, Dark and System, with compact labeled icons on small screens.
   Run rows show failure counts; expanding a run reveals the full property list.
   A run link opens Test runs without changing the saved tab. When browser storage
   is unavailable, controls still work for the current visit.
@@ -234,6 +242,12 @@ gh-pages), on-chain facts (barred: the dashboard never writes chain data).
   Continuous integration runs the same gate over fixtures.
 
 ## Develop
+
+The theme switch uses [Web Awesome](https://webawesome.com/docs/components/radio-group/)
+3.14.0, bundled locally with its theme tokens. Rebuild the checked-in
+`site/theme-components.js` and CSS with `bash tools/vendor-theme.sh` using
+esbuild 0.25.5. The helper verifies the pinned package archive before bundling;
+no runtime CDN or package installation is needed to serve the dashboard.
 
 ```sh
 nix develop

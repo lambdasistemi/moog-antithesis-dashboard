@@ -3,7 +3,9 @@ const vm = require('vm');
 const assert = require('assert/strict');
 const source = fs.readFileSync('site/preferences.js', 'utf8');
 function visit(storage, unavailable = false) {
-  const root = {dataset: {}};
+  const classes = new Set();
+  const root = {dataset: {}, classList: {toggle(name, on) { if (on) classes.add(name); else classes.delete(name); }}};
+  const systemTheme = {matches: false, addEventListener(_, callback) { this.change = callback; }};
   const tabs = ['tests', 'pipeline', 'mpfs', 'accounts'].map(pane => ({
     dataset: {pane}, handlers: {}, attributes: {},
     addEventListener(key, callback) { this.handlers[key] = callback; },
@@ -12,7 +14,7 @@ function visit(storage, unavailable = false) {
   }));
   const control = {handlers: {}, addEventListener(key, callback) { this.handlers[key] = callback; }};
   let ready;
-  const context = {document: {documentElement: root, querySelectorAll: () => tabs,
+  const context = {matchMedia: () => systemTheme, document: {documentElement: root, querySelectorAll: () => tabs,
     getElementById: () => control, addEventListener: (_, callback) => { ready = callback; }},
     localStorage: {
       getItem(key) { if (unavailable) throw Error('Storage denied'); return storage[key] ?? null; },
@@ -21,7 +23,7 @@ function visit(storage, unavailable = false) {
   vm.createContext(context);
   vm.runInContext(source, context);
   ready();
-  return {root, tabs, control, context};
+  return {root, tabs, control, context, classes, systemTheme};
 }
 const storage = {};
 let page = visit(storage);
@@ -59,3 +61,19 @@ page.tabs[2].handlers.click();
 assert.equal(page.root.dataset.theme, 'dark');
 assert.equal(page.root.dataset.pane, 'mpfs');
 console.log('Theme and pane persist; keyboard, invalid values and unavailable storage work');
+
+page = visit({});
+page.systemTheme.matches = true;
+page.systemTheme.change();
+assert.ok(page.classes.has('wa-dark'), 'System dark mode must also theme the library control');
+page.control.value = 'light';
+page.control.handlers.change();
+page.systemTheme.change();
+assert.ok(!page.classes.has('wa-dark'), 'Explicit light overrides a dark system preference');
+page.control.value = 'system';
+page.control.handlers.change();
+assert.ok(page.classes.has('wa-dark'));
+page.systemTheme.matches = false;
+page.systemTheme.change();
+assert.ok(!page.classes.has('wa-dark'));
+console.log('Library color scheme follows system changes and respects explicit overrides');

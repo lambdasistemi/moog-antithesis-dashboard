@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Moog Antithesis Pipeline</title>
 <script src="preferences.js"></script>
+<link rel="stylesheet" href="theme-components.css">
+<script type="module" src="theme-components.js"></script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141413'/%3E%3Cpath d='M5 18h5l3-8 5 14 3-6h6' fill='none' stroke='%235cc28f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -33,71 +35,190 @@
   --idle: #9a998f; --idle-bg: #262523;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 "IBM Plex Sans", system-ui, sans-serif; }
-main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
-h1 { font-size: 20px; font-weight: 600; margin: 0; }
-h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 32px 0 10px; }
-code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12.5px; }
-a { color: var(--run); }
-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
-.header-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.theme-control { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
-.theme-control select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
-.tabs { display: flex; gap: 4px; margin-top: 24px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-.tabs button { flex: 1; max-width: 180px; font: inherit; font-weight: 500; padding: 10px 8px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; }
-.tabs button[aria-selected="true"] { color: var(--run); background: var(--run-bg); border-color: var(--run); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 "IBM Plex Sans", system-ui, sans-serif; }
+main { max-width: 1280px; margin: 0 auto; padding: 32px 40px 40px; min-width: 0; }
+h1 { font-size: 22px; font-weight: 600; letter-spacing: -.6px; margin: 0; }
+h2 { font-size: 25px; font-weight: 600; letter-spacing: -.7px; margin: 0; }
+h3 { font-size: 15px; font-weight: 600; }
+p { margin: 6px 0 0; }
+code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; }
+a { color: var(--run); text-underline-offset: 3px; }
+button, input, select { font: inherit; }
+button, summary, select { cursor: pointer; }
+button:disabled { cursor: wait; opacity: .65; }
+button, select, input { color: var(--ink); }
+button { background: transparent; }
 :focus-visible { outline: 2px solid var(--run); outline-offset: 3px; }
-[role="tabpanel"] { display: none; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip-link { position: absolute; top: -60px; left: 20px; padding: 12px; background: var(--panel); z-index: 10; }
+.skip-link:focus { top: 12px; }
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-mark { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--ink); color: var(--panel); font: 600 24px/1 "IBM Plex Mono", monospace; }
+.eyebrow { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; }
+.header-controls { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.theme-control { --wa-font-family-body: "IBM Plex Sans", system-ui, sans-serif; --wa-form-control-border-color: var(--line); --wa-color-surface-default: var(--panel); --wa-form-control-value-color: var(--ink); --wa-color-brand-fill-loud: var(--ink); --wa-color-brand-on-loud: var(--panel); --wa-focus-ring-color: var(--run); }
+.theme-control::part(form-control-label) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.theme-control wa-radio::part(label) { display: flex; align-items: center; gap: 7px; }
+.theme-control svg { width: 16px; height: 16px; flex: 0 0 16px; }
+.theme-control:not(:defined) { visibility: hidden; }
+.button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-height: 38px; background: var(--panel); }
+.button:hover { background: var(--idle-bg); }
+.tabs { display: flex; gap: 28px; margin-top: 30px; border-bottom: 1px solid var(--line); }
+.tabs button { position: relative; font-weight: 500; padding: 12px 0 16px; color: var(--muted); border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ok); }
+[role="tabpanel"] { display: none; min-width: 0; }
 :root:not([data-pane]) #pane-tests,
 :root[data-pane="tests"] #pane-tests,
 :root[data-pane="pipeline"] #pane-pipeline,
 :root[data-pane="mpfs"] #pane-mpfs,
 :root[data-pane="accounts"] #pane-accounts { display: block; }
-.meta { color: var(--muted); font-size: 13px; }
-.banner { margin-top: 16px; padding: 10px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); display: none; }
+.section-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 30px 0 20px; }
+.section-heading p, .meta { color: var(--muted); font-size: 13px; }
+.snapshot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin-top: 18px; color: var(--muted); font-size: 12px; }
+.snapshot-status { display: inline-flex; align-items: center; gap: 7px; }
+.snapshot-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.banner { margin-top: 12px; padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--warn) 20%, transparent); border-radius: 8px; background: var(--warn-bg); color: var(--warn); display: none; font-size: 13px; overflow-wrap: anywhere; }
 .banner.show { display: block; }
-.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.chip { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; line-height: 1.5; font-weight: 500; overflow-wrap: anywhere; }
 .ok { color: var(--ok); background: var(--ok-bg); } .bad { color: var(--bad); background: var(--bad-bg); }
 .warn { color: var(--warn); background: var(--warn-bg); } .run { color: var(--run); background: var(--run-bg); }
 .idle { color: var(--idle); background: var(--idle-bg); }
-.chain, .wallet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
-.node { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
-.node .name { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
-.node .detail { margin-top: 12px; font-size: 15px; }
-.node .age, .section-note { color: var(--muted); font-size: 12px; margin-top: 8px; }
-.node details { margin-top: 10px; color: var(--muted); font-size: 12px; }
-.node summary { cursor: pointer; }
-.node .technical { margin-top: 6px; overflow-wrap: anywhere; }
-.wallet-balance { font-size: 25px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 14px; }
+.run-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 24px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.metric { padding: 18px 24px; }
+.metric + .metric { border-left: 1px solid var(--line); }
+.metric span { color: var(--muted); font-size: 12px; }
+.metric b { display: block; font-size: 30px; font-weight: 500; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.metric small { color: var(--muted); font-size: 11px; }
+.metric[data-tone="bad"] b { color: var(--bad); }
+.metric[data-tone="run"] b { color: var(--run); }
+.chain, .wallet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; }
+.node { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; overflow-wrap: anywhere; }
+.node .name { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 600; }
+.node .detail { margin-top: 16px; font-size: 16px; }
+.node .age, .section-note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.node details { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 16px; font-size: 12px; color: var(--muted); }
+.node .technical { margin-top: 8px; overflow-wrap: anywhere; }
+.wallet-balance { font-size: 30px; font-weight: 500; letter-spacing: -.8px; font-variant-numeric: tabular-nums; margin-top: 20px; overflow-wrap: anywhere; }
 .wallet-balance small { font-size: 14px; color: var(--muted); }
-@media (max-width: 560px) { .chain { grid-template-columns: repeat(2, minmax(0, 1fr)); } .node { padding: 12px; } .node .name { flex-wrap: wrap; } .wallet-grid { grid-template-columns: 1fr; } }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
-tr:last-child td { border-bottom: 0; }
-.failing { color: var(--bad); font-size: 12.5px; }
-.ignored { color: var(--muted); font-size: 12.5px; }
-tbody#runs tr[data-run] { cursor: pointer; }
-tbody#runs tr[data-run]:hover td { background: var(--run-bg); }
-tbody#runs tr[data-run].open td { background: var(--run-bg); }
-tr.detail-row > td { background: var(--panel); padding: 12px 14px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th, td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+th { font-size: 11px; font-weight: 500; color: var(--muted); background: var(--bg); }
+th:first-child { border-radius: 12px 0 0 0; }
+th:last-child { border-radius: 0 12px 0 0; }
+tr:last-child > td { border-bottom: 0; }
+.runs-table > thead > tr > th:nth-child(1) { width: 24%; }
+.runs-table > thead > tr > th:nth-child(2) { width: 13%; }
+.runs-table > thead > tr > th:nth-child(3) { width: 16%; }
+.runs-table > thead > tr > th:nth-child(4) { width: 8%; }
+.runs-table > thead > tr > th:nth-child(5) { width: 21%; }
+.runs-table > thead > tr > th:nth-child(6) { width: 18%; }
+.failing { color: var(--bad); font-size: 12px; }
+.ignored { color: var(--muted); font-size: 12px; }
+.cell-stack { display: flex; align-items: flex-start; gap: 5px; flex-wrap: wrap; }
+.cell-stack .ignored { width: 100%; margin-top: 2px; }
+.run-title { font-size: 13px; font-weight: 500; }
+.run-toggle { display: inline-flex; align-items: baseline; gap: 8px; padding: 0; border: 0; text-align: left; max-width: 100%; }
+.run-toggle::before { content: '›'; flex: 0 0 8px; font-size: 17px; line-height: 1; color: var(--muted); }
+.run-toggle[aria-expanded="true"]::before { transform: rotate(90deg); }
+.mobile-meta, .mobile-time { display: none; }
+tbody#runs > tr[data-run] { cursor: pointer; }
+tbody#runs > tr[data-run]:hover > td, tbody#runs > tr[data-run].open > td { background: var(--run-bg); }
+tr.detail-row > td { background: var(--panel); padding: 20px 24px; }
 tr.prop-row[data-prop-index] { cursor: pointer; }
 tr.prop-row[data-prop-index]:hover td { background: var(--run-bg); }
-.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
-.kv dt { color: var(--muted); font-size: 12.5px; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 20px; margin: 0; }
+.kv dt { color: var(--muted); font-size: 12px; }
 .kv dd { margin: 0; overflow-wrap: anywhere; }
-.ce { border-left: 3px solid var(--line); padding: 6px 10px; margin: 8px 0; }
-.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
-.filters input, .filters select { font: inherit; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
-.counts { display: flex; flex-wrap: wrap; gap: 10px; }
-.count { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 120px; }
-.count b { display: block; font-size: 22px; font-weight: 600; }
+.ce { border-left: 3px solid var(--line); padding: 8px 12px; margin: 8px 0; overflow-wrap: anywhere; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.search-field { flex: 1 1 240px; position: relative; min-width: 0; }
+.search-field > span { position: absolute; top: 14px; left: 15px; width: 12px; height: 12px; border: 1.5px solid var(--muted); border-radius: 50%; }
+.search-field > span::after { content: ''; position: absolute; width: 5px; height: 1.5px; background: var(--muted); transform: rotate(45deg); top: 9px; left: 8px; }
+.filters input, .filters select { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-height: 42px; max-width: 100%; }
+.filters input { width: 100%; padding-left: 38px; }
+.filters input::placeholder { color: var(--muted); opacity: 1; }
+.more-filters { flex: 0 0 auto; }
+.more-filters > summary { list-style: none; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; background: var(--panel); }
+.more-filters > summary::-webkit-details-marker { display: none; }
+.more-filters > summary::after { content: ' +'; color: var(--muted); }
+.more-filters[open] > summary::after { content: ' −'; }
+.more-filters[open] { flex-basis: 100%; }
+.more-filters[open] > summary { width: fit-content; }
+.extra-filters { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 12px; }
+.extra-filters label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.results-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 10px; min-height: 28px; }
+.clear-filters { border: 0; padding: 4px 0; font-size: 12px; color: var(--run); }
+.counts { display: flex; flex-wrap: wrap; gap: 24px; margin: 16px 0 24px; }
+.count { min-width: 100px; }
+.count b { display: block; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .count small { color: var(--muted); }
-.empty { padding: 16px; color: var(--muted); }
-footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
-@media (max-width: 640px) { .hide-sm { display: none; } th, td { padding: 6px 8px; } }
-.compose-viewer { width: min(100%, calc(100vw - 64px)); max-width: calc(100vw - 64px); white-space: normal; margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.empty { padding: 32px 20px; text-align: center; color: var(--muted); }
+.empty strong { display: block; font-size: 16px; color: var(--ink); margin-bottom: 4px; }
+.detail-fold { margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.detail-fold > summary { font-weight: 500; }
+.detail-fold > .panel, .detail-fold > .kv { margin-top: 14px; }
+footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; border-top: 1px solid var(--line); padding-top: 20px; margin-top: 40px; color: var(--muted); font-size: 12px; }
+footer details { flex: 1 1 400px; }
+footer details p { max-width: 760px; }
+footer a { color: var(--muted); }
+@media (max-width: 900px) {
+  main { padding: 24px; }
+  th, td { padding: 12px 10px; }
+  .hide-md { display: none; }
+  .runs-table > thead > tr > th:nth-child(1) { width: 30%; }
+  .runs-table > thead > tr > th:nth-child(3) { width: 20%; }
+  .runs-table > thead > tr > th:nth-child(5), .runs-table > thead > tr > th:nth-child(6) { width: 25%; }
+  .mobile-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 5px; }
+}
+@media (max-width: 600px) {
+  main { padding: 20px 16px 28px; }
+  h1 { font-size: 18px; } h2 { font-size: 23px; }
+  .brand-mark { flex-basis: 34px; height: 34px; border-radius: 10px; font-size: 21px; }
+  .eyebrow { font-size: 9px; letter-spacing: .08em; }
+  .theme-control wa-radio { --wa-form-control-padding-inline: 10px; min-height: 40px; }
+  .theme-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabs { gap: 0; justify-content: space-between; margin-top: 24px; }
+  .tabs button { font-size: 13px; padding: 12px 5px; }
+  .section-heading { margin-top: 24px; }
+  .section-heading p { font-size: 12px; }
+  .metric { padding: 14px 12px; }
+  .metric b { font-size: 26px; }
+  .metric span { font-size: 11px; }
+  .metric small { display: none; }
+  .filters { gap: 8px; }
+  .search-field { flex-basis: 100%; }
+  .filters > select { flex: 1; min-width: 0; }
+  .extra-filters { align-items: stretch; }
+  .extra-filters label { flex: 1 1 100%; justify-content: space-between; }
+  .extra-filters select { flex: 0 1 65%; min-width: 0; }
+  .runs-table, .runs-table > tbody { display: block; }
+  .runs-table > thead { display: none; }
+  #runs > tr:not(.detail-row) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 16px; gap: 12px; border-bottom: 1px solid var(--line); }
+  #runs > tr:last-child { border-bottom: 0; }
+  #runs > tr > td { display: block; border: 0; padding: 0; min-width: 0; }
+  #runs > tr > td:first-child { grid-column: 1 / -1; }
+  #runs > tr > td.hide-sm, #runs > tr > td.hide-md { display: none; }
+  #runs > tr > td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+  #runs > tr.detail-row { display: block; border-bottom: 1px solid var(--line); }
+  #runs > tr.detail-row > td { padding: 16px; }
+  #runs > tr[data-run]:hover, #runs > tr[data-run].open { background: var(--run-bg); }
+  .run-title { font-size: 14px; }
+  .mobile-time { display: inline; }
+  .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .kv dd { margin-bottom: 8px; }
+  .properties-table, .properties-table tbody { display: block; }
+  .properties-table thead { display: none; }
+  .properties-table tr { display: block; padding: 12px; border-bottom: 1px solid var(--line); }
+  .properties-table tr:last-child { border-bottom: 0; }
+  .properties-table td { display: block; border: 0; padding: 4px 0; }
+  .properties-table td[data-label]::before { content: attr(data-label) ': '; color: var(--muted); font-size: 11px; }
+  .node { padding: 18px; }
+}
+.compose-viewer { width: 100%; max-width: 100%; min-width: 0; white-space: normal; margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
 .compose-viewer > summary { cursor: pointer; font-weight: 600; }
 .compose-viewer > summary .ignored { font-weight: 400; font-size: 12px; margin-left: 8px; }
 .compose-toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 12px; }
@@ -121,83 +242,76 @@ footer { margin-top: 40px; color: var(--muted); font-size: 12.5px; }
 </style>
 </head>
 <body>
-<main>
+<a class="skip-link" href="#dashboard-content">Skip to dashboard</a>
+<main id="dashboard-content">
   <header>
-    <h1>Moog → Antithesis pipeline</h1>
+    <div class="brand"><span class="brand-mark" aria-hidden="true">m</span><div><div class="eyebrow">Antithesis / observability</div><h1>Moog dashboard</h1></div></div>
     <div class="header-controls">
-      <div class="meta"><span id="generated">loading…</span> · <span id="next"></span></div>
-      <label class="theme-control" for="theme">Theme
-        <select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
-      </label>
+      <wa-radio-group class="theme-control" id="theme" label="Theme" orientation="horizontal" size="small" value="system">
+        <wa-radio appearance="button" value="light" title="Light theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"></path></svg><span class="theme-label">Light</span></wa-radio>
+        <wa-radio appearance="button" value="dark" title="Dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14A9 9 0 0 1 10 3.5 9 9 0 1 0 20.5 14Z"></path></svg><span class="theme-label">Dark</span></wa-radio>
+        <wa-radio appearance="button" value="system" title="Follow system theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 21h8m-4-5v5"></path></svg><span class="theme-label">System</span></wa-radio>
+      </wa-radio-group>
     </div>
   </header>
-  <div class="banner" id="banner"></div>
-
   <nav class="tabs" role="tablist" aria-label="Dashboard sections">
     <button id="tab-tests" type="button" role="tab" aria-controls="pane-tests" aria-selected="true" tabindex="0" data-pane="tests">Test runs</button>
     <button id="tab-pipeline" type="button" role="tab" aria-controls="pane-pipeline" aria-selected="false" tabindex="-1" data-pane="pipeline">Pipeline</button>
     <button id="tab-mpfs" type="button" role="tab" aria-controls="pane-mpfs" aria-selected="false" tabindex="-1" data-pane="mpfs">MPFS</button>
     <button id="tab-accounts" type="button" role="tab" aria-controls="pane-accounts" aria-selected="false" tabindex="-1" data-pane="accounts">Accounts</button>
   </nav>
+  <div class="snapshot"><span class="snapshot-status" id="generated">Loading snapshot…</span><span id="next">Checks for updates every minute</span></div>
+  <div class="banner" id="banner" role="status"></div>
 
   <section id="pane-pipeline" role="tabpanel" aria-labelledby="tab-pipeline" tabindex="0">
-  <h2>Pipeline</h2>
+  <div class="section-heading"><div><h2>Pipeline</h2><p>From request to on-chain result. Each source reports its own freshness.</p></div></div>
+  <div class="eyebrow">On-chain totals · all collected facts</div>
+  <div class="counts" id="phases"></div>
   <div class="chain" id="chain"></div>
   </section>
 
   <section id="pane-mpfs" role="tabpanel" aria-labelledby="tab-mpfs" tabindex="0">
-  <h2>MPFS services</h2>
+  <div class="section-heading"><div><h2>MPFS services</h2><p>Availability and synchronization of the two preprod backends.</p></div></div>
   <div class="wallet-grid" id="mpfs"></div>
   <p class="section-note">Two separate legacy preprod services. Indexer lag is measured in slots against each backend's own network tip; it is not an independent network check. Container and API availability do not establish synchronization.</p>
   </section>
 
   <section id="pane-accounts" role="tabpanel" aria-labelledby="tab-accounts" tabindex="0">
-  <h2>ADA accounts</h2>
+  <div class="section-heading"><div><h2>ADA accounts</h2><p>Observed wallet balances on the preprod test network.</p></div></div>
   <div class="wallet-grid" id="wallets"></div>
   <p class="section-note">On-chain ADA at the configured wallet addresses · preprod test network. Spending history and locked funds are not collected yet.</p>
   </section>
 
   <section id="pane-tests" role="tabpanel" aria-labelledby="tab-tests" tabindex="0">
-  <h2>Test runs</h2>
-  <div class="counts" id="phases"></div>
-  <div class="filters" id="run-filters" style="margin-top:10px">
-    <input id="flt-q" type="search" placeholder="filter: commit, requester, test…" aria-label="filter runs by text">
-    <select id="flt-status" aria-label="filter by status">
-      <option value="">any status</option>
-      <option value="in_progress">running</option>
-      <option value="completed">completed</option>
-      <option value="incomplete">incomplete</option>
-    </select>
-    <select id="flt-result" aria-label="filter by result">
-      <option value="">any result</option>
-      <option value="failing">has failures</option>
-      <option value="passing">passing</option>
-    </select>
-    <select id="flt-phase" aria-label="filter by on-chain phase">
-      <option value="">any phase</option>
-      <option value="pending">pending</option>
-      <option value="accepted">accepted</option>
-      <option value="finished">finished</option>
-      <option value="rejected">rejected</option>
-    </select>
-    <select id="flt-testnet" aria-label="filter by testnet"><option value="">all testnets</option></select>
-    <span class="meta" id="runs-count"></span>
+  <div class="section-heading"><div><h2>Test runs</h2><p>Track execution, inspect failures, and follow results on chain.</p></div><button class="button" id="refresh" type="button">Refresh</button></div>
+  <div class="run-overview" id="run-overview" aria-label="Antithesis runs in this snapshot">
+    <div class="metric"><span>Runs in snapshot</span><b>–</b></div><div class="metric"><span>Running</span><b>–</b></div><div class="metric"><span>With failures</span><b>–</b></div>
   </div>
-  <div class="panel"><table>
-    <thead><tr><th>Started</th><th>Testnet</th><th class="hide-sm">Commit · try</th><th>Hours</th><th>Antithesis</th><th>On chain</th></tr></thead>
-    <tbody id="runs"></tbody>
+  <div class="filters" id="run-filters">
+    <label class="search-field"><span aria-hidden="true"></span><input id="flt-q" type="search" placeholder="Search testnet, commit, or requester…" aria-label="Search runs"></label>
+    <select id="flt-status" aria-label="Filter by status">
+      <option value="">All statuses</option><option value="in_progress">Running</option><option value="completed">Completed</option><option value="incomplete">Incomplete</option>
+    </select>
+    <select id="flt-testnet" aria-label="Filter by testnet"><option value="">All testnets</option></select>
+    <details class="more-filters" id="more-filters">
+      <summary>Filters<span id="extra-filter-count"></span></summary>
+      <div class="extra-filters">
+        <label>Result<select id="flt-result"><option value="">Any result</option><option value="failing">Has failures</option><option value="passing">Passing</option></select></label>
+        <label>On-chain phase<select id="flt-phase"><option value="">Any phase</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="finished">Finished</option><option value="rejected">Rejected</option></select></label>
+      </div>
+    </details>
+  </div>
+  <div class="results-meta"><span class="meta" id="runs-count" role="status">Loading runs…</span><button class="clear-filters" id="clear-filters" type="button" hidden>Clear filters</button></div>
+  <div class="panel"><table class="runs-table" aria-label="Test runs">
+    <thead><tr><th scope="col">Testnet</th><th scope="col" class="hide-md">Commit · try</th><th scope="col" class="hide-sm">Started</th><th scope="col" class="hide-md">Hours</th><th scope="col">Antithesis</th><th scope="col">On chain</th></tr></thead>
+    <tbody id="runs"><tr><td colspan="6" class="empty">Loading runs…</td></tr></tbody>
   </table></div>
-  <p class="section-note">Select a run to see its properties, counterexamples and Docker Compose.</p>
+  <p class="section-note">Select a run for properties, counterexamples, and Docker Compose. On-chain records without an Antithesis run have no detail view.</p>
   </section>
 
   <footer>
-    <a href="swagger.html">Snapshot API documentation</a> · <a href="openapi.json">OpenAPI schema</a><br>
-    Collected every 10 minutes from the Antithesis API, the moog on-chain facts, the oracle and agent hosts, the
-    Antithesis proxy, the run freshness monitor and GitHub Actions. Each source keeps its last good value when it fails.
-    One table of test runs joins Antithesis runs with their on-chain record.
-    Click a run to expand it in place; click a failing property for its counterexamples.
-    Filter by text, status, result, on-chain phase, or testnet.
-    The property “Recent software version provided” is shown separately: it is outside this pipeline's control.
+    <details><summary>About this data</summary><p>Moog → Antithesis pipeline · collected every 10 minutes, checked for updates every minute. Each source keeps its last good value when it fails. Test runs are joined with their on-chain records. The property “Recent software version provided” is shown separately because it is outside this pipeline's control.</p></details>
+    <div><a href="swagger.html">Snapshot API</a> · <a href="openapi.json">OpenAPI schema</a></div>
   </footer>
 </main>
 <script src="compose.js"></script>
@@ -224,7 +338,7 @@ function ago(iso) {
 const when = iso => iso ? new Date(iso).toLocaleString([], {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"}) : "–";
 
 function renderHeader(d) {
-  $("generated").textContent = `updated ${ago(d.generated_at)}`;
+  $("generated").textContent = `Snapshot updated ${ago(d.generated_at)}`;
   $("generated").title = d.generated_at;
   const age = (Date.now() - Date.parse(d.generated_at)) / 1000;
   const bad = Object.entries(d.sources || {}).filter(([, s]) => s.status !== "ok");
@@ -240,6 +354,10 @@ function renderHeader(d) {
     b.textContent = `Stale sources showing last good values: ${staleList}.`;
     b.classList.add("show");
   } else b.classList.remove("show");
+  if (loadError) {
+    b.textContent = loadError;
+    b.classList.add("show");
+  }
   const next = Math.max(0, d.refresh_seconds - age);
   $("next").textContent = next > 0 ? `next collection in about ${Math.ceil(next / 60)} min` : "next collection due";
 }
@@ -363,7 +481,7 @@ function rowMatches(x) {
   if (st && (!r || r.status !== st)) return false;
   const res = $("flt-result").value;
   if (res === "failing" && !(r && realFailures(r.properties).length > 0)) return false;
-  if (res === "passing" && !(r && r.status === "completed" && realFailures(r.properties).length === 0)) return false;
+  if (res === "passing" && !(r && r.status === "completed" && r.properties?.total > (r.properties?.failing || []).length && realFailures(r.properties).length === 0)) return false;
   const ph = $("flt-phase").value;
   if (ph && (!f || f.phase !== ph)) return false;
   const tn = $("flt-testnet").value;
@@ -376,7 +494,7 @@ function renderRuns(d) {
   const sel = $("flt-testnet");
   const keep = sel.value;
   const nets = [...new Set(testRows.map(x => x.run ? x.run.directory : x.fact.directory).filter(Boolean))].sort();
-  sel.innerHTML = `<option value="">all testnets</option>` + nets.map(n =>
+  sel.innerHTML = `<option value="">All testnets</option>` + nets.map(n =>
     `<option value="${esc(n)}">${esc(testnet(n))}</option>`).join("");
   if (nets.includes(keep)) sel.value = keep;
   renderRunRows();
@@ -385,28 +503,41 @@ function renderRuns(d) {
 function testRowHtml(x, repo) {
   const r = x.run, f = x.fact;
   const dir = r ? r.directory : f.directory, cm = r ? r.commit : f.commit, t = r ? r.try : f.try;
-  const started = r ? `<td title="${esc(r.created_at)}">${when(r.created_at)}</td>` : `<td>–</td>`;
   const hours = r && r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–";
-  const st = s => s === "completed" ? chip("ok", "completed") : s === "in_progress" ? chip("run", "running")
+  const st = s => s === "completed" ? chip("idle", "completed") : s === "in_progress" ? chip("run", "running")
     : s === "incomplete" ? chip("warn", "incomplete") : chip("idle", s);
-  const anti = r ? `${st(r.status)}<br>${propsCell(r.properties, r.status)}` : `<span class="ignored">–</span>`;
-  const chain = f ? `<span title="slot ${esc(f.slot)}">${phaseChip(f.phase)} ${outcomeChip(f)}</span>` : `<span class="ignored">–</span>`;
-  const open = r ? ` data-run="${esc(r.run_id)}" tabindex="0"` : "";
-  return `<tr${open}>
-    ${started}
-    <td>${esc(testnet(dir))}</td>
-    <td class="hide-sm">${commitLink(repo, cm)} · ${esc(t ?? "–")}</td>
-    <td>${hours}</td>
-    <td>${anti}</td>
-    <td>${chain}</td></tr>`;
+  const anti = r ? '<div class="cell-stack">' + st(r.status) + (r.status === "in_progress" ? '' : propsCell(r.properties, r.status)) + '</div>' : '<span class="ignored">No run in snapshot</span>';
+  const chain = f ? '<div class="cell-stack" title="slot ' + esc(f.slot) + '">' + phaseChip(f.phase) + outcomeChip(f) + '</div>' : '<span class="ignored">No matching record</span>';
+  const title = r ? '<button type="button" class="run-toggle run-title" aria-expanded="false" aria-label="Details for ' + esc(testnet(dir)) + ', try ' + esc(t ?? '–') + '">' + esc(testnet(dir)) + '</button>' : '<span class="run-title">' + esc(testnet(dir)) + '</span>';
+  return '<tr' + (r ? ' data-run="' + esc(r.run_id) + '"' : '') + '>' +
+    '<td>' + title + '<div class="mobile-meta">' + commitLink(repo, cm) + ' · try ' + esc(t ?? '–') + (hours !== '–' ? ' · ' + hours + ' h' : '') + (r ? '<span class="mobile-time"> · ' + when(r.created_at) + '</span>' : '') + '</div></td>' +
+    '<td class="hide-md">' + commitLink(repo, cm) + '<div class="ignored">try ' + esc(t ?? '–') + '</div></td>' +
+    '<td class="hide-sm" title="' + esc(r?.created_at || '') + '">' + (r ? when(r.created_at) : '<span class="ignored">Not recorded</span>') + '</td>' +
+    '<td class="hide-md mono">' + hours + '</td>' +
+    '<td data-label="Antithesis">' + anti + '</td><td data-label="On chain">' + chain + '</td></tr>';
 }
 
+const filterIds = ["flt-q", "flt-status", "flt-result", "flt-phase", "flt-testnet"];
 function renderRunRows() {
-  if (!testRows.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs.</td></tr>`; return; }
   const rows = testRows.filter(rowMatches);
-  $("runs-count").textContent = `showing ${rows.length} of ${testRows.length} test runs`;
-  if (!rows.length) { $("runs").innerHTML = `<tr><td colspan="6" class="empty">No runs match the filters.</td></tr>`; return; }
+  const filtered = filterIds.some(id => $(id).value);
+  $("clear-filters").hidden = !filtered;
+  const extra = ["flt-result", "flt-phase"].filter(id => $(id).value).length;
+  $("extra-filter-count").textContent = extra ? ' (' + extra + ')' : '';
+  $("runs-count").textContent = rows.length + ' of ' + testRows.length + ' records' + (filtered ? ' · filtered' : ' · newest runs first');
+  if (!testRows.length) { $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>No runs yet</strong>Runs and on-chain records will appear after collection.</td></tr>'; return; }
+  if (!rows.length) { $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>No matching runs</strong>Try another search or clear the filters.</td></tr>'; return; }
   $("runs").innerHTML = rows.map(x => testRowHtml(x, last.repository)).join("");
+}
+
+function renderOverview(d) {
+  const runs = d.runs;
+  const metrics = [
+    ['Runs in snapshot', runs?.length, '', 'Antithesis runs'],
+    ['Running', runs?.filter(r => r.status === 'in_progress').length, 'run', 'Execution in progress'],
+    ['With failures', runs?.filter(r => realFailures(r.properties).length > 0).length, 'bad', 'Based on run summaries']
+  ];
+  $("run-overview").innerHTML = metrics.map(([label, value, tone, note]) => '<div class="metric" data-tone="' + (value > 0 ? tone : '') + '"><span>' + label + '</span><b>' + (value ?? '–') + '</b><small>' + note + '</small></div>').join('');
 }
 
 function restoreExpansion() {
@@ -473,8 +604,8 @@ function detailHtml(d) {
     const kind = p.is_group ? "group" : p.is_event ? "event" : "assertion";
     const expandable = (p.counterexamples || []).length > 0;
     const desc = p.description || (sharedDescriptions || {})[p.name] || "";
-    return `<tr${expandable ? ` class="prop-row" data-prop-index="${i}" tabindex="0" title="show counterexamples"` : ""}><td>${esc(p.name)}</td><td>${pst}</td><td>${kind}</td>
-      <td>${p.example_count ?? "–"} / ${p.counterexample_count ?? "–"}</td>
+    return `<tr${expandable ? ` class="prop-row" data-prop-index="${i}" tabindex="0" title="show counterexamples"` : ""}><td>${esc(p.name)}</td><td>${pst}</td><td data-label="Kind">${kind}</td>
+      <td data-label="Examples / counterexamples">${p.example_count ?? "–"} / ${p.counterexample_count ?? "–"}</td>
       <td class="ignored">${esc(desc)}</td></tr>`;
   }).join("");
   const chain = d.chain
@@ -484,7 +615,7 @@ function detailHtml(d) {
     `<div><a href="${esc(n.url)}">${esc(n.day || "?")}</a> · ${esc(n.stage || n.conclusion || "?")}${n.error ? ` · ${esc(n.error)}` : ""}</div>`).join("")
     || (d.directory === "testnets/cardano_amaru" ? "no nightly runs the same day" : "not a nightly testnet run");
   return `<h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span> ${st}</h3>
-    <dl class="kv">
+    <details class="detail-fold"><summary>Run metadata</summary><dl class="kv">
       <dt>run id</dt><dd class="mono">${esc(d.run_id)}</dd>
       <dt>created</dt><dd>${esc(d.created_at || "–")}</dd>
       <dt>started</dt><dd>${esc(d.started_at || "–")}</dd>
@@ -493,19 +624,21 @@ function detailHtml(d) {
       <dt>requester</dt><dd>${esc(d.requester || "–")}</dd>
       <dt>repository</dt><dd>${esc(d.repository || "–")}</dd>
       <dt>on chain</dt><dd>${chain}</dd>
-    </dl>
+    </dl></details>
     ${ComposeViewer.html(d)}
     <h3 style="font-size:13px;margin:16px 0 4px">Nightly Amaru integration</h3><div>${nightly}</div>
-    <h3 style="font-size:13px;margin:16px 0 4px">Parameters</h3>
-    <div class="panel"><table><tbody>${params}</tbody></table></div>
+    <details class="detail-fold"><summary>Run parameters</summary><div class="panel"><table><tbody>${params || '<tr><td class="ignored">No parameters reported</td></tr>'}</tbody></table></div></details>
     <h3 style="font-size:13px;margin:16px 0 4px">Properties</h3>
-    <div class="panel"><table><thead><tr><th>Name</th><th>Status</th><th>Kind</th><th>Examples / counterexamples</th><th>Description</th></tr></thead><tbody>${props}</tbody></table></div>
+    <div class="panel"><table class="properties-table" aria-label="Run properties"><thead><tr><th>Name</th><th>Status</th><th>Kind</th><th>Examples / counterexamples</th><th>Description</th></tr></thead><tbody>${props}</tbody></table></div>
 `;
 }
 
 function collapseAll() {
   document.querySelectorAll("tbody#runs tr.detail-row").forEach(n => n.remove());
-  document.querySelectorAll("tbody#runs tr[data-run].open").forEach(n => n.classList.remove("open"));
+  document.querySelectorAll("tbody#runs tr[data-run].open").forEach(n => {
+    n.classList.remove("open");
+    n.querySelector(".run-toggle").setAttribute("aria-expanded", "false");
+  });
 }
 
 // One run open at a time. The detail file is fetched on first expansion
@@ -518,6 +651,7 @@ async function expandRow(id, propName, scroll = true) {
   if (!already) {
     collapseAll();
     tr.classList.add("open");
+    tr.querySelector(".run-toggle").setAttribute("aria-expanded", "true");
     tr.insertAdjacentHTML("afterend",
       `<tr class="detail-row"><td colspan="6"><div class="empty">Loading ${esc(id)}…</div></td></tr>`);
   }
@@ -582,24 +716,49 @@ function routeFromHash() {
 window.addEventListener("hashchange", routeFromHash);
 
 let last = null;
+let loading = false;
+let loadError = "";
 function render(d) {
   last = d;
-  for (const f of [renderHeader, renderChain, renderMpfs, renderWallets, renderRuns, renderPhaseCounts]) {
+  for (const f of [renderHeader, renderChain, renderMpfs, renderWallets, renderRuns, renderPhaseCounts, renderOverview]) {
     try { f(d); } catch (e) { console.error(f.name, e); }
   }
 }
 async function load() {
+  if (loading) return;
+  loading = true;
+  $("refresh").disabled = true;
+  $("refresh").textContent = "Refreshing…";
   try {
     const r = await fetch(`data.json?t=${Date.now()}`, {cache: "no-store"});
     if (!r.ok) throw new Error(r.status);
-    render(await r.json());
+    const data = await r.json();
+    loadError = "";
+    render(data);
     restoreExpansion();
   } catch (e) {
     const b = $("banner");
-    b.textContent = `Could not load data.json (${e.message}).${last ? " Showing the previous snapshot." : ""}`;
+    loadError = `Could not refresh the snapshot (${e.message}).${last ? " Showing the previous snapshot." : " Use Refresh to try again."}`;
+    b.textContent = loadError;
+    if (!last) {
+      $("generated").textContent = "Snapshot unavailable";
+      $("runs-count").textContent = "Unable to load runs";
+      $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>Snapshot unavailable</strong>Use Refresh to try again.</td></tr>';
+    }
     b.classList.add("show");
+  } finally {
+    loading = false;
+    $("refresh").disabled = false;
+    $("refresh").textContent = "Refresh";
   }
 }
+$("refresh").addEventListener("click", load);
+$("clear-filters").addEventListener("click", () => {
+  filterIds.forEach(id => { $(id).value = ""; });
+  renderRunRows();
+  restoreExpansion();
+  $("flt-q").focus();
+});
 $("runs").addEventListener("click", e => {
   if (e.target.closest("a")) return;
   const propTr = e.target.closest("tr.prop-row");
@@ -622,11 +781,12 @@ $("runs").addEventListener("click", e => {
     else location.hash = `run=${encodeURIComponent(runTr.dataset.run)}`;
   }
 });
-["flt-q", "flt-status", "flt-result", "flt-phase", "flt-testnet"].forEach(id =>
+filterIds.forEach(id =>
   $(id).addEventListener("input", () => { renderRunRows(); restoreExpansion(); }));
 $("runs").addEventListener("keydown", e => {
   if (e.key !== "Enter" && e.key !== " ") return;
-  const tr = e.target.closest("tr[data-run], tr.prop-row");
+  if (e.target.closest("a, button, input, select, summary")) return;
+  const tr = e.target.closest("tr.prop-row");
   if (!tr) return;
   e.preventDefault();
   tr.click();

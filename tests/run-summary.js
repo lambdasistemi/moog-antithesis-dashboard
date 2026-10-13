@@ -20,3 +20,18 @@ context.detail = {run_id: context.run.run_id, status: 'completed', properties: c
 const detail = vm.runInContext('detailHtml(detail)', context);
 for (const name of context.run.properties.failing) assert.ok(detail.includes(name), `Expanded detail lost ${name}`);
 console.log('Run rows show counts and retain every failure in expanded details');
+
+context.document.getElementById = id => ({value: id === 'flt-result' ? 'passing' : ''});
+for (const [properties, expected] of [
+  [null, false],
+  [{total: 0, failing: []}, false],
+  [{total: 1, failing: ['Recent software version provided']}, false],
+  [{total: 2, failing: ['Pipeline assertion']}, false],
+  [{total: 2, failing: []}, true],
+  [{total: 2, failing: ['Recent software version provided']}, true]
+]) {
+  context.candidate = {run: {status: 'completed', directory: 'testnets/example', properties}, fact: null};
+  assert.equal(vm.runInContext('rowMatches(candidate)', context), expected,
+    `Passing filter misclassified ${JSON.stringify(properties)}`);
+}
+console.log('Passing filter requires measured properties with no pipeline failures');
