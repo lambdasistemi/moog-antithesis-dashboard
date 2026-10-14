@@ -9,6 +9,16 @@ for schema in spec['components']['schemas'].values():
 v=Draft202012Validator({'$ref':'#/components/schemas/Snapshot','components':spec['components']})
 sample=json.loads(Path('tests/snapshot.example.json').read_text())
 v.validate(sample)
+covered=copy.deepcopy(sample)
+covered['chain']['scope']='all_requesters'
+for fact in covered['chain']['recent']:
+    fact.pop('requester',None)
+assert list(v.iter_errors(covered)), 'all-requester coverage accepted facts without requester identity'
+for fact in covered['chain']['recent']:
+    fact['requester']='cfhal'
+    fact['platform']='github'
+    fact['repository']='cardano-foundation/cardano-node-antithesis'
+v.validate(covered)
 compose=copy.deepcopy(sample)
 compose['runs'][0]['compose']={
     'status':'available','reason':None,'url':'runs/compose-test/docker-compose.yaml',

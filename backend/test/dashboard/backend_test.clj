@@ -12,6 +12,42 @@
 (defn temporary [f]
   (let [dir (fs/create-temp-dir)] (try (f (str dir)) (finally (fs/delete-tree dir)))))
 (defn property [n] {:name (str "result-" n) :status "Passing" :is_group (even? n)})
+(deftest public-chain-coverage-and-visible-records
+  (let [fact (fn [requester commit slot]
+               {:key {:requester requester :platform "github" :repository {:organization "owner" :repo "repo"}
+                      :commitId commit :directory "testnets/example" :try 1}
+                :value {:phase "finished" :outcome "success" :duration 60 :url "must-not-publish"}
+                :slot slot})
+        facts (vec (concat [(fact "wolf31o2" "shared" 1) (fact "saratomaz" "shared" 2)
+                            (assoc-in (fact "wolf31o2" "shared" 0) [:key :repository :repo] "fork")]
+                           (map #(fact "cfhal" (str "commit-" %) %) (range 3 43))))
+        visible [{:requester "wolf31o2" :platform "github" :repository "owner/repo" :commit "shared" :directory "testnets/example" :try 1}
+                 {:requester "saratomaz" :platform "github" :repository "owner/repo" :commit "shared" :directory "testnets/example" :try 1}]]
+    (with-redefs [sources/moog (fn [_ & args]
+                                (if (some #{"--whose"} args)
+                                  (vec (filter #(= "cfhal" (get-in % [:key :requester])) facts)) facts))]
+      (let [result (sources/chain {:requester "cfhal" :visible-runs visible})]
+        (is (= "all_requesters" (:scope result)))
+        (is (= 43 (get-in result [:phases "finished"])))
+        (is (= 32 (count (:recent result))))
+        (is (= #{"cfhal" "wolf31o2" "saratomaz"} (set (map :requester (:recent result)))))
+        (is (not (str/includes? (io/encode result) "must-not-publish")))))))
+
+(deftest detail-chain-match-preserves-requester
+  (temporary
+   (fn [dir]
+     (let [raw {:run_id "identity-test" :status "completed"
+                :description (io/encode {:testRun {:requester "wolf31o2" :platform "github" :repository {:organization "owner" :repo "repo"} :directory "testnets/example"
+                                                  :commitId "shared" :try 1}})}
+           identity {:platform "github" :repository "owner/repo" :directory "testnets/example" :commit "shared" :try 1}
+           facts [(assoc identity :requester "wolf31o2" :repository "owner/fork" :phase "rejected" :outcome "failure" :slot 9)
+                  (assoc identity :requester "saratomaz" :phase "rejected" :outcome "failure" :slot 7)
+                  (assoc identity :requester "wolf31o2" :phase "finished" :outcome "success" :slot 8)]]
+       (with-redefs [anti/get-json (constantly raw)]
+         (is (= {:phase "finished" :outcome "success" :slot 8}
+                (:chain (anti/detail {:cache dir} (anti/normalize raw) [(property 1)] {:recent facts}))))
+         (io/write-json! (str dir "/details/v3-identity-test.json") (assoc (anti/normalize raw) :nightly [{:day "2026-10-14"}]))
+         (is (not (contains? (anti/detail {:cache dir} (anti/normalize raw) [(property 1)] {:recent facts}) :nightly))))))))
 (deftest top-level-json-arrays-are-eager
   (is (vector? (io/decode "[{\"balance\":\"9007199254740993\"}]")))
   (is (= "9007199254740993" (:balance (first (io/decode "[{\"balance\":\"9007199254740993\"}]"))))))
@@ -52,7 +88,7 @@
            run (anti/normalize raw)]
        (io/write-json! (str dir "/details/run.json") (assoc raw :properties []))
        (with-redefs [anti/get-json (constantly raw)]
-         (is (= rows (mapv #(select-keys % [:name :status :is_group]) (:properties (anti/detail config run rows nil [])))))
+         (is (= rows (mapv #(select-keys % [:name :status :is_group]) (:properties (anti/detail config run rows nil)))))
          (is (= 30 (count (:failing (anti/summary rows))))))))))
 
 (def address-a (str "addr_test1" (apply str (repeat 30 "a"))))

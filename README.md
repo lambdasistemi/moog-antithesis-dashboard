@@ -11,9 +11,11 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   or requester, then narrows by status or testnet. Filters reveals result and
   on-chain phase options; Clear filters resets them together. Runs and property
   details stack on small screens, without horizontal pane scrolling. Refresh
-  checks for a new snapshot; metadata and parameters expand on demand. Summary
+  checks for a new snapshot; metadata, parameters and property descriptions expand on demand. Summary
   counts describe Antithesis runs in the snapshot, while the list also includes
-  unmatched on-chain records. All collected phase totals live in Pipeline.
+  unmatched on-chain records. Records cover every requester in the configured
+  public state, and matching includes requester identity. All collected phase
+  totals and independent GitHub workflow receipts live in Pipeline.
 - **Someone checking the pipeline** selects the Pipeline tab and sees, in one
   screen, whether test requests are flowing, the oracle and agent are up,
   Antithesis runs are progressing, on-chain runs are settling, the proxy is
@@ -88,7 +90,7 @@ flowchart TB
    `data.json`: Antithesis runs and their properties, on-chain test-run
    facts and pending requests, oracle and agent status (live, via their
    status issues), proxy readiness, the freshness monitor verdict (via
-   its status issue), nightly Amaru integration runs with their receipts, Koios
+   its status issue), GitHub launch workflow runs with their receipts, Koios
    balances and both MPFS observations. It also writes one detail file per run
    (`runs/<run_id>.json`) and the shared `property-descriptions.json`.
    Each run's Compose metadata records a public GitHub source at its full commit.
@@ -159,7 +161,10 @@ with stripped group and other permissions.
 - A source that fails keeps its last good value, marked `stale` on the page.
 - Completed Antithesis property sets and run metadata, plus receipts of concluded
   nightly runs, are fetched once and kept in the `dashboard-cache` volume.
-  On-chain and nightly detail joins are rebuilt from current observations.
+  On-chain detail joins are rebuilt from current observations using requester,
+  directory, commit and try. The snapshot keeps the latest thirty facts plus
+  every record needed to match a visible run. GitHub workflow receipts remain
+  independent observations; they are not attached to tests by date.
 - If the cache volume is lost, every source loses its last good value and
   shows `error` until its first success — never a silently stale number.
 - Property descriptions repeat verbatim across runs, so they publish once in
@@ -285,7 +290,8 @@ configuration remains supported by the Babashka backend.
 | Immutable commit-SHA image tags | Semantic-versioned releases | The continuously deployed service identifies its exact source revision and preserves an image for rollback. |
 | No separate documentation site | MkDocs site on Pages | Pages already serves the dashboard itself. This README is the documentation; it carries the stories and the diagram above. |
 | One failing source never blanks the page | Fail the whole snapshot on any source error | Each source is independent. The page shows the last good value marked `stale` so one outage stays visible without hiding the rest. |
-| Nightly runs match by same day, only for the nightly testnet | An exact receipt-to-run join | Receipts carry no run key and no nightly run ever reached the launch stage, so same-day runs for `testnets/cardano_amaru` are the strongest available signal. Other runs show no nightly section rather than a guessed one. |
+| All public requesters share one on-chain query and an identity-preserving join | A requester filter or matching by directory/commit/try alone | A public record belongs to its requester. Visible matches survive the recent-record display limit, and repeated executions can share the same record. |
+| GitHub workflow receipts appear independently in Pipeline | Testnet-specific association by calendar date | Current receipts carry no exact Antithesis run key. A shared date does not establish that a workflow launched a particular test. |
 
 ## License
 

@@ -2,7 +2,9 @@
   (:require [clojure.test :as t]
             [dashboard.backend-test]))
 (def groups
-  {"wallets" [#'dashboard.backend-test/top-level-json-arrays-are-eager
+  {"chain" [#'dashboard.backend-test/public-chain-coverage-and-visible-records
+             #'dashboard.backend-test/detail-chain-match-preserves-requester]
+   "wallets" [#'dashboard.backend-test/top-level-json-arrays-are-eager
               #'dashboard.backend-test/exact-wallets-stale-recovery-and-invalid-inputs]
    "properties" [#'dashboard.backend-test/complete-pages-and-cache-generation
                   #'dashboard.backend-test/summary-and-detail-share-the-complete-population]

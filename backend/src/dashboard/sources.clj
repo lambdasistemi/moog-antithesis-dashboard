@@ -1,5 +1,6 @@
 (ns dashboard.sources
   (:require [dashboard.io :as io]
+            [dashboard.identity :as identity]
             [babashka.fs :as fs]
             [clojure.string :as str]))
 
@@ -56,13 +57,19 @@
                     {:extra-env (assoc (io/parse-env (slurp (:moog-env config)))
                                        "PATH" (str (:moog-dir config) ":" (io/env "PATH" "/bin")))})))
 (defn chain [config]
-  (let [raw (moog config "facts" "test-runs" "--whose" (:requester config) "--no-pretty")]
+  (let [raw (moog config "facts" "test-runs" "--no-pretty")]
     (when-not (vector? raw) (io/fail! "Invalid Moog facts"))
-    (let [facts (mapv #(merge (select-keys (:key %) [:directory :try])
-                              {:commit (get-in % [:key :commitId]) :phase (get-in % [:value :phase])
+    (let [facts (mapv #(merge (identity/coordinates (:key %))
+                              {:phase (get-in % [:value :phase])
                                :outcome (get-in % [:value :outcome]) :duration (get-in % [:value :duration])
-                               :slot (:slot %)}) raw)]
-      {:phases (frequencies (map :phase facts)) :recent (vec (take 30 (reverse (sort-by :slot facts))))})))
+                               :slot (:slot %)}) raw)
+          key identity/run-key
+          ordered (reverse (sort-by :slot facts))
+          retained (into (set (map key (take 30 ordered))) (map key (:visible-runs config)))]
+      (when-not (every? identity/complete? facts)
+        (io/fail! "Invalid test-run identity"))
+      {:scope "all_requesters" :phases (frequencies (map :phase facts))
+       :recent (vec (filter #(contains? retained (key %)) ordered))})))
 (defn token [config] {:pending_requests (count (:requests (moog config "token" "--no-pretty")))})
 (defn proxy [config]
   (let [code (try (io/run ["curl" "-s" "-o" "/dev/null" "-w" "%{http_code}" "--max-time" "20" (:proxy config)])

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Moog dashboard snapshot",
-    "version": "1.2.1",
+    "version": "1.3.0",
     "description": "As a dashboard consumer, read the published snapshot and inspect source status, last-success time and wallet address scope before using a value. This is a public static GET resource, not a live query API. Unavailable dependencies do not make the whole HTTP request fail."
   },
   "servers": [
@@ -235,6 +235,10 @@
               }
             ]
           },
+          "platform": {
+            "type": ["string", "null"],
+            "description": "Public request platform, part of the complete on-chain request identity. Legacy snapshots may omit it."
+          },
           "requester": {
             "anyOf": [
               {
@@ -288,6 +292,19 @@
       "ChainFact": {
         "type": "object",
         "properties": {
+          "requester": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Requester identity in the full request key. Legacy snapshots may omit it."
+          },
+          "platform": {
+            "type": "string",
+            "minLength": 1
+          },
+          "repository": {
+            "type": "string",
+            "minLength": 1
+          },
           "directory": {
             "type": "string"
           },
@@ -346,7 +363,18 @@
       },
       "Chain": {
         "type": "object",
+        "allOf": [
+          {
+            "if": {"required": ["scope"], "properties": {"scope": {"const": "all_requesters"}}},
+            "then": {"properties": {"recent": {"items": {"required": ["requester", "platform", "repository"]}}}}
+          }
+        ],
         "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["all_requesters"],
+            "description": "The source queried all public test-run facts without a requester filter."
+          },
           "phases": {
             "type": "object",
             "properties": {
@@ -371,6 +399,7 @@
           },
           "recent": {
             "type": "array",
+            "description": "Latest thirty facts plus all records needed to match visible Antithesis runs. Phase totals cover the full public source.",
             "items": {
               "$ref": "#/components/schemas/ChainFact"
             }

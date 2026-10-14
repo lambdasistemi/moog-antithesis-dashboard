@@ -11,13 +11,14 @@
 (defn collect! [config]
   (fs/create-dirs (str (:out config) "/runs"))
   (let [started (io/now)
-        adapters [[:runs #(anti/runs config)] [:chain #(sources/chain config)] [:token #(sources/token config)]
+        runs-source (sources/source config :runs #(anti/runs config))
+        adapters [[:chain #(sources/chain (assoc config :visible-runs (:value runs-source)))] [:token #(sources/token config)]
                   [:oracle #(sources/host config "oracle")] [:agent #(sources/host config "agent")]
                   [:proxy #(sources/proxy config)] [:monitor #(sources/monitor config)] [:nightly #(sources/nightly config)]
                   [:wallets #(sources/wallets config)]
                   [:mpfs_collector #(sources/mpfs config :mpfs_collector "collector-legacy-mpfs")]
                   [:mpfs_roles #(sources/mpfs config :mpfs_roles "moog-role-legacy-mpfs")]]
-        observations (into {} (map (fn [[name adapter]] [name (sources/source config name adapter)]) adapters))
+        observations (assoc (into {} (map (fn [[name adapter]] [name (sources/source config name adapter)]) adapters)) :runs runs-source)
         value #(get-in observations [% :value])
         descriptions (atom {})
         runs (when (vector? (value :runs))
@@ -25,7 +26,7 @@
                        (let [rows (try (anti/property-set config (:run_id run) (:status run)) (catch Exception _ nil))
                              asset (compose/asset config run)
                              detail (if (nil? rows) (anti/unavailable run)
-                                      (try (anti/detail config run rows (value :chain) (value :nightly))
+                                      (try (anti/detail config run rows (value :chain))
                                            (catch Exception _ (anti/unavailable run))))]
                          (doseq [property (:properties detail) :when (:description property)]
                            (swap! descriptions #(if (contains? % (:name property)) % (assoc % (:name property) (:description property)))))

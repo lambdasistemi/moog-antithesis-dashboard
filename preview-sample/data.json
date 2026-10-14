@@ -70,7 +70,10 @@
         "phase": "accepted",
         "outcome": null,
         "duration": null,
-        "slot": 135610214
+        "slot": 135610214,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -79,7 +82,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135600713
+        "slot": 135600713,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_head",
@@ -88,7 +94,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135589116
+        "slot": 135589116,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -97,7 +106,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135584988
+        "slot": 135584988,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -106,7 +118,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135556984
+        "slot": 135556984,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -115,7 +130,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135536098
+        "slot": 135536098,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -124,7 +142,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135515316
+        "slot": 135515316,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_head",
@@ -133,7 +154,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135503176
+        "slot": 135503176,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -142,7 +166,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135498966
+        "slot": 135498966,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -151,7 +178,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135478583
+        "slot": 135478583,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -160,7 +190,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135456333
+        "slot": 135456333,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -169,7 +202,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135433933
+        "slot": 135433933,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_head",
@@ -178,7 +214,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135412981
+        "slot": 135412981,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -187,7 +226,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135408881
+        "slot": 135408881,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -196,7 +238,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135386392
+        "slot": 135386392,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -205,7 +250,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135367037
+        "slot": 135367037,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -214,7 +262,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135346601
+        "slot": 135346601,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -223,7 +274,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135325493
+        "slot": 135325493,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_head",
@@ -232,7 +286,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135324782
+        "slot": 135324782,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -241,7 +298,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135303233
+        "slot": 135303233,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -250,7 +310,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135276340
+        "slot": 135276340,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -259,7 +322,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135255079
+        "slot": 135255079,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_head",
@@ -268,7 +334,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135237920
+        "slot": 135237920,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -277,7 +346,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135235537
+        "slot": 135235537,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -286,7 +358,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135211327
+        "slot": 135211327,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -295,7 +370,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135195467
+        "slot": 135195467,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_amaru",
@@ -304,7 +382,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 1,
-        "slot": 135195379
+        "slot": 135195379,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -313,7 +394,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 3,
-        "slot": 135174477
+        "slot": 135174477,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -322,7 +406,10 @@
         "phase": "finished",
         "outcome": "success",
         "duration": 1,
-        "slot": 135170532
+        "slot": 135170532,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       },
       {
         "directory": "testnets/cardano_node_master",
@@ -331,7 +418,10 @@
         "phase": "finished",
         "outcome": "failure",
         "duration": 3,
-        "slot": 135168767
+        "slot": 135168767,
+        "requester": "cfhal",
+        "platform": "github",
+        "repository": "cardano-foundation/cardano-node-antithesis"
       }
     ]
   },
@@ -630,7 +720,8 @@
         "commit": "ae43745ed5e59d688830d2207649907c5d1a69c9",
         "internal_network": true,
         "url": "runs/fe222c247145a3186799298d5bd9a08b-62-14/docker-compose.yaml"
-      }
+      },
+      "platform": "github"
     },
     {
       "run_id": "198bfff10e31159dfa8e967431d5ec5b-62-14",
@@ -658,7 +749,8 @@
         "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
         "internal_network": true,
         "url": "runs/198bfff10e31159dfa8e967431d5ec5b-62-14/docker-compose.yaml"
-      }
+      },
+      "platform": "github"
     }
   ],
   "mpfs": {

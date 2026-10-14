@@ -31,7 +31,6 @@
      :gh-key (env "GH_READ_TOKEN_FILE" "/run/secrets/gh-read")
      :moog-env (env "MOOG_READ_ENV_FILE" "/run/secrets/moog-read-env")
      :moog-dir (env "MOOG_DIR" "/opt/moog")
-     :requester (env "MOOG_REQUESTER" "cfhal")
      :status-repo (env "STATUS_REPOSITORY" "lambdasistemi/moog-antithesis-dashboard")
      :proxy (env "PROXY_URL" "https://antithesis-proxy.plutimus.com/readyz")}))
 (defn fail! [message] (throw (ex-info message {:public true})))

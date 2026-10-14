@@ -14,7 +14,7 @@ association to a test merely because both ran on the same date.
 flowchart LR
   F[All public test-run facts] --> C[Collector]
   A[Antithesis runs] --> C
-  C --> J[Requester, directory, commit and try join]
+  C --> J[Full public request identity join]
   J --> T[Test runs]
   G[GitHub workflow receipts] --> P[Pipeline]
 ```

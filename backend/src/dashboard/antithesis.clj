@@ -1,5 +1,6 @@
 (ns dashboard.antithesis
-  (:require [dashboard.io :as io])
+  (:require [dashboard.io :as io]
+            [dashboard.identity :as identity])
   (:import [java.net URLEncoder]))
 
 (defn get-json [config path]
@@ -45,37 +46,32 @@
 (defn number-or-nil [value]
   (try (let [n (io/decode (str value))] (when (number? n) n)) (catch Exception _ nil)))
 (defn normalize [run]
-  (let [test (description run) repo (:repository test)]
+  (let [test (description run)]
     (merge {:run_id (:run_id run) :status (:status run) :created_at (:created_at run) :started_at (:started_at run)}
            {:test_name (get-in run [:parameters (keyword "antithesis.test_name")])
-            :duration_minutes (number-or-nil (get-in run [:parameters (keyword "antithesis.duration")] "0"))
-            :directory (:directory test) :commit (:commitId test) :try (:try test)
-            :requester (:requester test)
-            :repository (when repo (str (:organization repo) "/" (:repo repo)))})))
+            :duration_minutes (number-or-nil (get-in run [:parameters (keyword "antithesis.duration")] "0"))}
+           (identity/coordinates test))))
 (defn runs [config]
   (let [page (get-json config "runs?limit=25")]
     (when-not (vector? (:data page)) (io/fail! "Invalid run list"))
     (mapv #(do (safe-id! (:run_id %)) (normalize %)) (:data page))))
 (defn unavailable [run]
-  {:run_id (:run_id run) :status (:status run) :unavailable true :properties [] :chain nil :nightly []})
-(defn detail [config run rows chain nightly]
+  {:run_id (:run_id run) :status (:status run) :unavailable true :properties [] :chain nil})
+(defn detail [config run rows chain]
   (let [id (safe-id! (:run_id run)) path (str (:cache config) "/details/v3-" id ".json")
         cached (io/read-json path)
-        base (or cached (let [raw (get-json config (str "runs/" id))]
+        base (if cached (merge cached (into {} (filter #(some? (val %)) (select-keys run identity/fields))))
+                 (let [raw (get-json config (str "runs/" id))]
                           (merge (normalize raw) {:status (or (:status raw) (:status run))
                                                   :completed_at (:completed_at raw) :parameters (or (:parameters raw) {})})))
-        day #(subs (or % "") 0 (min 10 (count (or % ""))))
-        match (first (filter #(and (= (:directory %) (:directory base))
-                                   (= (:commit %) (:commit base)) (= (:try %) (:try base))) (:recent chain)))
-        detail (assoc base :run_id id
+        match (when (identity/complete? base)
+                (first (filter #(= (identity/run-key %) (identity/run-key base)) (:recent chain))))
+        detail (assoc (dissoc base :nightly) :run_id id
                       :properties (mapv #(merge (select-keys % [:name :description :status :is_group])
                                                  {:is_event (:is_event %) :example_count (:example_count %)
                                                   :counterexample_count (:counterexample_count %)
                                                   :counterexamples (or (:counterexamples %) [])}) rows)
-                      :chain (when (and (:commit base) match) (select-keys match [:phase :outcome :slot]))
-                      :nightly (if (= (:directory base) "testnets/cardano_amaru")
-                                 (mapv #(merge (select-keys % [:url :conclusion :status]) (select-keys (:receipt %) [:day :stage :error]))
-                                       (filter #(= (day (:createdAt %)) (day (:created_at base))) nightly)) []))]
+                      :chain (when (and (:commit base) match) (select-keys match [:phase :outcome :slot])))]
     (when (and (not cached) (seq rows) (contains? #{"completed" "incomplete"} (:status detail)))
       (io/write-json! path detail))
     detail))
