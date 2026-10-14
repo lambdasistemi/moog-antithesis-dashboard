@@ -34,3 +34,9 @@ the table and phone metadata. Preserve commit destinations and missing-value
 fallbacks. Verify the rendered layout at desktop, 390px and 320px, plus the
 existing site checks. This reversible presentation change uses browser
 evidence rather than a new permanent test of its markup.
+
+Hosted CI passed all thirteen reproduction rows, then failed its shared Docker
+cleanup census on resources from the cancelled planning run. Mark this census
+pending with tracked issue #56; preserve every behavioral row and the clean-tree
+check. A passing run must explicitly publish the cleanup evidence gap until
+resource ownership and its negative controls are implemented.
