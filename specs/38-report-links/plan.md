@@ -26,3 +26,11 @@ Open report label and tooltip. Keep the text action in expanded details.
 Preserve run-ID validation and isolated proxy navigation. Adjust table spans
 and phone layout together; verify end-of-row placement, keyboard access,
 navigation isolation and320/390px layout using the existing browser checks.
+
+## Compact commit and try
+
+Render the linked short SHA and numeric try on one line as `sha / try` in
+the table and phone metadata. Preserve commit destinations and missing-value
+fallbacks. Verify the rendered layout at desktop, 390px and 320px, plus the
+existing site checks. This reversible presentation change uses browser
+evidence rather than a new permanent test of its markup.
