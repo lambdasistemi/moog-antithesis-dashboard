@@ -121,9 +121,13 @@ Antithesis property results follow every pagination cursor and share one complet
 population between summary and detail. A failed later page leaves the result
 unavailable, never complete with a truncated count. Completed nonempty property
 sets use the new cache generation; old partial property/detail caches are ignored.
-Counts include API groups and events, not distinct bugs. On-chain and nightly
-detail joins are refreshed from current observations even when Antithesis data
-is immutable. Last-good source values and timestamps form one atomic cache record;
+Counts include API groups and events, not distinct bugs. On-chain records cover
+all public requesters in the configured MPFS state. Detail and summary joins
+use requester, platform, repository, directory, commit and try, and are refreshed from current facts
+even when Antithesis data is immutable. The recent-record limit never removes
+records needed by visible runs. GitHub workflow receipts appear independently
+in Pipeline; calendar dates and testnet names do not establish a launch link.
+Last-good source values and timestamps form one atomic cache record;
 legacy records remain readable during the transition.
 
 The collector loops every ten minutes. Publication passes a secret gate before

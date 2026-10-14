@@ -73,7 +73,7 @@
       "pause": 400
     },
     {
-      "text": "bb collect fetches eleven independent sources into one data.json: Antithesis runs and their properties, on-chain test-run facts and pending requests, oracle and agent status (live, via their status issues), proxy readiness, the freshness monitor verdict (via its status issue), nightly Amaru integration runs with their receipts, Koios balances and both MPFS observations. It also writes one detail file per run (runs/<run_id>.json) and the shared property-descriptions.json.",
+      "text": "bb collect fetches eleven independent sources into one data.json: Antithesis runs and their properties, on-chain test-run facts and pending requests, oracle and agent status (live, via their status issues), proxy readiness, the freshness monitor verdict (via its status issue), GitHub launch workflow runs with their receipts, Koios balances and both MPFS observations. It also writes one detail file per run (runs/<run_id>.json) and the shared property-descriptions.json.",
       "pause": 300
     },
     {
@@ -153,7 +153,7 @@
       "pause": 300
     },
     {
-      "text": "Completed Antithesis property sets and run metadata, plus receipts of concluded nightly runs, are fetched once and cached. On-chain and nightly detail joins are rebuilt from current observations.",
+      "text": "Completed Antithesis property sets and run metadata, plus receipts of concluded nightly runs, are fetched once and cached. On-chain matching uses requester, platform, repository, directory, commit and try across all public requesters. Visible matches survive the recent-record limit. GitHub workflow receipts appear independently in Pipeline, and property descriptions start folded.",
       "pause": 300
     },
     {
@@ -257,6 +257,6 @@
   ],
   "_source": {
     "file": "README.md",
-    "sha256": "045db72f6539cac78bf91ddb6803017dda2921749bc77c575684aef85122e2ae"
+    "sha256": "321ed2f5637dc5281db568f3a051bfd96899e40d354ca9756359456150f29eff"
   }
 }

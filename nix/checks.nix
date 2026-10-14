@@ -20,6 +20,7 @@ let
     snapshot-schema = {
       runtimeInputs = [ (pkgs.python3.withPackages (p: [ p.jsonschema ])) pkgs.bash pkgs.jq pkgs.coreutils pkgs.gnused pkgs.gnugrep pkgs.findutils ];
       text = ''
+        bb --config bb.edn --main dashboard.test-runner chain
         python3 tests/snapshot-schema.py "$@"
       '';
     };
@@ -32,7 +33,7 @@ let
     docs-presentation = {
       runtimeInputs = [ pkgs.python3 ];
       text = ''
-        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md specs/29-mpfs-status/spec.md
+        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md specs/29-mpfs-status/spec.md specs/49-run-record-coverage/spec.md
       '';
     };
 

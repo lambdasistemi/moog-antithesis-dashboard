@@ -268,6 +268,7 @@ footer a { color: var(--muted); }
   <div class="eyebrow">On-chain totals · all collected facts</div>
   <div class="counts" id="phases"></div>
   <div class="chain" id="chain"></div>
+  <details class="detail-fold"><summary>GitHub workflow runs</summary><div class="panel" id="workflow-runs"></div></details>
   </section>
 
   <section id="pane-mpfs" role="tabpanel" aria-labelledby="tab-mpfs" tabindex="0">
@@ -454,19 +455,16 @@ function realFailures(p) {
 // One table on the test-run grain: Antithesis runs joined with their
 // on-chain record, plus on-chain records with no run in the window.
 function buildTestRows(d) {
-  const byKey = new Map();
-  const k = (dir, c, t) => `${dir}|${c}|${t}`;
-  for (const f of ((d.chain && d.chain.recent) || []))
-    byKey.set(k(f.directory, f.commit, f.try), {run: null, fact: f});
-  for (const r of (d.runs || [])) {
-    const e = byKey.get(k(r.directory, r.commit, r.try));
-    if (e && !e.run) e.run = r;
-    else if (!e) byKey.set(k(r.directory, r.commit, r.try), {run: r, fact: null});
-    else byKey.set(r.run_id, {run: r, fact: null});
-  }
-  const withRun = [...byKey.values()].filter(x => x.run)
+  const key = x => JSON.stringify([x.requester, x.platform, x.repository, x.directory, x.commit, x.try]);
+  const facts = new Map((d.chain?.recent || []).map(f => [key(f), f]));
+  const matched = new Set();
+  const withRun = (d.runs || []).map(run => {
+    const fact = facts.get(key(run)) || null;
+    if (fact) matched.add(key(run));
+    return {run, fact};
+  })
     .sort((a, b) => String(b.run.created_at || "").localeCompare(String(a.run.created_at || "")));
-  const factOnly = [...byKey.values()].filter(x => !x.run)
+  const factOnly = [...facts].filter(([k]) => !matched.has(k)).map(([, fact]) => ({run:null, fact}))
     .sort((a, b) => (b.fact.slot || 0) - (a.fact.slot || 0));
   return withRun.concat(factOnly);
 }
@@ -501,12 +499,14 @@ function renderRuns(d) {
   renderRunRows();
 }
 
-function testRowHtml(x, repo) {
+function testRowHtml(x, repo, chainMeasured = false) {
   const r = x.run, f = x.fact;
+  repo = r?.repository || f?.repository || repo;
   const dir = r ? r.directory : f.directory, cm = r ? r.commit : f.commit, t = r ? r.try : f.try;
   const hours = r && r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–";
   const anti = r ? '<div class="cell-stack">' + propsCell(r.properties, r.status) + '</div>' : '<span class="ignored">No run in snapshot</span>';
-  const chain = f ? '<div class="cell-stack" title="slot ' + esc(f.slot) + '">' + phaseChip(f.phase) + outcomeChip(f) + '</div>' : '<span class="ignored">No matching record</span>';
+  const identityKnown = r && [r.requester, r.platform, r.repository, r.directory, r.commit, r.try].every(v => v != null && v !== "");
+  const chain = f ? '<div class="cell-stack" title="slot ' + esc(f.slot) + '">' + phaseChip(f.phase) + outcomeChip(f) + '</div>' : '<span class="ignored">' + (!identityKnown ? 'Run identity unavailable' : chainMeasured ? 'No matching record' : 'On-chain coverage unavailable') + '</span>';
   const title = r ? '<button type="button" class="run-toggle run-title" aria-expanded="false" aria-label="Details for ' + esc(testnet(dir)) + ', try ' + esc(t ?? '–') + '">' + esc(testnet(dir)) + '</button>' : '<span class="run-title">' + esc(testnet(dir)) + '</span>';
   return '<tr' + (r ? ' data-run="' + esc(r.run_id) + '"' : '') + '>' +
     '<td>' + title + '<div class="mobile-meta">' + commitLink(repo, cm) + ' · try ' + esc(t ?? '–') + (hours !== '–' ? ' · ' + hours + ' h' : '') + (r ? '<span class="mobile-time"> · ' + when(r.created_at) + '</span>' : '') + '</div></td>' +
@@ -526,7 +526,14 @@ function renderRunRows() {
   $("runs-count").textContent = rows.length + ' of ' + testRows.length + ' records' + (filtered ? ' · filtered' : ' · newest runs first');
   if (!testRows.length) { $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>No runs yet</strong>Runs and on-chain records will appear after collection.</td></tr>'; return; }
   if (!rows.length) { $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>No matching runs</strong>Try another search or clear the filters.</td></tr>'; return; }
-  $("runs").innerHTML = rows.map(x => testRowHtml(x, last.repository)).join("");
+  const chainMeasured = last.chain?.scope === "all_requesters" && last.sources?.chain?.status === "ok";
+  $("runs").innerHTML = rows.map(x => testRowHtml(x, last.repository, chainMeasured)).join("");
+}
+
+function renderWorkflows(d) {
+  const runs = d.nightly || [], source = d.sources?.nightly;
+  const rows = runs.map(r => '<tr><td>' + when(r.createdAt) + '</td><td>' + esc(r.receipt?.stage || r.status || '–') + (r.receipt?.error ? '<div class="ignored">' + esc(r.receipt.error) + '</div>' : '') + '</td><td>' + esc(r.receipt?.outcome || r.conclusion || r.status || '–') + '</td><td><a href="' + esc(r.url) + '">Workflow run</a></td></tr>').join('');
+  $("workflow-runs").innerHTML = (source?.status === "stale" ? '<div class="ignored">Last successful workflow observation · stale</div>' : '') + (rows ? '<table aria-label="GitHub workflow runs"><thead><tr><th>Started</th><th>Stage</th><th>Result</th><th>GitHub</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<div class="empty">GitHub workflow observations unavailable.</div>');
 }
 
 function renderOverview(d) {
@@ -605,14 +612,11 @@ function detailHtml(d) {
     const desc = p.description || (sharedDescriptions || {})[p.name] || "";
     return `<tr${expandable ? ` class="prop-row" data-prop-index="${i}" tabindex="0" title="show counterexamples"` : ""}><td>${esc(p.name)}</td><td>${pst}</td><td data-label="Kind">${kind}</td>
       <td data-label="Examples / counterexamples">${p.example_count ?? "–"} / ${p.counterexample_count ?? "–"}</td>
-      <td class="ignored">${esc(desc)}</td></tr>`;
+      <td class="ignored">${desc ? `<details class="property-description"><summary>Description</summary><div>${esc(desc)}</div></details>` : ""}</td></tr>`;
   }).join("");
   const chain = d.chain
     ? `${esc(d.chain.phase)} · ${esc(d.chain.outcome || "–")} · slot <span class="mono">${esc(d.chain.slot)}</span>`
     : "no matching on-chain record";
-  const nightly = (d.nightly || []).map(n =>
-    `<div><a href="${esc(n.url)}">${esc(n.day || "?")}</a> · ${esc(n.stage || n.conclusion || "?")}${n.error ? ` · ${esc(n.error)}` : ""}</div>`).join("")
-    || (d.directory === "testnets/cardano_amaru" ? "no nightly runs the same day" : "not a nightly testnet run");
   return `<h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span> ${st}</h3>
     <details class="detail-fold"><summary>Run metadata</summary><dl class="kv">
       <dt>run id</dt><dd class="mono">${esc(d.run_id)}</dd>
@@ -625,7 +629,6 @@ function detailHtml(d) {
       <dt>on chain</dt><dd>${chain}</dd>
     </dl></details>
     ${ComposeViewer.html(d)}
-    <h3 style="font-size:13px;margin:16px 0 4px">Nightly Amaru integration</h3><div>${nightly}</div>
     <details class="detail-fold"><summary>Run parameters</summary><div class="panel"><table><tbody>${params || '<tr><td class="ignored">No parameters reported</td></tr>'}</tbody></table></div></details>
     <h3 style="font-size:13px;margin:16px 0 4px">Properties</h3>
     <div class="panel"><table class="properties-table" aria-label="Run properties"><thead><tr><th>Name</th><th>Status</th><th>Kind</th><th>Examples / counterexamples</th><th>Description</th></tr></thead><tbody>${props}</tbody></table></div>
@@ -719,7 +722,7 @@ let loading = false;
 let loadError = "";
 function render(d) {
   last = d;
-  for (const f of [renderHeader, renderChain, renderMpfs, renderWallets, renderRuns, renderPhaseCounts, renderOverview]) {
+  for (const f of [renderHeader, renderChain, renderWorkflows, renderMpfs, renderWallets, renderRuns, renderPhaseCounts, renderOverview]) {
     try { f(d); } catch (e) { console.error(f.name, e); }
   }
 }
@@ -759,7 +762,7 @@ $("clear-filters").addEventListener("click", () => {
   $("flt-q").focus();
 });
 $("runs").addEventListener("click", e => {
-  if (e.target.closest("a")) return;
+  if (e.target.closest("a, details")) return;
   const propTr = e.target.closest("tr.prop-row");
   if (propTr) {
     const detailRow = propTr.closest("tr.detail-row");
