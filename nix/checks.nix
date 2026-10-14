@@ -33,7 +33,7 @@ let
     docs-presentation = {
       runtimeInputs = [ pkgs.python3 ];
       text = ''
-        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md specs/29-mpfs-status/spec.md specs/49-run-record-coverage/spec.md specs/38-report-links/spec.md
+        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md specs/29-mpfs-status/spec.md specs/49-run-record-coverage/spec.md specs/38-report-links/spec.md specs/52-alarms-status-feeds/spec.md
       '';
     };
 
@@ -1330,6 +1330,7 @@ PY
         node tests/preferences.js
         node tests/run-summary.js
         node tests/report-access.js
+        node tests/alarms.js
         python3 -c "
 import html.parser, sys
 

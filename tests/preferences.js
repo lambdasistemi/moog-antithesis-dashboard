@@ -6,7 +6,7 @@ function visit(storage, unavailable = false) {
   const classes = new Set();
   const root = {dataset: {}, classList: {toggle(name, on) { if (on) classes.add(name); else classes.delete(name); }}};
   const systemTheme = {matches: false, addEventListener(_, callback) { this.change = callback; }};
-  const tabs = ['tests', 'pipeline', 'mpfs', 'accounts'].map(pane => ({
+  const tabs = ['tests', 'pipeline', 'mpfs', 'accounts', 'alarms'].map(pane => ({
     dataset: {pane}, handlers: {}, attributes: {},
     addEventListener(key, callback) { this.handlers[key] = callback; },
     setAttribute(key, value) { this.attributes[key] = value; },
@@ -37,7 +37,7 @@ assert.equal(page.root.dataset.theme, 'dark');
 assert.equal(page.control.value, 'dark');
 assert.equal(page.root.dataset.pane, 'accounts');
 assert.equal(page.tabs[3].attributes['aria-selected'], 'true');
-assert.deepEqual(page.tabs.map(tab => tab.tabIndex), [-1, -1, -1, 0]);
+assert.deepEqual(page.tabs.map(tab => tab.tabIndex), [-1, -1, -1, 0, -1]);
 page.control.value = 'light';
 page.control.handlers.change();
 assert.equal(visit(storage).root.dataset.theme, 'light');
@@ -45,7 +45,9 @@ page.context.DashboardPreferences.openPane('tests', false);
 assert.equal(page.root.dataset.pane, 'tests');
 assert.equal(visit(storage).root.dataset.pane, 'accounts', 'A run link must not overwrite the saved pane');
 let prevented = false;
-page.tabs[3].handlers.keydown({key: 'ArrowRight', preventDefault() { prevented = true; }});
+page.tabs[4].handlers.click();
+assert.equal(visit(storage).root.dataset.pane, 'alarms', 'Alarms must persist like every other pane');
+page.tabs[4].handlers.keydown({key: 'ArrowRight', preventDefault() { prevented = true; }});
 assert.ok(prevented && page.tabs[0].focused);
 assert.equal(visit(storage).root.dataset.pane, 'tests');
 page.control.value = 'system';

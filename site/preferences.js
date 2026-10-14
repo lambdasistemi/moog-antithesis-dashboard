@@ -1,6 +1,6 @@
 (() => {
   const root = document.documentElement;
-  const panes = ["tests", "pipeline", "mpfs", "accounts"];
+  const panes = ["tests", "pipeline", "mpfs", "accounts", "alarms"];
   const themes = ["system", "light", "dark"];
   const read = key => { try { return localStorage.getItem(`moog-dashboard.${key}`); } catch { return null; } };
   const save = (key, value) => { try { localStorage.setItem(`moog-dashboard.${key}`, value); } catch {} };

@@ -66,7 +66,7 @@ header { display: flex; flex-wrap: wrap; align-items: center; justify-content: s
 .button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-height: 38px; background: var(--panel); }
 .button:hover { background: var(--idle-bg); }
 .report-link { display: inline-flex; align-items: center; padding: 4px 0; font-size: 12px; font-weight: 500; }
-.tabs { display: flex; gap: 28px; margin-top: 30px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; flex-wrap: wrap; gap: 0 28px; margin-top: 30px; border-bottom: 1px solid var(--line); }
 .tabs button { position: relative; font-weight: 500; padding: 12px 0 16px; color: var(--muted); border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ok); }
@@ -75,7 +75,10 @@ header { display: flex; flex-wrap: wrap; align-items: center; justify-content: s
 :root[data-pane="tests"] #pane-tests,
 :root[data-pane="pipeline"] #pane-pipeline,
 :root[data-pane="mpfs"] #pane-mpfs,
-:root[data-pane="accounts"] #pane-accounts { display: block; }
+:root[data-pane="accounts"] #pane-accounts,
+:root[data-pane="alarms"] #pane-alarms { display: block; }
+.alarm-count { margin-left: 4px; padding: 1px 6px; border-radius: 10px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.alarm-count[hidden] { display: none; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 30px 0 20px; }
 .section-heading p, .meta { color: var(--muted); font-size: 13px; }
 .snapshot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin-top: 18px; color: var(--muted); font-size: 12px; }
@@ -260,9 +263,15 @@ footer a { color: var(--muted); }
     <button id="tab-pipeline" type="button" role="tab" aria-controls="pane-pipeline" aria-selected="false" tabindex="-1" data-pane="pipeline">Pipeline</button>
     <button id="tab-mpfs" type="button" role="tab" aria-controls="pane-mpfs" aria-selected="false" tabindex="-1" data-pane="mpfs">MPFS</button>
     <button id="tab-accounts" type="button" role="tab" aria-controls="pane-accounts" aria-selected="false" tabindex="-1" data-pane="accounts">Accounts</button>
+    <button id="tab-alarms" type="button" role="tab" aria-controls="pane-alarms" aria-selected="false" tabindex="-1" data-pane="alarms">Alarms <span id="alarm-count" class="alarm-count bad" hidden>0</span></button>
   </nav>
   <div class="snapshot"><span class="snapshot-status" id="generated">Loading snapshot…</span><span id="next">Checks for updates every minute</span></div>
   <div class="banner" id="banner" role="status"></div>
+
+  <section id="pane-alarms" role="tabpanel" aria-labelledby="tab-alarms" tabindex="0">
+    <div class="section-heading"><div><h2>Alarms</h2><p>Current source freshness and service problems. Test assertion failures remain in Test runs.</p></div></div>
+    <div id="alarms" class="wallet-grid" aria-live="polite"><div class="empty">Waiting for a snapshot.</div></div>
+  </section>
 
   <section id="pane-pipeline" role="tabpanel" aria-labelledby="tab-pipeline" tabindex="0">
   <div class="section-heading"><div><h2>Pipeline</h2><p>From request to on-chain result. Each source reports its own freshness.</p></div></div>
@@ -347,6 +356,8 @@ function ago(iso) {
 const when = iso => iso ? new Date(iso).toLocaleString([], {month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"}) : "–";
 
 function renderHeader(d) {
+  renderAlarms(d);
+  if (!d) return;
   $("generated").textContent = `Snapshot updated ${ago(d.generated_at)}`;
   $("generated").title = d.generated_at;
   const age = (Date.now() - Date.parse(d.generated_at)) / 1000;
@@ -369,6 +380,60 @@ function renderHeader(d) {
   }
   const next = Math.max(0, d.refresh_seconds - age);
   $("next").textContent = next > 0 ? `next collection in about ${Math.ceil(next / 60)} min` : "next collection due";
+}
+
+function renderAlarms(d) {
+  const alarms = [];
+  const add = (id, name, detail, pane, at) => alarms.push({id, name, detail, pane, at});
+  if (loadError) add("refresh", "Snapshot refresh failed", loadError);
+  if (!d) {
+    if (!loadError) add("snapshot", "Snapshot unavailable", "Use Refresh to try again.");
+  } else {
+    if (!Number.isFinite(Date.parse(d.generated_at)) || Date.now() - Date.parse(d.generated_at) > STALE_AFTER_S * 1000)
+      add("snapshot", "Snapshot is stale", "The collector may be stopped. Showing the last snapshot.", null, d.generated_at);
+    const labels = {
+      runs:["Antithesis runs","tests"], chain:["On-chain records","pipeline"], token:["Pending requests","pipeline"],
+      oracle:["Oracle","pipeline"], agent:["Agent","pipeline"], proxy:["Antithesis proxy","pipeline"],
+      monitor:["Freshness monitor","pipeline"], nightly:["GitHub workflows","pipeline"], wallets:["ADA accounts","accounts"],
+      mpfs_collector:["MPFS · collector","mpfs"], mpfs_roles:["MPFS · oracle and agent","mpfs"]
+    };
+    for (const id of new Set([...Object.keys(labels), ...Object.keys(d.sources || {})])) {
+      const source = d.sources?.[id], [name, pane] = labels[id] || [id,"pipeline"];
+      const at = source?.last_success;
+      if (!source || source.status !== "ok" || !Number.isFinite(Date.parse(at)) || Date.now() - Date.parse(at) > 15 * 60 * 1000) {
+        add(id, name, source?.error || (at ? "Source observation is stale; last good values are retained." : "No successful source observation."), pane, at);
+        continue;
+      }
+      let detail = "";
+      if (id === "monitor" && d.monitor?.ok === false) detail = d.monitor.last || "Freshness check failed.";
+      if (id === "proxy" && d.proxy?.ready === false) detail = "Proxy is not ready · HTTP " + (d.proxy.http_code ?? "no response");
+      if (id === "oracle" || id === "agent") {
+        const container = (d.hosts?.[id] || []).find(c => c.name.includes("moog-" + id) && !c.name.includes("reporter"));
+        if (!container || !/^Up/.test(container.status) || /\(unhealthy\)/.test(container.status)) detail = container?.status || "Service container is not reported.";
+        else if (id === "agent" && d.hosts.agent_errors_6h > 0) detail = d.hosts.agent_errors_6h + " errors observed in the last 6 hours.";
+      }
+      if (id === "mpfs_collector" || id === "mpfs_roles") {
+        const value = d.mpfs?.[id === "mpfs_collector" ? "collector" : "roles"];
+        const problems = [];
+        if (!value || value.container?.status !== "running") problems.push("Container " + (value?.container?.status || "unavailable"));
+        if (!value?.api?.reachable) problems.push("API unreachable · HTTP " + (value?.api?.http_status ?? "no response"));
+        if (value?.synchronization?.ready === false) problems.push("Backend is not ready");
+        detail = problems.join(" · ");
+      }
+      if (detail) add(id, name, detail, pane, at);
+    }
+  }
+  const badge = $("alarm-count");
+  badge.textContent = String(alarms.length);
+  badge.hidden = alarms.length === 0;
+  $("tab-alarms").ariaLabel = "Alarms, " + alarms.length + " active";
+  document.title = (alarms.length ? "(" + alarms.length + ") " : "") + "Moog dashboard";
+  $("alarms").innerHTML = alarms.length ? alarms.map(a =>
+    '<article class="node" data-alarm="' + esc(a.id) + '"><div class="name">' + esc(a.name) + chip("bad","attention") +
+    '</div><div class="detail">' + esc(a.detail) + '</div><div class="age">' +
+    (a.at ? "Last success " + ago(a.at) : "No current observation") + '</div>' +
+    (a.pane ? '<button type="button" class="button" data-alarm-pane="' + esc(a.pane) + '">Open ' + esc(a.pane === "tests" ? "Test runs" : a.pane === "mpfs" ? "MPFS" : a.pane[0].toUpperCase() + a.pane.slice(1)) + '</button>' : '') + '</article>'
+  ).join("") : '<div class="empty"><strong>No active alarms</strong>All observed sources and services are healthy.</div>';
 }
 
 function monitorDetail(m) {
@@ -757,6 +822,7 @@ async function load() {
       $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>Snapshot unavailable</strong>Use Refresh to try again.</td></tr>';
     }
     b.classList.add("show");
+    renderAlarms(last);
   } finally {
     loading = false;
     $("refresh").disabled = false;
@@ -764,6 +830,10 @@ async function load() {
   }
 }
 $("refresh").addEventListener("click", load);
+$("alarms").addEventListener("click", e => {
+  const button = e.target.closest("[data-alarm-pane]");
+  if (button) globalThis.DashboardPreferences?.openPane(button.dataset.alarmPane);
+});
 $("clear-filters").addEventListener("click", () => {
   filterIds.forEach(id => { $(id).value = ""; });
   renderRunRows();

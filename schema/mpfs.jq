@@ -9,7 +9,7 @@ elif .container.name != (if $service == "collector-legacy-mpfs" then "mpfs-compo
 elif (.container.status as $state | ["created","running","paused","restarting","removing","exited","dead","missing"] | index($state)) == null then fail
 elif (if .container.status == "missing" then .container.image != null
       else (.container.image | type) != "string" or (.container.image | length) > 200
-        or (.container.image | test("^ghcr.io/cardano-foundation/mpfs/mpfs:[A-Za-z0-9_.-]+$") | not) end) then fail
+        or (.container.image | test("^ghcr\\.io/cardano-foundation/mpfs/mpfs:[A-Za-z0-9_.-]+(@sha256:[a-f0-9]{64})?\\z") | not) end) then fail
 elif (.api | exact(["reachable","http_status"]) | not) then fail
 elif (.api.reachable | type) != "boolean" then fail
 elif (.api.http_status != null and ((.api.http_status | slot) | not)) then fail
