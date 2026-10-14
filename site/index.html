@@ -320,7 +320,7 @@ footer a { color: var(--muted); }
   </div>
   <div class="results-meta"><span class="meta" id="runs-count" role="status">Loading runs…</span><button class="clear-filters" id="clear-filters" type="button" hidden>Clear filters</button></div>
   <div class="panel"><table class="runs-table" aria-label="Test runs">
-    <thead><tr><th scope="col">Testnet</th><th scope="col" class="hide-md">Commit · try</th><th scope="col" class="hide-sm">Started</th><th scope="col" class="hide-md">Hours</th><th scope="col">Antithesis</th><th scope="col">On chain</th><th scope="col" aria-label="Report actions"></th></tr></thead>
+    <thead><tr><th scope="col">Testnet</th><th scope="col" class="hide-md">Commit / try</th><th scope="col" class="hide-sm">Started</th><th scope="col" class="hide-md">Hours</th><th scope="col">Antithesis</th><th scope="col">On chain</th><th scope="col" aria-label="Report actions"></th></tr></thead>
     <tbody id="runs"><tr><td colspan="7" class="empty">Loading runs…</td></tr></tbody>
   </table></div>
   <p class="section-note">Select a run for properties, counterexamples, and Docker Compose. On-chain records without an Antithesis run have no detail view. Result counts include groups and events; they are not counts of distinct bugs.</p>
@@ -589,8 +589,8 @@ function testRowHtml(x, repo, chainMeasured = false) {
   const chain = f ? '<div class="cell-stack" title="slot ' + esc(f.slot) + '">' + phaseChip(f.phase) + outcomeChip(f) + '</div>' : '<span class="ignored">' + (!identityKnown ? 'Run identity unavailable' : chainMeasured ? 'No matching record' : 'On-chain coverage unavailable') + '</span>';
   const title = r ? '<button type="button" class="run-toggle run-title" aria-expanded="false" aria-label="Details for ' + esc(testnet(dir)) + ', try ' + esc(t ?? '–') + '">' + esc(testnet(dir)) + '</button>' : '<span class="run-title">' + esc(testnet(dir)) + '</span>';
   return '<tr' + (r ? ' data-run="' + esc(r.run_id) + '"' : '') + '>' +
-    '<td>' + title + '<div class="mobile-meta">' + commitLink(repo, cm) + ' · try ' + esc(t ?? '–') + (hours !== '–' ? ' · ' + hours + ' h' : '') + (r ? '<span class="mobile-time"> · ' + when(r.created_at) + '</span>' : '') + '</div></td>' +
-    '<td class="hide-md">' + commitLink(repo, cm) + '<div class="ignored">try ' + esc(t ?? '–') + '</div></td>' +
+    '<td>' + title + '<div class="mobile-meta">' + commitLink(repo, cm) + ' / ' + esc(t ?? '–') + (hours !== '–' ? ' · ' + hours + ' h' : '') + (r ? '<span class="mobile-time"> · ' + when(r.created_at) + '</span>' : '') + '</div></td>' +
+    '<td class="hide-md">' + commitLink(repo, cm) + ' / ' + esc(t ?? '–') + '</td>' +
     '<td class="hide-sm" title="' + esc(r?.created_at || '') + '">' + (r ? when(r.created_at) : '<span class="ignored">Not recorded</span>') + '</td>' +
     '<td class="hide-md mono">' + hours + '</td>' +
     '<td data-label="Antithesis">' + anti + '</td><td data-label="On chain">' + chain + '</td><td class="row-actions">' + (r ? reportLink(r.run_id, true) : '') + '</td></tr>';

@@ -310,14 +310,9 @@ row_props_summary() {
         fn="row_${name//-/_}"
         "$fn" || fail=1
     done
-    leftovers=$(timeout 20 docker ps -a --format '{{.Names}}' 2>/dev/null | grep -iE 'reporter-smoke-|push-verdict-smoke-|^smoke-' || true)
-    leftovers_vol=$(timeout 20 docker volume ls --format '{{.Name}}' 2>/dev/null | grep -iE 'reporter-smoke-|push-verdict-smoke-|^smoke-' || true)
-    if [[ -n $leftovers || -n $leftovers_vol ]]; then
-        printf 'leftover containers/volumes:\n%s\n%s\n' "$leftovers" "$leftovers_vol" >&2
-        fail=1
-    else
-        printf '# no leftover smoke containers or volumes\n'
-    fi
+    # A shared-daemon census includes cancelled and concurrent runs' resources.
+    # Restore the cleanup claim with run ownership and negative controls in #56.
+    printf '# PENDING: smoke-resource cleanup isolation (GitHub issue #56)\n'
     if [[ -n $(git status --porcelain) ]]; then
         printf 'ABORT: tree dirty at end\n' >&2
         git status --porcelain >&2
