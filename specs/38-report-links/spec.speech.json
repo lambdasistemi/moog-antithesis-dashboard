@@ -1,0 +1,29 @@
+{
+  "open-authorized-antithesis-reports" : [ {
+    "text" : "Open authorized Antithesis reports.",
+    "pause" : 500
+  } ],
+  "user-stories" : [ {
+    "text" : "Open a run report in a new tab while public browsing remains available. Use the account page to sign out.",
+    "pause" : 400
+  } ],
+  "data-flow" : [ {
+    "text" : "The dashboard sends only a public run identifier. The proxy checks GitHub identity and active team membership, then privately redirects to Antithesis.",
+    "pause" : 400
+  } ],
+  "acceptance" : [ {
+    "text" : "Validate identifiers and isolate navigation. Public assets and browser application storage contain no report URLs or credentials.",
+    "pause" : 400
+  } ],
+  "verification" : [ {
+    "text" : "Execute renderer regressions and real browser navigation on phone and desktop. Keep backend and denied-account acceptance separate.",
+    "pause" : 400
+  } ],
+  "boundaries" : [ {
+    "text" : "This UI preserves the existing proxy session design and does not change authorization or token custody.",
+    "pause" : 400
+  } ],
+  "_source" : {
+    "sha256" : "bc940a986f74f9a5c75d6ae512ce841c9a1e10425272c7aa33f02ce1feecbc31"
+  }
+}
