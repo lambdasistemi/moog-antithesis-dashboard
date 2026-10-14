@@ -66,6 +66,10 @@ header { display: flex; flex-wrap: wrap; align-items: center; justify-content: s
 .button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-height: 38px; background: var(--panel); }
 .button:hover { background: var(--idle-bg); }
 .report-link { display: inline-flex; align-items: center; padding: 4px 0; font-size: 12px; font-weight: 500; }
+.report-icon { justify-content: center; width: 100%; max-width: 40px; height: 40px; padding: 0; border-radius: 6px; }
+.report-icon:hover { background: var(--run-bg); }
+.report-icon svg { width: 18px; height: 18px; }
+.runs-table .row-actions { padding-inline: 0; text-align: center; }
 .tabs { display: flex; flex-wrap: wrap; gap: 0 28px; margin-top: 30px; border-bottom: 1px solid var(--line); }
 .tabs button { position: relative; font-weight: 500; padding: 12px 0 16px; color: var(--muted); border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tabs button:hover { color: var(--ink); }
@@ -118,8 +122,9 @@ tr:last-child > td { border-bottom: 0; }
 .runs-table > thead > tr > th:nth-child(2) { width: 13%; }
 .runs-table > thead > tr > th:nth-child(3) { width: 16%; }
 .runs-table > thead > tr > th:nth-child(4) { width: 8%; }
-.runs-table > thead > tr > th:nth-child(5) { width: 21%; }
+.runs-table > thead > tr > th:nth-child(5) { width: 15%; }
 .runs-table > thead > tr > th:nth-child(6) { width: 18%; }
+.runs-table > thead > tr > th:nth-child(7) { width: 6%; }
 .failing { color: var(--bad); font-size: 12px; }
 .ignored { color: var(--muted); font-size: 12px; }
 .cell-stack { display: flex; align-items: flex-start; gap: 5px; flex-wrap: wrap; }
@@ -173,9 +178,9 @@ footer a { color: var(--muted); }
   main { padding: 24px; }
   th, td { padding: 12px 10px; }
   .hide-md { display: none; }
-  .runs-table > thead > tr > th:nth-child(1) { width: 30%; }
-  .runs-table > thead > tr > th:nth-child(3) { width: 20%; }
-  .runs-table > thead > tr > th:nth-child(5), .runs-table > thead > tr > th:nth-child(6) { width: 25%; }
+  .runs-table > thead > tr > th:nth-child(1) { width: 29%; }
+  .runs-table > thead > tr > th:nth-child(3) { width: 19%; }
+  .runs-table > thead > tr > th:nth-child(5), .runs-table > thead > tr > th:nth-child(6) { width: 23%; }
   .mobile-meta { display: block; font-size: 11px; color: var(--muted); margin-top: 5px; }
 }
 @media (max-width: 600px) {
@@ -204,7 +209,8 @@ footer a { color: var(--muted); }
   #runs > tr:not(.detail-row) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 16px; gap: 12px; border-bottom: 1px solid var(--line); }
   #runs > tr:last-child { border-bottom: 0; }
   #runs > tr > td { display: block; border: 0; padding: 0; min-width: 0; }
-  #runs > tr > td:first-child { grid-column: 1 / -1; }
+  #runs > tr > td:first-child { grid-column: 1 / -1; grid-row: 1; padding-right: 48px; }
+  #runs > tr > td.row-actions { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; width: 40px; }
   #runs > tr > td.hide-sm, #runs > tr > td.hide-md { display: none; }
   #runs > tr > td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; color: var(--muted); margin-bottom: 5px; }
   #runs > tr.detail-row { display: block; border-bottom: 1px solid var(--line); }
@@ -314,8 +320,8 @@ footer a { color: var(--muted); }
   </div>
   <div class="results-meta"><span class="meta" id="runs-count" role="status">Loading runs…</span><button class="clear-filters" id="clear-filters" type="button" hidden>Clear filters</button></div>
   <div class="panel"><table class="runs-table" aria-label="Test runs">
-    <thead><tr><th scope="col">Testnet</th><th scope="col" class="hide-md">Commit · try</th><th scope="col" class="hide-sm">Started</th><th scope="col" class="hide-md">Hours</th><th scope="col">Antithesis</th><th scope="col">On chain</th></tr></thead>
-    <tbody id="runs"><tr><td colspan="6" class="empty">Loading runs…</td></tr></tbody>
+    <thead><tr><th scope="col">Testnet</th><th scope="col" class="hide-md">Commit · try</th><th scope="col" class="hide-sm">Started</th><th scope="col" class="hide-md">Hours</th><th scope="col">Antithesis</th><th scope="col">On chain</th><th scope="col" aria-label="Report actions"></th></tr></thead>
+    <tbody id="runs"><tr><td colspan="7" class="empty">Loading runs…</td></tr></tbody>
   </table></div>
   <p class="section-note">Select a run for properties, counterexamples, and Docker Compose. On-chain records without an Antithesis run have no detail view. Result counts include groups and events; they are not counts of distinct bugs.</p>
   <p class="section-note">Reports require active GitHub membership in <span class="mono">pragma-org/antithesis-access</span>. Sign-in opens at the Antithesis proxy. <a href="https://antithesis-proxy.plutimus.com/browser/account" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Account &amp; sign out ↗</a></p>
@@ -333,9 +339,10 @@ const STALE_AFTER_S = 25 * 60;
 const POLL_MS = 60 * 1000;
 const REPORT_PROXY_ORIGIN = "https://antithesis-proxy.plutimus.com";
 
-function reportLink(id) {
+function reportLink(id, icon = false) {
   if (typeof id !== "string" || id.length === 0 || id.length > 128 || /[^A-Za-z0-9_-]/.test(id)) return "";
-  return `<a class="report-link" href="${REPORT_PROXY_ORIGIN}/browser/report/${encodeURIComponent(id)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" title="Opens a new tab; GitHub team access required">Open report ↗</a>`;
+  const label = icon ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7m0-7L10 14"></path><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"></path></svg>' : 'Open report ↗';
+  return `<a class="report-link${icon ? ' report-icon' : ''}" href="${REPORT_PROXY_ORIGIN}/browser/report/${encodeURIComponent(id)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-label="Open report" title="Open Antithesis report in a new tab; GitHub team access required">${label}</a>`;
 }
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -577,7 +584,7 @@ function testRowHtml(x, repo, chainMeasured = false) {
   repo = r?.repository || f?.repository || repo;
   const dir = r ? r.directory : f.directory, cm = r ? r.commit : f.commit, t = r ? r.try : f.try;
   const hours = r && r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–";
-  const anti = r ? '<div class="cell-stack">' + propsCell(r.properties, r.status) + reportLink(r.run_id) + '</div>' : '<span class="ignored">No run in snapshot</span>';
+  const anti = r ? propsCell(r.properties, r.status) : '<span class="ignored">No run in snapshot</span>';
   const identityKnown = r && [r.requester, r.platform, r.repository, r.directory, r.commit, r.try].every(v => v != null && v !== "");
   const chain = f ? '<div class="cell-stack" title="slot ' + esc(f.slot) + '">' + phaseChip(f.phase) + outcomeChip(f) + '</div>' : '<span class="ignored">' + (!identityKnown ? 'Run identity unavailable' : chainMeasured ? 'No matching record' : 'On-chain coverage unavailable') + '</span>';
   const title = r ? '<button type="button" class="run-toggle run-title" aria-expanded="false" aria-label="Details for ' + esc(testnet(dir)) + ', try ' + esc(t ?? '–') + '">' + esc(testnet(dir)) + '</button>' : '<span class="run-title">' + esc(testnet(dir)) + '</span>';
@@ -586,7 +593,7 @@ function testRowHtml(x, repo, chainMeasured = false) {
     '<td class="hide-md">' + commitLink(repo, cm) + '<div class="ignored">try ' + esc(t ?? '–') + '</div></td>' +
     '<td class="hide-sm" title="' + esc(r?.created_at || '') + '">' + (r ? when(r.created_at) : '<span class="ignored">Not recorded</span>') + '</td>' +
     '<td class="hide-md mono">' + hours + '</td>' +
-    '<td data-label="Antithesis">' + anti + '</td><td data-label="On chain">' + chain + '</td></tr>';
+    '<td data-label="Antithesis">' + anti + '</td><td data-label="On chain">' + chain + '</td><td class="row-actions">' + (r ? reportLink(r.run_id, true) : '') + '</td></tr>';
 }
 
 const filterIds = ["flt-q", "flt-status", "flt-result", "flt-phase", "flt-testnet"];
@@ -597,8 +604,8 @@ function renderRunRows() {
   const extra = ["flt-result", "flt-phase"].filter(id => $(id).value).length;
   $("extra-filter-count").textContent = extra ? ' (' + extra + ')' : '';
   $("runs-count").textContent = rows.length + ' of ' + testRows.length + ' records' + (filtered ? ' · filtered' : ' · newest runs first');
-  if (!testRows.length) { $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>No runs yet</strong>Runs and on-chain records will appear after collection.</td></tr>'; return; }
-  if (!rows.length) { $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>No matching runs</strong>Try another search or clear the filters.</td></tr>'; return; }
+  if (!testRows.length) { $("runs").innerHTML = '<tr><td colspan="7" class="empty"><strong>No runs yet</strong>Runs and on-chain records will appear after collection.</td></tr>'; return; }
+  if (!rows.length) { $("runs").innerHTML = '<tr><td colspan="7" class="empty"><strong>No matching runs</strong>Try another search or clear the filters.</td></tr>'; return; }
   const chainMeasured = last.chain?.scope === "all_requesters" && last.sources?.chain?.status === "ok";
   $("runs").innerHTML = rows.map(x => testRowHtml(x, last.repository, chainMeasured)).join("");
 }
@@ -729,7 +736,7 @@ async function expandRow(id, propName, scroll = true) {
     tr.classList.add("open");
     tr.querySelector(".run-toggle").setAttribute("aria-expanded", "true");
     tr.insertAdjacentHTML("afterend",
-      `<tr class="detail-row"><td colspan="6"><div class="empty">Loading ${esc(id)}…</div></td></tr>`);
+      `<tr class="detail-row"><td colspan="7"><div class="empty">Loading ${esc(id)}…</div></td></tr>`);
   }
   const detailTr = tr.nextElementSibling;
   try {
@@ -819,7 +826,7 @@ async function load() {
     if (!last) {
       $("generated").textContent = "Snapshot unavailable";
       $("runs-count").textContent = "Unable to load runs";
-      $("runs").innerHTML = '<tr><td colspan="6" class="empty"><strong>Snapshot unavailable</strong>Use Refresh to try again.</td></tr>';
+      $("runs").innerHTML = '<tr><td colspan="7" class="empty"><strong>Snapshot unavailable</strong>Use Refresh to try again.</td></tr>';
     }
     b.classList.add("show");
     renderAlarms(last);

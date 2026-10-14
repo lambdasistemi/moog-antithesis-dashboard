@@ -18,3 +18,11 @@ then merge and deploy the matching image with preserved production settings.
 Execution: existing Codex seat, solo coordination/author/review; no extra agent
 or independent audit. Operator authorized the row links and deployment when
 ready. Same product scope and standing merge/deployment authority continue.
+
+## Row action refinement
+
+Move the run-row report action into a final icon cell, with an accessible
+Open report label and tooltip. Keep the text action in expanded details.
+Preserve run-ID validation and isolated proxy navigation. Adjust table spans
+and phone layout together; verify end-of-row placement, keyboard access,
+navigation isolation and320/390px layout using the existing browser checks.
