@@ -39,6 +39,41 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   refreshing, a banner names it and its last success instead of silently
   showing old numbers.
 
+## Open reports
+
+As an active `pragma-org/antithesis-access` member, select **Open report** on
+an Antithesis run row or its detail view. A new tab opens the Antithesis proxy
+with only the public run ID. The public dashboard stays open. Use **Account &
+sign out** below the run table to manage your proxy session.
+
+```mermaid
+flowchart TB
+  D[Dashboard] -->|Public run ID| P[Proxy sign-in]
+  P -->|Identity and current team check| G[GitHub]
+  G -->|Active member| L[Proxy report lookup]
+  L -->|Server API key| A[Antithesis API]
+  A -->|Private report URL| R[Proxy redirect]
+  R -->|Authorized navigation| T[Antithesis report]
+```
+
+The proxy handles GitHub sign-in, checks current team membership, retrieves
+the report with its server-side Antithesis API key and redirects directly to
+Antithesis. Running, missing, denied and service-failure responses disclose no
+report URL; retry from the dashboard when the condition changes. On-chain-only
+rows have no report action because they have no Antithesis run ID.
+
+Report URLs and user credentials do not enter public snapshots, static assets,
+dashboard application storage or telemetry. The current proxy holds user tokens
+in RAM sessions and sends opaque cookies to the browser; there is no session
+database. Browser-held tokens and Pragma-only GitHub App authorization are not
+part of this UI. Once disclosed, a report URL remains usable by anyone holding
+it; proxy sign-out does not revoke an already received URL.
+
+The [access preview](https://lambdasistemi.github.io/moog-antithesis-dashboard/access-prototype.html)
+demonstrates explicitly simulated outcomes. It performs no authorization and
+is not evidence that an account is allowed. Full installation and negative
+account acceptance remain tracked in [deployed report access](https://github.com/lambdasistemi/moog-antithesis-dashboard/issues/39).
+
 ## Collection design and delivery status
 
 GitHub supplies service observations and, in the approved wallet design, public

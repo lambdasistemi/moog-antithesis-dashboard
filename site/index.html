@@ -65,6 +65,7 @@ header { display: flex; flex-wrap: wrap; align-items: center; justify-content: s
 .theme-control:not(:defined) { visibility: hidden; }
 .button { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; min-height: 38px; background: var(--panel); }
 .button:hover { background: var(--idle-bg); }
+.report-link { display: inline-flex; align-items: center; padding: 4px 0; font-size: 12px; font-weight: 500; }
 .tabs { display: flex; gap: 28px; margin-top: 30px; border-bottom: 1px solid var(--line); }
 .tabs button { position: relative; font-weight: 500; padding: 12px 0 16px; color: var(--muted); border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tabs button:hover { color: var(--ink); }
@@ -308,11 +309,12 @@ footer a { color: var(--muted); }
     <tbody id="runs"><tr><td colspan="6" class="empty">Loading runs…</td></tr></tbody>
   </table></div>
   <p class="section-note">Select a run for properties, counterexamples, and Docker Compose. On-chain records without an Antithesis run have no detail view. Result counts include groups and events; they are not counts of distinct bugs.</p>
+  <p class="section-note">Reports require active GitHub membership in <span class="mono">pragma-org/antithesis-access</span>. Sign-in opens at the Antithesis proxy. <a href="https://antithesis-proxy.plutimus.com/browser/account" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Account &amp; sign out ↗</a></p>
   </section>
 
   <footer>
     <details><summary>About this data</summary><p>Moog → Antithesis pipeline · collected every 10 minutes, checked for updates every minute. Each source keeps its last good value when it fails. Test runs are joined with their on-chain records. The property “Recent software version provided” is shown separately because it is outside this pipeline's control.</p></details>
-    <div><a href="swagger.html">Snapshot API</a> · <a href="openapi.json">OpenAPI schema</a></div>
+    <div><a href="swagger.html">Snapshot API</a> · <a href="openapi.json">OpenAPI schema</a> · <a href="access-prototype.html">Access preview</a></div>
   </footer>
 </main>
 <script src="compose.js"></script>
@@ -320,6 +322,12 @@ footer a { color: var(--muted); }
 const IGNORED = new Set(["Recent software version provided"]);
 const STALE_AFTER_S = 25 * 60;
 const POLL_MS = 60 * 1000;
+const REPORT_PROXY_ORIGIN = "https://antithesis-proxy.plutimus.com";
+
+function reportLink(id) {
+  if (typeof id !== "string" || id.length === 0 || id.length > 128 || /[^A-Za-z0-9_-]/.test(id)) return "";
+  return `<a class="report-link" href="${REPORT_PROXY_ORIGIN}/browser/report/${encodeURIComponent(id)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" title="Opens a new tab; GitHub team access required">Open report ↗</a>`;
+}
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const chip = (cls, text) => `<span class="chip ${cls}">${esc(text)}</span>`;
@@ -504,7 +512,7 @@ function testRowHtml(x, repo, chainMeasured = false) {
   repo = r?.repository || f?.repository || repo;
   const dir = r ? r.directory : f.directory, cm = r ? r.commit : f.commit, t = r ? r.try : f.try;
   const hours = r && r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–";
-  const anti = r ? '<div class="cell-stack">' + propsCell(r.properties, r.status) + '</div>' : '<span class="ignored">No run in snapshot</span>';
+  const anti = r ? '<div class="cell-stack">' + propsCell(r.properties, r.status) + reportLink(r.run_id) + '</div>' : '<span class="ignored">No run in snapshot</span>';
   const identityKnown = r && [r.requester, r.platform, r.repository, r.directory, r.commit, r.try].every(v => v != null && v !== "");
   const chain = f ? '<div class="cell-stack" title="slot ' + esc(f.slot) + '">' + phaseChip(f.phase) + outcomeChip(f) + '</div>' : '<span class="ignored">' + (!identityKnown ? 'Run identity unavailable' : chainMeasured ? 'No matching record' : 'On-chain coverage unavailable') + '</span>';
   const title = r ? '<button type="button" class="run-toggle run-title" aria-expanded="false" aria-label="Details for ' + esc(testnet(dir)) + ', try ' + esc(t ?? '–') + '">' + esc(testnet(dir)) + '</button>' : '<span class="run-title">' + esc(testnet(dir)) + '</span>';
@@ -599,7 +607,7 @@ function ceHtml(c) {
 }
 
 function detailHtml(d) {
-  if (d.unavailable) return `<div class="empty">Detail for this run is not available yet; it appears once the collector has fetched it.</div>` + ComposeViewer.html(d);
+  if (d.unavailable) return reportLink(d.run_id) + `<div class="empty">Detail for this run is not available yet; it appears once the collector has fetched it.</div>` + ComposeViewer.html(d);
   const st = d.status === "completed" ? "" : d.status === "in_progress" ? chip("run", "running")
     : chip("idle", d.status || "?");
   const params = Object.entries(d.parameters || {}).map(([k, v]) =>
@@ -618,6 +626,7 @@ function detailHtml(d) {
     ? `${esc(d.chain.phase)} · ${esc(d.chain.outcome || "–")} · slot <span class="mono">${esc(d.chain.slot)}</span>`
     : "no matching on-chain record";
   return `<h3 style="font-size:15px;margin:10px 0">${esc(testnet(d.directory))} <span class="mono">${short(d.commit)} · try ${esc(d.try ?? "–")}</span> ${st}</h3>
+    ${reportLink(d.run_id)}
     <details class="detail-fold"><summary>Run metadata</summary><dl class="kv">
       <dt>run id</dt><dd class="mono">${esc(d.run_id)}</dd>
       <dt>created</dt><dd>${esc(d.created_at || "–")}</dd>
