@@ -1,0 +1,25 @@
+{
+  "accurate-test-run-context" : [ {
+    "text" : "Accurate test-run context.",
+    "pause" : 500
+  } ],
+  "user-stories" : [ {
+    "text" : "Public records match every requester. Descriptions start folded. Workflow activity appears independently in Pipeline.",
+    "pause" : 400
+  } ],
+  "data-flow" : [ {
+    "text" : "The collector joins public facts and Antithesis runs using requester, directory, commit and try. GitHub workflow receipts remain separate.",
+    "pause" : 400
+  } ],
+  "acceptance" : [ {
+    "text" : "Collect all public records, retain every visible match and show unknown coverage honestly. Preserve private report exclusion and source isolation.",
+    "pause" : 400
+  } ],
+  "verification" : [ {
+    "text" : "Run regression gates and verify the previously missing requester records against live data.",
+    "pause" : 400
+  } ],
+  "_source" : {
+    "sha256" : "bdc58df8552791f6087d27e4e298267ec7113ca96ebf49786cdae9ad3e81a014"
+  }
+}
