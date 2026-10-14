@@ -16,9 +16,17 @@ context.run = {run_id: 'summary-test', status: 'completed', properties: {total: 
 const row = vm.runInContext('testRowHtml({run, fact:null}, "owner/repo")', context);
 assert.match(row, /30 failing/);
 assert.match(row, /0 passing/);
-assert.match(row, /31 reported results/);
+assert.doesNotMatch(row, /31 reported results/);
+assert.doesNotMatch(row, />completed</);
 assert.doesNotMatch(row, /Praos latency failure/, 'Failure names overwhelm the summary row');
 assert.match(row, /1 outside pipeline control/);
+for (const [status, label] of [['incomplete', 'incomplete'], ['in_progress', 'running']]) {
+  context.run.status = status;
+  const pendingRow = vm.runInContext('testRowHtml({run, fact:null}, "owner/repo")', context);
+  assert.match(pendingRow, new RegExp(`>${label}<`));
+  assert.doesNotMatch(pendingRow, /\d+ passing|\d+ failing/);
+}
+context.run.status = 'completed';
 context.detail = {run_id: context.run.run_id, status: 'completed', properties: context.run.properties.failing.map(name => ({name, status: 'Failing'}))};
 const detail = vm.runInContext('detailHtml(detail)', context);
 for (const name of context.run.properties.failing) assert.ok(detail.includes(name), `Expanded detail lost ${name}`);
