@@ -22,6 +22,12 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   ready, and the freshness monitor is happy. A stale source is labelled
   `stale` instead of blanking the page, and a snapshot older than 25 minutes
   raises a banner that the collector may be stopped.
+- **Someone checking alarms** opens Alarms to inspect stale or unavailable sources
+  and explicit service problems. The tab badge and browser title carry the same
+  current count. Each source is counted once; retained old health never becomes a
+  fresh service failure. Snapshot age and refresh failures have separate entries.
+  Counts clear on recovery. Test assertions stay in Test runs; no synchronization
+  lag threshold is assumed.
 - **Someone inspecting a test** expands its run details, then opens the collapsed
   Docker Compose section. YAML services and nested sections fold; Copy and
   Download expose the same local-use file with `INTERNAL_NETWORK=true`. The
@@ -29,7 +35,7 @@ Live page: https://lambdasistemi.github.io/moog-antithesis-dashboard/
   explicitly. Companion files and container images are not bundled.
 - **Someone returning to the dashboard** finds their selected tab and theme
   restored from browser local storage. Test runs opens on a first visit; Pipeline,
-  MPFS and Accounts have separate panes. A Web Awesome button group offers
+  MPFS, Accounts and Alarms have separate panes. A Web Awesome button group offers
   Light, Dark and System, with compact labeled icons on small screens.
   Run rows show failure counts; expanding a run reveals the full property list.
   A run link opens Test runs without changing the saved tab. When browser storage

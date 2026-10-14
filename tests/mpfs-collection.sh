@@ -14,7 +14,7 @@ now=$(date -u +%FT%TZ)
 sample() {
     jq -n --arg t "$now" --arg id "$1" --arg name "$2" --argjson used "$3" '
       {role:"mpfs",service_id:$id,used_by:$used,network:"preprod",
-       container:{name:$name,image:"ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.0",status:"running"},
+       container:{name:$name,image:"ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.1@sha256:7ae4f6dbadde0f823371a0aba6173807e89d7d2167de5db9bfd72951e9df524b",status:"running"},
        api:{reachable:true,http_status:200},
        synchronization:{status:"observed",ready:true,network_tip_slot:100,indexer_tip_slot:100,lag_slots:0},reported_at:$t}'
 }

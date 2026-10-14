@@ -34,9 +34,9 @@ export MPFS_PROBE_URL=http://fixture/tokens
 export STATUS_TOKEN_FILE="$work/token" STATUS_ISSUE_NUMBER=30
 export REPORT_STATE_FILE="$work/state.json" REPORT_HEARTBEAT_SECONDS=300
 sample() {
-    jq -n --arg uptime "$1" --arg state "${2:-running}" '
+    jq -n --arg uptime "$1" --arg state "${2:-running}" --arg image "${3:-ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.0}" '
       [{Names:["/unrelated-mpfs"],Image:"private-image",State:"running"},
-       {Names:["/mpfs-compose-mpfs-1"],Image:"ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.0",State:$state,Status:$uptime}]' >"$work/containers"
+       {Names:["/mpfs-compose-mpfs-1"],Image:$image,State:$state,Status:$uptime}]' >"$work/containers"
 }
 probe() {
     printf '%s' "${1:-200}" >"$work/http"
@@ -53,6 +53,20 @@ count() {
         exit 1
     }
 }
+pinned=ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.1@sha256:7ae4f6dbadde0f823371a0aba6173807e89d7d2167de5db9bfd72951e9df524b
+sample 'Up 1 minute' running "$pinned"
+probe
+REPORT_DRY_RUN=1 report >"$work/payload"
+jq -e --arg image "$pinned" '.container.image==$image' "$work/payload" >/dev/null
+for image in "$pinned?token=private" "$pinned/extra" "${pinned%?}" "$pinned"$'\n' \
+    'ghcr.io/other/mpfs:v1.3.1' 'ghcr.io/cardano-foundation/mpfs/mpfs:v1.3.1@sha256:xyz'; do
+    sample 'Up 1 minute' running "$image"
+    if REPORT_DRY_RUN=1 report >"$work/payload" 2>/dev/null; then
+        echo 'mpfs: malformed or private image accepted' >&2
+        exit 1
+    fi
+    test ! -s "$work/payload"
+done
 sample 'Up 1 minute'
 probe
 REPORT_DRY_RUN=1 report >"$work/payload"

@@ -1,0 +1,25 @@
+{
+  "user-story" : [ {
+    "text" : "Open Alarms to inspect current source and service problems, with matching pane and browser title counts.",
+    "pause" : 400
+  } ],
+  "data-flow" : [ {
+    "text" : "Scheduled reporters publish to GitHub. The collector makes a snapshot and the dashboard renders alarms.",
+    "pause" : 400
+  } ],
+  "alarm-rules" : [ {
+    "text" : "Count a source once and prefer freshness over retained health. Snapshot age and refresh failures are separate. Clear counts after recovery.",
+    "pause" : 400
+  } ],
+  "acceptance" : [ {
+    "text" : "Run reporter, collector, user interface and preference checks, then verify current deployed timestamps and mobile layouts.",
+    "pause" : 400
+  } ],
+  "boundaries" : [ {
+    "text" : "Preserve secrets, authorization and chain state. Add no notification channel and change no backend deployment version.",
+    "pause" : 400
+  } ],
+  "_source" : {
+    "sha256" : "708f25bf8ad89cf6f8382e2c200351ffc6405d4ff5e54464e4fb21ce3fedcd43"
+  }
+}

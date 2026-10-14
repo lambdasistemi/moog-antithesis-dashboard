@@ -15,7 +15,7 @@
   ],
   "who-this-is-for": [
     {
-      "text": "Who this is for.",
+      "text": "Who this is for. Alarms shows current source and service problems with matching pane and browser title counts. Old health stays stale and counts clear on recovery.",
       "pause": 500
     },
     {
@@ -31,7 +31,7 @@
       "pause": 300
     },
     {
-      "text": "Someone returning to the dashboard finds their selected tab and theme restored from browser local storage. Test runs opens on a first visit. Pipeline, MPFS and Accounts have separate panes. A Web Awesome button group offers Light, Dark and System, with compact labeled icons on small screens. Run rows show failure counts; expanding a run reveals the full property list. A run link opens Test runs without changing the saved tab. When browser storage is unavailable, controls still work for the current visit.",
+      "text": "Someone returning to the dashboard finds their selected tab and theme restored from browser local storage. Test runs opens on a first visit. Pipeline, MPFS, Accounts and Alarms have separate panes. A Web Awesome button group offers Light, Dark and System, with compact labeled icons on small screens. Run rows show failure counts; expanding a run reveals the full property list. A run link opens Test runs without changing the saved tab. When browser storage is unavailable, controls still work for the current visit.",
       "pause": 300
     },
     {
@@ -258,6 +258,6 @@
   "open-reports": [{"text":"Open a report from its run row in a new tab. The proxy verifies GitHub identity and active Pragma team membership, then privately redirects to Antithesis. Public browsing stays open. Use the account page to sign out. The access preview is explicitly simulated. Current user tokens stay in proxy RAM sessions with opaque browser cookies; no session database is used.","pause":400}],
   "_source": {
     "file": "README.md",
-    "sha256": "798163feddb2752748e305efcabb2f58283fba93affade31c31140d099902e35"
+    "sha256": "3ee8219ee89614f4deb262fd74773f6d61eb13c34898466edf0c3d9929a7ec3a"
   }
 }
