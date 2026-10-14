@@ -434,13 +434,14 @@ function renderWallets(d) {
 }
 
 function propsCell(p, status) {
-  if (status === "in_progress") return `<span class="ignored">running</span>`;
+  if (status !== "completed") return status === "in_progress" ? chip("run", "running")
+    : status === "incomplete" ? chip("warn", "incomplete") : chip("idle", status || "?");
   if (!p) return `<span class="ignored">results unavailable</span>`;
   if (p.total === 0) return `<span class="ignored">no reported results</span>`;
   const real = p.failing.filter(n => !IGNORED.has(n)), ignored = p.failing.filter(n => IGNORED.has(n));
   const passing = p.total - real.length - ignored.length;
   return chip(real.length ? "bad" : "ok", `${passing} passing · ${real.length} failing`)
-    + `<div class="ignored">${p.total} reported results${ignored.length ? ` · ${ignored.length} outside pipeline control` : ""}</div>`;
+    + (ignored.length ? `<div class="ignored">${ignored.length} outside pipeline control</div>` : "");
 }
 
 let testRows = []; // {run, fact}, either side may be missing
@@ -504,9 +505,7 @@ function testRowHtml(x, repo) {
   const r = x.run, f = x.fact;
   const dir = r ? r.directory : f.directory, cm = r ? r.commit : f.commit, t = r ? r.try : f.try;
   const hours = r && r.duration_minutes ? (r.duration_minutes / 60).toFixed(r.duration_minutes % 60 ? 1 : 0) : "–";
-  const st = s => s === "completed" ? chip("idle", "completed") : s === "in_progress" ? chip("run", "running")
-    : s === "incomplete" ? chip("warn", "incomplete") : chip("idle", s);
-  const anti = r ? '<div class="cell-stack">' + st(r.status) + (r.status === "in_progress" ? '' : propsCell(r.properties, r.status)) + '</div>' : '<span class="ignored">No run in snapshot</span>';
+  const anti = r ? '<div class="cell-stack">' + propsCell(r.properties, r.status) + '</div>' : '<span class="ignored">No run in snapshot</span>';
   const chain = f ? '<div class="cell-stack" title="slot ' + esc(f.slot) + '">' + phaseChip(f.phase) + outcomeChip(f) + '</div>' : '<span class="ignored">No matching record</span>';
   const title = r ? '<button type="button" class="run-toggle run-title" aria-expanded="false" aria-label="Details for ' + esc(testnet(dir)) + ', try ' + esc(t ?? '–') + '">' + esc(testnet(dir)) + '</button>' : '<span class="run-title">' + esc(testnet(dir)) + '</span>';
   return '<tr' + (r ? ' data-run="' + esc(r.run_id) + '"' : '') + '>' +
@@ -594,7 +593,7 @@ function ceHtml(c) {
 
 function detailHtml(d) {
   if (d.unavailable) return `<div class="empty">Detail for this run is not available yet; it appears once the collector has fetched it.</div>` + ComposeViewer.html(d);
-  const st = d.status === "completed" ? chip("idle", "completed") : d.status === "in_progress" ? chip("run", "running")
+  const st = d.status === "completed" ? "" : d.status === "in_progress" ? chip("run", "running")
     : chip("idle", d.status || "?");
   const params = Object.entries(d.parameters || {}).map(([k, v]) =>
     `<tr><td class="mono">${esc(k)}</td><td class="mono">${esc(v)}</td></tr>`).join("");
