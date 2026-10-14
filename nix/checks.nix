@@ -33,7 +33,7 @@ let
     docs-presentation = {
       runtimeInputs = [ pkgs.python3 ];
       text = ''
-        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md specs/29-mpfs-status/spec.md specs/49-run-record-coverage/spec.md
+        python3 tools/check_presentation.py --front README.md README.md docs/transport-design.md docs/runbook.md specs/29-mpfs-status/spec.md specs/49-run-record-coverage/spec.md specs/38-report-links/spec.md
       '';
     };
 
@@ -1326,8 +1326,10 @@ PY
         node --check "$js_out"
         node --check site/compose.js
         node --check site/preferences.js
+        node --check site/access-prototype.js
         node tests/preferences.js
         node tests/run-summary.js
+        node tests/report-access.js
         python3 -c "
 import html.parser, sys
 
@@ -1349,14 +1351,15 @@ class P(html.parser.HTMLParser):
         if open_tag != tag:
             self.err = f'<{open_tag}> opened at {pos} closed by </{tag}> at {self.getpos()}'
 
-p = P()
-p.feed(open('site/index.html').read())
-if p.err:
-    print(p.err)
-    sys.exit(1)
-if p.stack:
-    print(f'unclosed: {p.stack}')
-    sys.exit(1)
+for path in ['site/index.html', 'site/access-prototype.html']:
+    p = P()
+    p.feed(open(path).read())
+    if p.err:
+        print(f'{path}: {p.err}')
+        sys.exit(1)
+    if p.stack:
+        print(f'{path}: unclosed: {p.stack}')
+        sys.exit(1)
 print('site ok')
 "
         cat >"$TMPDIR/render-test.js" <<'DRIVER_EOF'

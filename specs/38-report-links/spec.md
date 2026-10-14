@@ -10,11 +10,13 @@ Public browsing continues when a report is missing, pending or refused.
 ## Data flow
 
 ```mermaid
-flowchart LR
-  D[Dashboard] -->|Public run ID| P[Antithesis proxy]
+flowchart TB
+  D[Dashboard] -->|Public run ID| P[Proxy sign-in]
   P -->|Identity and current team check| G[GitHub]
-  P -->|Authorized report lookup| A[Antithesis API]
-  P -->|Private redirect| R[Antithesis report]
+  G -->|Active member| L[Proxy report lookup]
+  L -->|Server API key| A[Antithesis API]
+  A -->|Private report URL| R[Proxy redirect]
+  R -->|Authorized navigation| T[Antithesis report]
 ```
 
 ## Acceptance

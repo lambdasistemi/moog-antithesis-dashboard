@@ -255,8 +255,9 @@
       "pause": 400
     }
   ],
+  "open-reports": [{"text":"Open a report from its run row in a new tab. The proxy verifies GitHub identity and active Pragma team membership, then privately redirects to Antithesis. Public browsing stays open. Use the account page to sign out. The access preview is explicitly simulated. Current user tokens stay in proxy RAM sessions with opaque browser cookies; no session database is used.","pause":400}],
   "_source": {
     "file": "README.md",
-    "sha256": "321ed2f5637dc5281db568f3a051bfd96899e40d354ca9756359456150f29eff"
+    "sha256": "798163feddb2752748e305efcabb2f58283fba93affade31c31140d099902e35"
   }
 }

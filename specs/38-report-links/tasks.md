@@ -2,10 +2,10 @@
 
 - [x] Bind public run-ID navigation to the tested deployed backend contract.
 - [x] Review plan and tasks locally in the existing solo seat.
-- [ ] Execute missing-link RED against the actual row renderer.
-- [ ] Implement row/detail report links and account navigation in one slice.
-- [ ] Publish labelled simulated-state preview and reader documentation.
-- [ ] Execute invalid-ID, isolated navigation, layout and preference checks.
+- [x] Execute missing-link RED against the actual row renderer.
+- [x] Implement row/detail report links and account navigation in one slice.
+- [x] Add labelled simulated-state preview and reader documentation for publication.
+- [x] Execute invalid-ID, isolated navigation, layout and preference checks.
 - [ ] Pass native checks and exact-head hosted CI before merge.
 - [ ] Deploy merged image, verify live links and preserve rollback evidence.
 
