@@ -12,7 +12,8 @@
       src = ./.;
       images = import ./nix/image.nix { inherit pkgs src; };
       reporterImages = import ./nix/reporter-image.nix { inherit pkgs src; };
-      checksFull = import ./nix/checks.nix { inherit pkgs src images reporterImages; };
+      deploy = import ./nix/deploy.nix { inherit pkgs src; };
+      checksFull = import ./nix/checks.nix { inherit pkgs src images reporterImages deploy; };
       checkApps = import ./nix/apps.nix { inherit pkgs; checks = checksFull; };
       previewApps = import ./nix/preview-apps.nix { inherit pkgs; };
       checks = builtins.removeAttrs checksFull [ "apps" ];
@@ -21,9 +22,14 @@
       packages.${system} = {
         collector-image = images.image;
         reporter-image = reporterImages.image;
+        collector-deploy = deploy.collectorDeploy;
       };
       checks.${system} = checks;
       apps.${system} = checkApps // previewApps // {
+        collector-deploy = {
+          type = "app";
+          program = pkgs.lib.getExe deploy.collectorDeploy;
+        };
         default = checkApps.shellcheck;
       };
       devShells.${system}.default = pkgs.mkShell {

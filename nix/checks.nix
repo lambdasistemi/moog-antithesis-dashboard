@@ -1,4 +1,4 @@
-{ pkgs, src, images, reporterImages }:
+{ pkgs, src, images, reporterImages, deploy }:
 let
   scripts = {
     compose-assets = {
@@ -40,14 +40,14 @@ let
     shellcheck = {
       runtimeInputs = [ pkgs.shellcheck ];
       text = ''
-        shellcheck collect/compose.sh tests/compose-assets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
+        shellcheck collect/compose.sh tests/compose-assets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh tests/deploy/fake-tool.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
     format-check = {
       runtimeInputs = [ pkgs.shfmt ];
       text = ''
-        shfmt -i 4 -d collect/compose.sh tests/compose-assets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
+        shfmt -i 4 -d collect/compose.sh tests/compose-assets.sh collect/collect.sh deploy/cycle.sh deploy/publish.sh deploy/loop.sh deploy/compare-live.sh tests/deploy/fake-tool.sh reporter/report.sh reporter/mpfs.sh reporter/loop.sh reporter/push-verdict.sh verify/reproduce.sh tests/mpfs-status.sh tests/mpfs-collection.sh
       '';
     };
 
@@ -55,6 +55,7 @@ let
       runtimeInputs = [ pkgs.bash ];
       text = ''
         bb --config bb.edn -e "(require 'dashboard.main)"
+        bb -cp host/src -e "(require 'dashboard.deploy)"
         bash -n collect/compose.sh
         bash -n tests/compose-assets.sh
         bash -n collect/collect.sh
@@ -62,6 +63,7 @@ let
         bash -n deploy/publish.sh
         bash -n deploy/loop.sh
         bash -n deploy/compare-live.sh
+        bash -n tests/deploy/fake-tool.sh
         bash -n reporter/report.sh
         bash -n reporter/mpfs.sh
         bash -n tests/mpfs-status.sh
@@ -1313,6 +1315,18 @@ EOF
       '';
     };
 
+    deploy-controls = {
+      inheritPath = false;
+      runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.gnused pkgs.gnugrep ];
+      text = ''
+        # Real collector-deploy against disposable fixtures behind fake
+        # gh, docker and curl: every refusal, rollback, Pages and
+        # serialization control executes the packaged command.
+        export DEPLOY_COMMAND=${deploy.collectorDeploy}/bin/collector-deploy
+        bb tests/deploy/controls.clj
+      '';
+    };
+
     site-check = {
       runtimeInputs = [ pkgs.python3 pkgs.nodejs ];
       text = ''
@@ -2005,6 +2019,7 @@ in
   publish-gate = mkCheck "publish-gate" scripts.publish-gate;
   site-check = mkCheck "site-check" scripts.site-check;
   loop-runtime = mkCheck "loop-runtime" scripts.loop-runtime;
+  deploy-controls = mkCheck "deploy-controls" scripts.deploy-controls;
   reporter-diff = mkCheck "reporter-diff" scripts.reporter-diff;
   monitor-http = mkCheck "monitor-http" scripts.monitor-http;
   schema-reject = mkCheck "schema-reject" scripts.schema-reject;

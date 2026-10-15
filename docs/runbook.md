@@ -49,7 +49,8 @@ exit 0 with 1486 facts; `token` exit 0 with the pending-request list.
 7. Flip the two GHCR packages
    (`moog-antithesis-dashboard`, `moog-antithesis-dashboard-reporter`) to
    public after the first push to main, so hosts pull without a credential.
-8. Pin deployed images to the merged commit SHA. Dry-run the collector
+8. Collector images are pinned and updated by the automatic deployment
+   described below; reporter images stay manual. Dry-run the collector
    first and compare with `deploy/compare-live.sh`, setting all installed
    `STATUS_ISSUE_*` numbers. The legacy timer is already disabled; leave
    it disabled. Save the current Compose configuration and image SHA
@@ -235,3 +236,91 @@ describes the public snapshot, not the external provider APIs. Try it out reads
 the same directory snapshot. CDN assets are version-pinned with integrity hashes;
 the specification is not sent to an external validation service. Schema CI
 checks recorded actual and unavailable snapshots and refuses malformed claims.
+
+## Automatic collector deployment
+
+As a dashboard maintainer, I merge a checked change and the running collector
+and public page update without manual deployment commands. The collector host
+polls GitHub, and one Nix-packaged Babashka command does everything:
+
+~~~sh
+nix run github:lambdasistemi/moog-antithesis-dashboard#collector-deploy -- update
+nix run github:lambdasistemi/moog-antithesis-dashboard#collector-deploy -- status
+nix run github:lambdasistemi/moog-antithesis-dashboard#collector-deploy -- rollback
+~~~
+
+`update` deploys only the current head of main, and only when its complete push
+CI run succeeded: every job is successful or skipped, and the collector image and
+reproduction jobs are both successful. Pull request runs, failed runs, pending
+runs and an older revision are refused with the reason printed and recorded.
+Image publication alone is not enough, because it precedes the final
+reproduction job. The head is read again after the image is pulled; if main
+moved, nothing deploys.
+
+The selected image is pulled by commit tag, bound to its registry digest, and
+pinned in `deployed-image.yaml` as `repository:tag@sha256:digest`. If the tag
+ever resolves to another digest, the update is refused. Only the collector
+service is recreated, with the existing `compose.yaml`, mounts, cache volume,
+secrets and environment untouched. Another container of the collector image
+outside the project, or a second running `update`, blocks the rollout. Repeating
+the same revision changes nothing.
+
+~~~mermaid
+flowchart LR
+  poll[Timer polls main] --> ci{Head CI complete and green?}
+  ci -- no --> refuse[Refuse and record]
+  ci -- yes --> pin[Pull and pin by digest]
+  pin --> up[Recreate collector]
+  up --> start{Stays running?}
+  start -- no --> back[Restore previous pin]
+  start --> cycle{New valid snapshot on gh-pages?}
+  cycle -- no --> back
+  cycle -- yes --> pages{Public page matches renderer?}
+  pages -- yes --> done[Healthy and published]
+  pages -- no --> wait[Report Pages pending or failed]
+~~~
+
+The diagram shows the three verdicts. A refused revision never reaches the
+collector. A collector that fails to start, or whose first cycle does not publish
+a new valid snapshot, gets the previous pinned override restored, and the failure
+is recorded in the state directory. A healthy collector whose page has not caught
+up is reported on its own, without a rollback and without touching GitHub Pages.
+
+Exit codes are 0 deployed or already current, 1 failed and rolled back, 2 refused,
+3 CI still running, 4 Pages pending, 5 Pages build failed. A revision that failed
+is not retried until `update --retry`. Pages pending or failed is re-observed on
+the next `update` without redeploying; the command never deletes, resets or
+recreates Pages.
+
+### Install on the collector host
+
+The unit pair is in `deploy/systemd/`. Copy both files to `/etc/systemd/system/`,
+set `User` and the three paths, then enable the timer:
+
+~~~sh
+systemctl daemon-reload
+systemctl enable --now collector-deploy.timer
+~~~
+
+The command needs `docker` with the Compose plugin on PATH, `bb`, `gh` and `curl`
+(the package supplies the last three). The GitHub token is the existing read file
+and reaches the command as a credential file; it needs Actions, contents and
+Pages read access. It is never an argument, never logged, and no token or
+Docker socket enters the collector container. State lives in
+`deploy-state/` beside the stack: `state.json`, `history.jsonl`, the previous
+override and `bindings.json`. The first update after installation recreates the
+collector once to move from a tag pin to a digest pin.
+
+### Status and rollback
+
+`status` prints the pinned image, the running container, the deployed revision,
+collector and Pages health, the previous pin and the last failure. `rollback`
+restores the previous pin and waits for it to run; it does nothing when no
+previous pin is recorded. If a rollback itself fails, `history.jsonl` records
+`rollback-failed` and the unit stays failed: restore `deploy-state/previous-override.yaml`
+over `deployed-image.yaml` by hand and run `docker compose up -d`.
+
+Timeouts are `DEPLOY_STARTUP_SECONDS`, `DEPLOY_SNAPSHOT_SECONDS` and
+`DEPLOY_PAGES_SECONDS`. The `deploy-controls` check runs the packaged command
+against disposable fixtures for every refusal, both rollback causes, Pages
+pending and failure, and serialization.
