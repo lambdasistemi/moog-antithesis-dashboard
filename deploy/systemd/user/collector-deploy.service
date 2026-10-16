@@ -1,0 +1,20 @@
+# Host-side collector rollout as a persistent USER unit (loginctl Linger=yes).
+# Install to ~/.config/systemd/user/ (see docs/runbook.md). The command is the
+# reviewed build in the user-owned, GC-rooted Nix profile; the timer never
+# resolves or runs unchecked code from main. Exit 2 (refused) and 3/4 (CI or
+# Pages pending) are normal; 1 (rolled back) and 5 (Pages failed) leave the
+# unit failed so `systemctl --user --failed` shows them.
+[Unit]
+Description=Deploy the dashboard collector after a green main
+
+[Service]
+Type=oneshot
+Environment=PATH=/run/current-system/sw/bin
+Environment=DEPLOY_STACK_DIR=/srv/prod-hot/services/moog-antithesis-dashboard
+# The read token never appears in the command line or the environment: the
+# unit exposes a private copy as a credential file.
+LoadCredential=gh-read:/srv/moog-antithesis-dashboard/gh-read
+Environment=DEPLOY_GH_TOKEN_FILE=%d/gh-read
+ExecStart=%h/.local/state/nix/profiles/collector-deploy/bin/collector-deploy update
+SuccessExitStatus=2 3 4
+TimeoutStartSec=3h
