@@ -1315,6 +1315,22 @@ EOF
       '';
     };
 
+    deploy-live-smoke = {
+      runtimeInputs = [ deploy.dockerWithCompose pkgs.gh pkgs.curl pkgs.git pkgs.coreutils pkgs.bash ];
+      text = ''
+        # collector-deploy against real Docker, Compose and GitHub: a
+        # disposable registry, project, cache volume and offline collector;
+        # real digest inspect, --pull never, startup and cycle rollback, the
+        # image's own schema on the live snapshot, the live Actions and Pages
+        # APIs read-only. Needs a Docker daemon and GH_TOKEN or
+        # SMOKE_GH_TOKEN_FILE (a read token). Removes only what it created.
+        export DEPLOY_COMMAND=${deploy.collectorDeploy}/bin/collector-deploy
+        export DEPLOY_VALIDATOR=${deploy.validator}/bin/validate-snapshot
+        export SMOKE_IMAGE_ARCHIVE=${images.image}
+        exec bb -cp host/src tests/deploy/live-smoke.clj
+      '';
+    };
+
     deploy-controls = {
       inheritPath = false;
       runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.gnused pkgs.gnugrep ];

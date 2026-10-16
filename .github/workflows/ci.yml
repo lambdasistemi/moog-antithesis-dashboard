@@ -166,6 +166,19 @@ jobs:
       - name: Run reproduction evidence
         run: nix run --quiet .#reproduce
 
+  deploy-live-smoke:
+    name: CI deploy live smoke
+    # After reproduce-evidence: it also drives the Docker daemon, and docker
+    # jobs overlapping on one runner have failed before.
+    needs: [reproduce-evidence]
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - name: Smoke the deployment command against real Docker, Compose and GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: nix run --quiet .#deploy-live-smoke
+
   image:
     name: CI collector image
     needs: build-gate
