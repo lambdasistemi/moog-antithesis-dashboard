@@ -149,6 +149,23 @@
   (let [dir (fixture {})]
     (add-container! dir (container-row "stack-collector-2" old-id old-pin "moog-antithesis-dashboard" "collector"))
     (refused "duplicate publishers in the project service" dir (deploy dir "update") 2 "competing publisher"))
+  ;; Repositories whose names merely extend the collector's are not the
+  ;; collector: the production MPFS reporter image is such a sibling.
+  (doseq [[label configured image] [["sibling configured by tag" (str image-repo "-reporter:dc73e4808d60dd2af2a79e73849738fbbcc5cd56") "sha256:image-sibling-image-reporter"]
+                                    ["sibling configured by digest" (str image-repo "-new@" (digest "7")) "sha256:image-sibling-image-new"]
+                                    ["sibling known only by image id" "sha256:image-sibling-image-reporter" "sha256:image-sibling-image-reporter"]]]
+    (let [dir (fixture {})]
+      (add-container! dir (container-row "reporter" image configured "mpfs" "reporter"))
+      (let [r (deploy dir "update")]
+        (expect (zero? (:exit r)) (str label " does not block: " (:all r)))
+        (expect (= 1 (count (ups dir))) (str label " does not block the rollout")))))
+  ;; The exact repository, bare or followed by a tag or digest, still competes.
+  (doseq [[label configured] [["collector digest reference" (str image-repo "@" (digest "d"))]
+                              ["collector bare repository" image-repo]
+                              ["collector tag and digest" (str image-repo ":main@" (digest "d"))]]]
+    (let [dir (fixture {})]
+      (add-container! dir (container-row "manual" "sha256:image-d" configured "" ""))
+      (refused (str "competing " label) dir (deploy dir "update") 2 "competing publisher")))
   (let [dir (fixture {})]
     (fail! dir "ps")
     (refused "docker ps fails" dir (deploy dir "update") 2 "cannot establish the state of the host"))

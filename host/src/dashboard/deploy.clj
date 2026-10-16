@@ -171,15 +171,25 @@
             {:id id :image image :status status :restarts (Long/parseLong restarts)}))
       (throw (ex-info (str "several " (:service config) " containers in the project: " (str/join "," ids)) {:discovery true})))))
 
+(defn of-repository?
+  "Whether an image reference names exactly this repository: the repository
+  itself, or followed by a tag or a digest. A longer repository name sharing
+  the prefix (moog-antithesis-dashboard-reporter) is another repository."
+  [repo ref]
+  (boolean (and ref (or (= ref repo)
+                        (str/starts-with? ref (str repo ":"))
+                        (str/starts-with? ref (str repo "@"))))))
+
 (defn publisher-image?
   "Whether a container runs an image of the collector repository, whatever
   tag it was started from: by its configured reference or by what its
-  image id is known as."
+  image id is known as (every quoted RepoTags / RepoDigests entry)."
   [config configured image-id]
-  (or (str/starts-with? (or configured "") (:image-repo config))
+  (or (of-repository? (:image-repo config) configured)
       (let [r (sh ["docker" "image" "inspect" "--format" "{{json .RepoTags}} {{json .RepoDigests}}" image-id])]
         (when-not (ok? r) (discovery-failed! "docker image inspect" r))
-        (str/includes? (:out r) (str "\"" (:image-repo config))))))
+        (boolean (some #(of-repository? (:image-repo config) (second %))
+                       (re-seq #"\"([^\"]*)\"" (:out r)))))))
 
 (defn competing-publishers
   "Names of running publishers that must not coexist with a rollout. The
