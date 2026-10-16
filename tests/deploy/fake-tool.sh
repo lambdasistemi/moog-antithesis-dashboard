@@ -68,6 +68,14 @@ docker_cmd() {
             printf '["docker.io/library/alpine:latest"] []\n'
             exit 0
         fi
+        # Images of sibling repositories whose names extend the collector's.
+        for sibling in reporter new; do
+            if [[ $ref == *-image-$sibling* ]]; then
+                r=ghcr.io/lambdasistemi/moog-antithesis-dashboard-$sibling
+                printf '["%s:dc73e4808d60dd2af2a79e73849738fbbcc5cd56"] ["%s@sha256:%064d"]\n' "$r" "$r" 7
+                exit 0
+            fi
+        done
         digest=$(digest_now "$ref")
         id="sha256:image-${digest#sha256:}"
         # Images are known by the repository they came from, except the
