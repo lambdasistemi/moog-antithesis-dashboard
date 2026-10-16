@@ -876,7 +876,7 @@
                   {
                     "type": "string",
                     "maxLength": 200,
-                    "pattern": "^ghcr.io/cardano-foundation/mpfs/mpfs:[A-Za-z0-9_.-]+$"
+                    "pattern": "^ghcr.io/cardano-foundation/mpfs/mpfs:[A-Za-z0-9_.-]+(@sha256:[a-f0-9]{64})?$"
                   },
                   {
                     "type": "null"

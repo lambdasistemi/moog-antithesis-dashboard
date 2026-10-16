@@ -9,6 +9,14 @@ for schema in spec['components']['schemas'].values():
 v=Draft202012Validator({'$ref':'#/components/schemas/Snapshot','components':spec['components']})
 sample=json.loads(Path('tests/snapshot.example.json').read_text())
 v.validate(sample)
+# The collector reports the exact digest of a running image; the live
+# snapshot carries it (found by the deploy live smoke against production).
+pinned=copy.deepcopy(sample)
+for role in ['collector','roles']:
+    pinned['mpfs'][role]['container']['image']+='@sha256:'+'a'*64
+v.validate(pinned)
+pinned['mpfs']['collector']['container']['image']+='x'
+assert list(v.iter_errors(pinned)), 'schema accepted a malformed image digest'
 covered=copy.deepcopy(sample)
 covered['chain']['scope']='all_requesters'
 for fact in covered['chain']['recent']:
