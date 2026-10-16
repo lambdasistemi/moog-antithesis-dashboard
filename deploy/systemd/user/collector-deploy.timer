@@ -1,0 +1,12 @@
+# Poll for a merged, green main every five minutes. A second run while one
+# is still observing a rollout exits at once: the deployment lock serializes.
+[Unit]
+Description=Poll for a deployable dashboard collector revision
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -1,5 +1,7 @@
 # Host-side collector rollout. Install to /etc/systemd/system/ and adjust
-# User and the three paths. Exit 2 (revision refused) and 3/4 (CI or Pages
+# User and the paths. The command is the reviewed build installed in the
+# GC-rooted profile (see docs/runbook.md); the timer never resolves or runs
+# unchecked code from main. Exit 2 (revision refused) and 3/4 (CI or Pages
 # still pending) are normal outcomes; 1 (rolled back) and 5 (Pages failed)
 # leave the unit failed so `systemctl --failed` shows them.
 [Unit]
@@ -16,6 +18,6 @@ Environment=DEPLOY_STACK_DIR=/srv/prod-hot/services/moog-antithesis-dashboard
 # unit exposes a private copy as a credential file.
 LoadCredential=gh-read:/srv/moog-antithesis-dashboard/gh-read
 Environment=DEPLOY_GH_TOKEN_FILE=%d/gh-read
-ExecStart=/run/current-system/sw/bin/nix run --quiet github:lambdasistemi/moog-antithesis-dashboard#collector-deploy -- update
+ExecStart=/nix/var/nix/profiles/collector-deploy/bin/collector-deploy update
 SuccessExitStatus=2 3 4
 TimeoutStartSec=3h
