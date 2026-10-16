@@ -142,6 +142,7 @@ compose_cmd() {
         if [[ -f "$FIXTURE/container" ]]; then echo collector-container; fi
         ;;
     up)
+        ! fails compose-up || exit 1
         rollout
         # A deployment that dies right after Compose applied the rollout.
         if [[ -f "$FIXTURE/die-after-up" ]]; then

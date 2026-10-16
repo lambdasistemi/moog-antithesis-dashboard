@@ -409,6 +409,11 @@
     (catch Throwable e
       (let [detail (str "rollback exception: " (ex-message e))]
         (try (record! config "rollback-failed" {:reason detail}) (catch Throwable _ nil))
+        ;; What runs is now unknown: the earlier healthy verdict and Pages
+        ;; observation belong to a deployment this rollback was replacing.
+        ;; previous.json, previous-override.yaml and rollout.json stay for recovery.
+        (try (update-state! config #(-> % (dissoc :pages) (assoc :collector {:status "unhealthy" :detail detail})))
+             (catch Throwable _ nil))
         {:ok false :detail detail}))))
 
 (defn suppress! [config revision reason]

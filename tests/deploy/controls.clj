@@ -282,6 +282,26 @@
       (expect (= 1 (:exit back)) (str "unready rollback fails: " (:all back)))
       (expect (not= "healthy" (get-in (state dir) [:collector :status])) "unready rollback never claims healthy")
       (expect (str/includes? (history dir) "rollback-failed") "unready rollback is recorded")))
+  ;; a rollback that throws after a successful deployment: neither Compose failing
+  ;; nor the observation failing may leave the superseded deployment claiming health
+  (doseq [[what mode] [["compose-up" "always"] ["logs" "always"]]]
+    (let [dir (fixture {})]
+      (expect (zero? (:exit (deploy dir "update"))) (str what ": deployment succeeds first"))
+      (expect (= "healthy" (get-in (state dir) [:collector :status])) (str what ": healthy before the rollback"))
+      (expect (= "ok" (get-in (state dir) [:pages :status])) (str what ": pages ok before the rollback"))
+      (fail! dir what mode)
+      (let [back (deploy dir "rollback") s (state dir) status (deploy dir "status")]
+        (expect (not (zero? (:exit back))) (str what ": throwing rollback exits nonzero: " (:all back)))
+        (expect (str/includes? (history dir) "rollback-failed") (str what ": rollback-failed recorded"))
+        (expect (not (str/includes? (history dir) "rollback-ok")) (str what ": no rollback-ok recorded"))
+        (expect (= "unhealthy" (get-in s [:collector :status])) (str what ": collector unhealthy, got " (pr-str (:collector s))))
+        (expect (str/includes? (str (get-in s [:collector :detail])) "rollback exception") (str what ": failure detail recorded"))
+        (expect (nil? (:pages s)) (str what ": superseded pages state invalidated"))
+        (expect (not (str/includes? (:all status) "collector: healthy")) (str what ": status never prints healthy"))
+        (expect (str/includes? (:all status) "pages: unknown") (str what ": status prints no pages verdict"))
+        (expect (fs/exists? (state-file dir "previous.json")) (str what ": previous pin record kept"))
+        (expect (fs/exists? (state-file dir "previous-override.yaml")) (str what ": previous override kept"))
+        (expect (= old-id (:image_id (json/parse-string (slurp (state-file dir "previous.json")) true))) (str what ": previous image identity unchanged")))))
   ;; a mutable tag that moved is not the image that was running
   (let [dir (fixture {:candidate {:startup "crash" :cycle "ok" :pages "ok"}})]
     (write (str dir "/stack/deployed-image.yaml") (override-with (str image-repo ":" old-sha)))
