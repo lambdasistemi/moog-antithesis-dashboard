@@ -1,0 +1,544 @@
+name: cardano_node_governance
+services:
+  gov-cli:
+    container_name: gov-cli
+    depends_on:
+      gov-configurator:
+        condition: service_completed_successfully
+        required: true
+      relay1:
+        condition: service_started
+        required: true
+    environment:
+      CARDANO_NODE_SOCKET_PATH: /state/node.socket
+      GOV: /gov-data
+      GOV_COMMAND_ERA: dijkstra
+      GOV_STATE_DIR: /gov-state
+      LEIOS_STORAGE_CHECKS: "true"
+      NUM_CC: "5"
+      NUM_DREPS: "5"
+      NUM_PAYMENT_ADDRS: "20"
+      NUM_POOLS: "3"
+      TESTNET_MAGIC: "42"
+      WORK: /work
+    hostname: gov-cli.example
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/gov-cli@sha256:60ca220f8827ec7d421d06a2bb6f6be41f3ebe052f92c6226099241a541340f6
+    labels:
+      com.antithesis.exclude_from_faults: network,kill,pause,stop
+    networks:
+      default: null
+    restart: always
+    tmpfs:
+      - /work
+    volumes:
+      - type: volume
+        source: relay1-state
+        target: /state
+        read_only: true
+        volume: {}
+      - type: volume
+        source: gov-data
+        target: /gov-data
+        volume: {}
+      - type: volume
+        source: gov-state
+        target: /gov-state
+        volume: {}
+      - type: volume
+        source: tracer
+        target: /tracer
+        read_only: true
+        volume: {}
+      - type: volume
+        source: leios-storage-state
+        target: /leios-storage
+        read_only: true
+        volume: {}
+  gov-configurator:
+    container_name: gov-configurator
+    environment:
+      NETWORK_MAGIC: "42"
+      NUM_CC: "5"
+      NUM_DREPS: "5"
+      NUM_POOLS: "3"
+      PROTOCOL_VERSION: "12"
+      SECURITY_PARAM: "150"
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/gov-configurator@sha256:e97d312c4444be31c97ba4801ee563a27a20df1bcd0de8d9a45a20f92bc8d633
+    networks:
+      default: null
+    volumes:
+      - type: volume
+        source: p1-configs
+        target: /configs/1
+        volume: {}
+      - type: volume
+        source: p2-configs
+        target: /configs/2
+        volume: {}
+      - type: volume
+        source: p3-configs
+        target: /configs/3
+        volume: {}
+      - type: volume
+        source: gov-data
+        target: /gov-data
+        volume: {}
+      - type: volume
+        source: gov-state
+        target: /gov-state
+        volume: {}
+  log-tailer:
+    container_name: log-tailer
+    depends_on:
+      tracer:
+        condition: service_started
+        required: true
+    hostname: log-tailer.example
+    image: ghcr.io/cardano-foundation/cardano-node-antithesis/log-tailer@sha256:a5d23c42408a1003bb14208fd97dd2bdda102e7002e4e2a2804e71a80df56484
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: tracer
+        target: /tracer
+        read_only: true
+        volume: {}
+  p1:
+    command:
+      - run
+      - --topology
+      - /configs/configs/topology.json
+      - --config
+      - /configs/configs/config.json
+      - --database-path
+      - /state
+      - --socket-path
+      - /state/node.socket
+      - --tracer-socket-path-connect
+      - /tracer/tracer.socket
+      - --shelley-operational-certificate
+      - /configs/keys/opcert.cert
+      - --shelley-kes-key
+      - /configs/keys/kes.skey
+      - --shelley-vrf-key
+      - /configs/keys/vrf.skey
+      - --port
+      - "3001"
+      - --host-addr
+      - 0.0.0.0
+      - --shelley-bls-key
+      - /configs/keys/bls.skey
+      - +RTS
+      - -N
+      - -A16m
+      - -qg
+      - -qb
+      - -RTS
+    container_name: p1
+    depends_on:
+      gov-configurator:
+        condition: service_completed_successfully
+        required: true
+      tracer-sidecar:
+        condition: service_started
+        required: true
+    environment:
+      CARDANO_BLOCK_PRODUCER: "true"
+    hostname: p1.example
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/cardano-node-leios@sha256:3a88c4544247839b23c258412bad0ea4ddfe21c30a43c93968a93e3e7cc15b17
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: p1-configs
+        target: /configs
+        read_only: true
+        volume: {}
+      - type: volume
+        source: tracer
+        target: /tracer
+        volume: {}
+  p2:
+    command:
+      - run
+      - --topology
+      - /configs/configs/topology.json
+      - --config
+      - /configs/configs/config.json
+      - --database-path
+      - /state
+      - --socket-path
+      - /state/node.socket
+      - --tracer-socket-path-connect
+      - /tracer/tracer.socket
+      - --shelley-operational-certificate
+      - /configs/keys/opcert.cert
+      - --shelley-kes-key
+      - /configs/keys/kes.skey
+      - --shelley-vrf-key
+      - /configs/keys/vrf.skey
+      - --port
+      - "3001"
+      - --host-addr
+      - 0.0.0.0
+      - --shelley-bls-key
+      - /configs/keys/bls.skey
+      - +RTS
+      - -N
+      - -A16m
+      - -qg
+      - -qb
+      - -RTS
+    container_name: p2
+    depends_on:
+      gov-configurator:
+        condition: service_completed_successfully
+        required: true
+      tracer-sidecar:
+        condition: service_started
+        required: true
+    environment:
+      CARDANO_BLOCK_PRODUCER: "true"
+    hostname: p2.example
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/cardano-node-leios@sha256:3a88c4544247839b23c258412bad0ea4ddfe21c30a43c93968a93e3e7cc15b17
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: p2-configs
+        target: /configs
+        read_only: true
+        volume: {}
+      - type: volume
+        source: tracer
+        target: /tracer
+        volume: {}
+  p3:
+    command:
+      - run
+      - --topology
+      - /configs/configs/topology.json
+      - --config
+      - /configs/configs/config.json
+      - --database-path
+      - /state
+      - --socket-path
+      - /state/node.socket
+      - --tracer-socket-path-connect
+      - /tracer/tracer.socket
+      - --shelley-operational-certificate
+      - /configs/keys/opcert.cert
+      - --shelley-kes-key
+      - /configs/keys/kes.skey
+      - --shelley-vrf-key
+      - /configs/keys/vrf.skey
+      - --port
+      - "3001"
+      - --host-addr
+      - 0.0.0.0
+      - --shelley-bls-key
+      - /configs/keys/bls.skey
+      - +RTS
+      - -N
+      - -A16m
+      - -qg
+      - -qb
+      - -RTS
+    container_name: p3
+    depends_on:
+      gov-configurator:
+        condition: service_completed_successfully
+        required: true
+      tracer-sidecar:
+        condition: service_started
+        required: true
+    environment:
+      CARDANO_BLOCK_PRODUCER: "true"
+    hostname: p3.example
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/cardano-node-leios@sha256:3a88c4544247839b23c258412bad0ea4ddfe21c30a43c93968a93e3e7cc15b17
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: p3-configs
+        target: /configs
+        read_only: true
+        volume: {}
+      - type: volume
+        source: tracer
+        target: /tracer
+        volume: {}
+  relay1:
+    command:
+      - run
+      - --topology
+      - /configs/configs/topology.json
+      - --config
+      - /configs/configs/config.json
+      - --database-path
+      - /state
+      - --socket-path
+      - /state/node.socket
+      - --tracer-socket-path-connect
+      - /tracer/tracer.socket
+      - --port
+      - "3001"
+      - --host-addr
+      - 0.0.0.0
+      - +RTS
+      - -N
+      - -A16m
+      - -qg
+      - -qb
+      - -RTS
+    container_name: relay1
+    depends_on:
+      gov-configurator:
+        condition: service_completed_successfully
+        required: true
+      tracer-sidecar:
+        condition: service_started
+        required: true
+    environment:
+      CARDANO_BLOCK_PRODUCER: "false"
+    hostname: relay1.example
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/cardano-node-leios@sha256:3a88c4544247839b23c258412bad0ea4ddfe21c30a43c93968a93e3e7cc15b17
+    labels:
+      com.antithesis.exclude_from_faults: network,kill,pause,stop
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: p1-configs
+        target: /configs
+        read_only: true
+        volume: {}
+      - type: bind
+        source: ./relay-topology.json
+        target: /configs/configs/topology.json
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: volume
+        source: relay1-state
+        target: /state
+        volume: {}
+      - type: volume
+        source: tracer
+        target: /tracer
+        volume: {}
+  sidecar:
+    container_name: sidecar
+    depends_on:
+      tracer-sidecar:
+        condition: service_started
+        required: true
+    environment:
+      NETWORKMAGIC: "42"
+      POOLS: "3"
+      PORT: "3001"
+    hostname: sidecar.example
+    image: ghcr.io/cardano-foundation/cardano-node-antithesis/sidecar:1ff6913
+    labels:
+      com.antithesis.exclude_from_faults: network,kill,pause,stop
+    networks:
+      default: null
+    restart: always
+    tmpfs:
+      - /tmp
+  storage-node:
+    command:
+      - run
+      - --topology
+      - /configs/configs/topology.json
+      - --config
+      - /configs/configs/config.json
+      - --database-path
+      - /state
+      - --socket-path
+      - /state/node.socket
+      - --tracer-socket-path-connect
+      - /tracer/tracer.socket
+      - --port
+      - "3001"
+      - --host-addr
+      - 0.0.0.0
+      - +RTS
+      - -N
+      - -A16m
+      - -qg
+      - -qb
+      - -RTS
+    container_name: storage-node
+    depends_on:
+      gov-configurator:
+        condition: service_completed_successfully
+        required: true
+      tracer-sidecar:
+        condition: service_started
+        required: true
+    environment:
+      CARDANO_BLOCK_PRODUCER: "false"
+    hostname: storage-node.example
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/cardano-node-leios@sha256:3a88c4544247839b23c258412bad0ea4ddfe21c30a43c93968a93e3e7cc15b17
+    labels:
+      com.antithesis.exclude_from_faults: ""
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: p1-configs
+        target: /configs
+        read_only: true
+        volume: {}
+      - type: bind
+        source: relay-topology.json
+        target: /configs/configs/topology.json
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: volume
+        source: leios-storage-state
+        target: /state
+        volume: {}
+      - type: volume
+        source: tracer
+        target: /tracer
+        volume: {}
+  tracer:
+    command:
+      - --config
+      - /tracer-config.yaml
+    container_name: tracer
+    entrypoint:
+      - cardano-tracer
+    hostname: tracer.example
+    image: ghcr.io/intersectmbo/cardano-tracer@sha256:da628263a851b419c38d020d3a7dc3b65b20ee84e730faeb74babd6d96f28efe
+    labels:
+      com.antithesis.exclude_from_faults: network,kill,pause,stop
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: tracer
+        target: /opt/cardano-tracer
+        volume: {}
+      - type: bind
+        source: ./tracer-config-leios.yaml
+        target: /tracer-config.yaml
+        read_only: true
+        bind:
+          create_host_path: true
+  tracer-sidecar:
+    command:
+      - /opt/cardano-tracer/logs
+    container_name: tracer-sidecar
+    depends_on:
+      tracer:
+        condition: service_started
+        required: true
+    environment:
+      CHAINPOINT_FILEPATH: /opt/cardano-tracer/chainPoints.log
+      POOLS: "3"
+    hostname: tracer-sidecar.example
+    image: ghcr.io/cardano-foundation/cardano-node-antithesis/tracer-sidecar:5271661
+    labels:
+      com.antithesis.exclude_from_faults: network,kill,pause,stop
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: tracer
+        target: /opt/cardano-tracer
+        volume: {}
+  tx-firehose:
+    container_name: tx-firehose
+    depends_on:
+      gov-configurator:
+        condition: service_completed_successfully
+        required: true
+      relay1:
+        condition: service_started
+        required: true
+    environment:
+      CARDANO_NODE_SOCKET_PATH: /state/node.socket
+      GOV: /gov-data
+      GOV_STATE_DIR: /gov-state
+      TESTNET_MAGIC: "42"
+      TX_FIREHOSE: ""
+      TX_TPS: "15"
+    hostname: tx-firehose.example
+    image: ghcr.io/saratomaz/cardano-node-tests-antithesis/tx-firehose@sha256:26deb2561ae0a5a660cc8509a17d7bb81eeaed7111bcb8d12e13e4ed19c5c457
+    labels:
+      com.antithesis.exclude_from_faults: network,kill,pause,stop
+    networks:
+      default: null
+    restart: always
+    volumes:
+      - type: volume
+        source: relay1-state
+        target: /state
+        read_only: true
+        volume: {}
+      - type: volume
+        source: gov-data
+        target: /gov-data
+        read_only: true
+        volume: {}
+      - type: volume
+        source: gov-state
+        target: /gov-state
+        read_only: true
+        volume: {}
+networks:
+  default:
+    name: cardano-node-testnet
+    driver: bridge
+volumes:
+  gov-data:
+    name: cardano_node_governance_gov-data
+  gov-state:
+    name: cardano_node_governance_gov-state
+  leios-storage-state:
+    name: cardano_node_governance_leios-storage-state
+  p1-configs:
+    name: cardano_node_governance_p1-configs
+  p2-configs:
+    name: cardano_node_governance_p2-configs
+  p3-configs:
+    name: cardano_node_governance_p3-configs
+  relay1-state:
+    name: cardano_node_governance_relay1-state
+  tracer:
+    name: cardano_node_governance_tracer
+x-cardano-node:
+  command: |
+    run --topology /configs/configs/topology.json
+      --config /configs/configs/config.json
+      --database-path /state
+      --socket-path /state/node.socket
+      --tracer-socket-path-connect /tracer/tracer.socket
+      --shelley-operational-certificate /configs/keys/opcert.cert
+      --shelley-kes-key /configs/keys/kes.skey
+      --shelley-vrf-key /configs/keys/vrf.skey
+      --port 3001
+      --host-addr 0.0.0.0
+      --shelley-bls-key /configs/keys/bls.skey
+      +RTS -N -A16m -qg -qb -RTS
+  depends_on:
+    gov-configurator:
+      condition: service_completed_successfully
+    tracer-sidecar:
+      condition: service_started
+  environment:
+    CARDANO_BLOCK_PRODUCER: true
+  image: ghcr.io/saratomaz/cardano-node-tests-antithesis/cardano-node-leios@sha256:3a88c4544247839b23c258412bad0ea4ddfe21c30a43c93968a93e3e7cc15b17
+  restart: always

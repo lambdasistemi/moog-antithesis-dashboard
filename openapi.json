@@ -1,0 +1,1234 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Moog dashboard snapshot",
+    "version": "1.3.0",
+    "description": "As a dashboard consumer, read the published snapshot and inspect source status, last-success time and wallet address scope before using a value. This is a public static GET resource, not a live query API. Unavailable dependencies do not make the whole HTTP request fail."
+  },
+  "servers": [
+    {
+      "url": ".",
+      "description": "This deployment"
+    }
+  ],
+  "paths": {
+    "/data.json": {
+      "get": {
+        "operationId": "readDashboardSnapshot",
+        "summary": "Read the latest published dashboard state",
+        "description": "Read-only snapshot of GitHub status, Antithesis tests, Moog chain facts, proxy readiness, nightly receipts and Koios wallet balances. Check sources for stale/error observations. No signing material or private Antithesis report links are published.",
+        "responses": {
+          "200": {
+            "description": "Published snapshot; individual sources may be stale or unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No snapshot has been published at this address."
+          }
+        },
+        "tags": [
+          "Dashboard snapshot"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Source": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "stale",
+              "error"
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_success": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "error",
+          "last_success"
+        ],
+        "additionalProperties": false,
+        "description": "ok means collection succeeded, not that the underlying service is healthy. stale retains a last-good value; error means no successful observation is available. Observation age must be checked independently."
+      },
+      "Sources": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "chain": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "token": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "oracle": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "proxy": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "monitor": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "nightly": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "wallets": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "mpfs_collector": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "mpfs_roles": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "runs",
+          "chain",
+          "token",
+          "oracle",
+          "agent",
+          "proxy",
+          "monitor",
+          "nightly",
+          "wallets",
+          "mpfs_collector",
+          "mpfs_roles"
+        ],
+        "additionalProperties": false
+      },
+      "PropertySummary": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "passing": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failing": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "passing",
+          "failing"
+        ],
+        "additionalProperties": false,
+        "description": "Counts all API property result entries after collecting every page, including groups and events. This is not a count of distinct bugs or leaf assertions."
+      },
+      "Run": {
+        "type": "object",
+        "properties": {
+          "run_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "test_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "try": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "platform": {
+            "type": ["string", "null"],
+            "description": "Public request platform, part of the complete on-chain request identity. Legacy snapshots may omit it."
+          },
+          "requester": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "repository": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "properties": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PropertySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compose": {
+            "$ref": "#/components/schemas/ComposeAsset"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "created_at",
+          "started_at",
+          "test_name",
+          "duration_minutes",
+          "directory",
+          "commit",
+          "try",
+          "requester",
+          "repository",
+          "properties"
+        ],
+        "additionalProperties": false
+      },
+      "ChainFact": {
+        "type": "object",
+        "properties": {
+          "requester": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Requester identity in the full request key. Legacy snapshots may omit it."
+          },
+          "platform": {
+            "type": "string",
+            "minLength": 1
+          },
+          "repository": {
+            "type": "string",
+            "minLength": 1
+          },
+          "directory": {
+            "type": "string"
+          },
+          "commit": {
+            "type": "string"
+          },
+          "try": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "finished",
+              "rejected"
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slot": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "directory",
+          "commit",
+          "try",
+          "phase",
+          "outcome",
+          "duration",
+          "slot"
+        ],
+        "additionalProperties": false
+      },
+      "Chain": {
+        "type": "object",
+        "allOf": [
+          {
+            "if": {"required": ["scope"], "properties": {"scope": {"const": "all_requesters"}}},
+            "then": {"properties": {"recent": {"items": {"required": ["requester", "platform", "repository"]}}}}
+          }
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["all_requesters"],
+            "description": "The source queried all public test-run facts without a requester filter."
+          },
+          "phases": {
+            "type": "object",
+            "properties": {
+              "pending": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "accepted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "finished": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rejected": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          },
+          "recent": {
+            "type": "array",
+            "description": "Latest thirty facts plus all records needed to match visible Antithesis runs. Phase totals cover the full public source.",
+            "items": {
+              "$ref": "#/components/schemas/ChainFact"
+            }
+          }
+        },
+        "required": [
+          "phases",
+          "recent"
+        ],
+        "additionalProperties": false
+      },
+      "Container": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "image",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "Hosts": {
+        "type": "object",
+        "properties": {
+          "oracle": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Container"
+            }
+          },
+          "agent": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Container"
+            }
+          },
+          "agent_errors_6h": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent_published_24h": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "oracle",
+          "agent",
+          "agent_errors_6h",
+          "agent_published_24h"
+        ],
+        "additionalProperties": false,
+        "description": "Includes reporter containers as well as services. Consumers must select the named oracle or agent service container, not the first list entry. Counts are log observations, not complete failure proofs."
+      },
+      "Monitor": {
+        "type": "object",
+        "properties": {
+          "last": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "last",
+          "ok"
+        ],
+        "additionalProperties": false,
+        "description": "Last recorded freshness verdict. A cached ok=true does not establish current health when sources.monitor is stale or expired."
+      },
+      "WalletAccount": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "oracle",
+              "agent",
+              "requester"
+            ]
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "preprod"
+            ]
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "balance_lovelace": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,18})$",
+            "description": "Integer lovelace string. Divide by 1,000,000 to format ADA without floating-point precision loss. On-chain address balance, not spending or freely spendable funds."
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "network",
+          "addresses",
+          "balance_lovelace",
+          "observed_at"
+        ],
+        "additionalProperties": false
+      },
+      "Wallets": {
+        "type": "object",
+        "properties": {
+          "config_revision": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "Koios"
+            ]
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "preprod"
+            ]
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "chain_point": {
+            "type": "null",
+            "description": "Current address_info observations are not bound to an independently verified exact chain point."
+          },
+          "history_status": {
+            "type": "string",
+            "enum": [
+              "not_collected"
+            ]
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletAccount"
+            }
+          }
+        },
+        "required": [
+          "config_revision",
+          "provider",
+          "network",
+          "reported_at",
+          "chain_point",
+          "history_status",
+          "accounts"
+        ],
+        "additionalProperties": false,
+        "description": "Read-only Koios observations for a GitHub-pinned address scope. Historical spending, locked/refundable funds and historical address coverage are not established. Shared role addresses must not be summed twice."
+      },
+      "Receipt": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "upstream_sha": {
+            "type": "string"
+          },
+          "bootstrap_candidate_sha": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "description": "Optional fields extracted from the nightly receipt. A missing field is not evidence of completion."
+      },
+      "NightlyRun": {
+        "type": "object",
+        "properties": {
+          "databaseId": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "receipt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Receipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "databaseId",
+          "conclusion",
+          "status",
+          "event",
+          "createdAt",
+          "url",
+          "receipt"
+        ],
+        "additionalProperties": false
+      },
+      "Snapshot": {
+        "type": "object",
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "refresh_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tenant": {
+            "type": "string"
+          },
+          "repository": {
+            "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/Sources"
+          },
+          "runs": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chain": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Chain"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "pending_requests": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "pending_requests"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hosts": {
+            "$ref": "#/components/schemas/Hosts"
+          },
+          "wallets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Wallets"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proxy": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ready": {
+                    "type": "boolean"
+                  },
+                  "http_code": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 599
+                  }
+                },
+                "required": [
+                  "ready",
+                  "http_code"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "monitor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Monitor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nightly": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/NightlyRun"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nightly_stages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "schema_url": {
+            "type": "string",
+            "const": "https://lambdasistemi.github.io/moog-antithesis-dashboard/openapi.json",
+            "description": "Public URL of the OpenAPI contract for this snapshot."
+          },
+          "mpfs": {
+            "$ref": "#/components/schemas/Mpfs"
+          }
+        },
+        "required": [
+          "schema_url",
+          "generated_at",
+          "started_at",
+          "refresh_seconds",
+          "tenant",
+          "repository",
+          "sources",
+          "runs",
+          "chain",
+          "token",
+          "hosts",
+          "wallets",
+          "proxy",
+          "monitor",
+          "nightly",
+          "nightly_stages",
+          "mpfs"
+        ],
+        "additionalProperties": false,
+        "description": "Published collector snapshot, refreshed approximately every ten minutes. Each source is collected independently, so this is not an atomic cross-provider observation. Null means no usable value; stale sources may carry older last-good values. generated_at is publication assembly time, not each source observation time."
+      },
+      "MpfsObservation": {
+        "type": "object",
+        "description": "One independently refreshed GitHub status feed. Producer reports expire after fifteen minutes; collector errors retain the previous value without refreshing its timestamp.",
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "const": "mpfs"
+          },
+          "service_id": {
+            "enum": [
+              "collector-legacy-mpfs",
+              "moog-role-legacy-mpfs"
+            ]
+          },
+          "used_by": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "dashboard-collector",
+                "oracle",
+                "agent"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true
+          },
+          "network": {
+            "const": "preprod"
+          },
+          "container": {
+            "type": "object",
+            "description": "Exact service container, including stopped and missing states; availability does not prove synchronization.",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "enum": [
+                  "mpfs-compose-mpfs-1",
+                  "mpfs-mpfs-1"
+                ]
+              },
+              "image": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 200,
+                    "pattern": "^ghcr.io/cardano-foundation/mpfs/mpfs:[A-Za-z0-9_.-]+(@sha256:[a-f0-9]{64})?$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "enum": [
+                  "created",
+                  "running",
+                  "paused",
+                  "restarting",
+                  "removing",
+                  "exited",
+                  "dead",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "image",
+              "status"
+            ]
+          },
+          "api": {
+            "type": "object",
+            "description": "Read-only GET /tokens response status. No token records or response bodies are published.",
+            "additionalProperties": false,
+            "properties": {
+              "reachable": {
+                "type": "boolean"
+              },
+              "http_status": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 599
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "reachable",
+              "http_status"
+            ]
+          },
+          "synchronization": {
+            "type": "object",
+            "description": "Slot lag against this backend's reported network tip, not an independent network observation. Unavailable or invalid tips are unmeasured.",
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "enum": [
+                  "observed",
+                  "unmeasured"
+                ]
+              },
+              "ready": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "network_tip_slot": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "indexer_tip_slot": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "lag_slots": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "ready",
+              "network_tip_slot",
+              "indexer_tip_slot",
+              "lag_slots"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "unmeasured"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "ready": {
+                      "type": "null"
+                    },
+                    "network_tip_slot": {
+                      "type": "null"
+                    },
+                    "indexer_tip_slot": {
+                      "type": "null"
+                    },
+                    "lag_slots": {
+                      "type": "null"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "ready": {
+                      "type": "boolean"
+                    },
+                    "network_tip_slot": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "indexer_tip_slot": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "lag_slots": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "role",
+          "service_id",
+          "used_by",
+          "network",
+          "container",
+          "api",
+          "synchronization",
+          "reported_at"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "service_id": {
+                  "const": "collector-legacy-mpfs"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "used_by": {
+                  "const": [
+                    "dashboard-collector"
+                  ]
+                },
+                "container": {
+                  "properties": {
+                    "name": {
+                      "const": "mpfs-compose-mpfs-1"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "used_by": {
+                  "const": [
+                    "oracle",
+                    "agent"
+                  ]
+                },
+                "container": {
+                  "properties": {
+                    "name": {
+                      "const": "mpfs-mpfs-1"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Mpfs": {
+        "type": "object",
+        "description": "Independent collector and oracle/agent legacy instances. One instance's report does not establish the other's availability.",
+        "additionalProperties": false,
+        "properties": {
+          "collector": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MpfsObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "roles": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MpfsObservation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "collector",
+          "roles"
+        ]
+      },
+      "ComposeAsset": {
+        "type": "object",
+        "description": "Local-use Docker Compose generated from the public source revision recorded in the test description. Only INTERNAL_NETWORK is replaced with true. Companion files and container images are not bundled.",
+        "properties": {
+          "status": {
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "reason": {
+            "enum": [
+              null,
+              "missing_or_invalid_coordinates",
+              "source_unavailable",
+              "publication_refused"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^runs/[A-Za-z0-9_-]{1,200}/docker-compose\\.yaml$"
+          },
+          "source_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^https://github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/blob/[0-9a-fA-F]{40}/"
+          },
+          "commit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-fA-F]{40}$"
+          },
+          "internal_network": {
+            "const": true
+          }
+        },
+        "required": [
+          "status",
+          "reason",
+          "url",
+          "source_url",
+          "commit",
+          "internal_network"
+        ],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "available"
+              },
+              "reason": {
+                "const": null
+              },
+              "url": {
+                "type": "string"
+              },
+              "source_url": {
+                "type": "string"
+              },
+              "commit": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "properties": {
+              "status": {
+                "const": "unavailable"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "url": {
+                "const": null
+              },
+              "source_url": {
+                "const": null
+              },
+              "commit": {
+                "const": null
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Dashboard snapshot",
+      "description": "Published state and source freshness"
+    }
+  ]
+}

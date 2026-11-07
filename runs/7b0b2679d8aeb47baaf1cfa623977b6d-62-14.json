@@ -1,0 +1,904 @@
+{
+  "run_id": "7b0b2679d8aeb47baaf1cfa623977b6d-62-14",
+  "status": "completed",
+  "created_at": "2026-10-05T01:48:59Z",
+  "started_at": "2026-10-05T01:48:59Z",
+  "completed_at": "2026-10-05T06:36:13Z",
+  "test_name": "amaru-v2",
+  "duration_minutes": 180,
+  "directory": "testnets/cardano_node_governance",
+  "commit": "aec081c1274e5f0d8dd16ea44dfaf8e7cebce108",
+  "try": 1,
+  "requester": "saratomaz",
+  "repository": "input-output-hk/cardano-node-tests-antithesis",
+  "parameters": {
+    "antithesis.config_image": "us-central1-docker.pkg.dev/molten-verve-216720/pragma-repository/cardano-moog-config:1b28106658",
+    "antithesis.description": "{\"testRun\":{\"commitId\":\"aec081c1274e5f0d8dd16ea44dfaf8e7cebce108\",\"directory\":\"testnets/cardano_node_governance\",\"platform\":\"github\",\"repository\":{\"organization\":\"input-output-hk\",\"repo\":\"cardano-node-tests-antithesis\"},\"requester\":\"saratomaz\",\"try\":1,\"type\":\"test-run\"},\"testRunId\":\"1b2810665825f06beb5dce133ffc773b8101f29021cc1319bfea452ca7865b7b\"}",
+    "antithesis.duration": "180",
+    "antithesis.integrations.type": "none",
+    "antithesis.is_ephemeral": "false",
+    "antithesis.is_setup": "false",
+    "antithesis.performance_tier": "standard",
+    "antithesis.report.recipients": "antithesis@cardanofoundation.org",
+    "antithesis.source": "input-output-hk/cardano-node-tests-antithesis",
+    "antithesis.test_name": "amaru-v2",
+    "custom.container_faults_kill_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose",
+    "custom.container_faults_pause_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose",
+    "custom.container_faults_stop_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose",
+    "custom.faults_enabled": "true",
+    "custom.instrumented": "true",
+    "custom.network_fault_exclusion": "gov-cli,relay1,sidecar,tracer,tracer-sidecar,tx-firehose"
+  },
+  "properties": [
+    {
+      "name": "No Antithesis errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Software images match expected platform",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 8,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build warnings",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Virtual time per wall time",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Test ran with full parallelism",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Containers joined the Antithesis network",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 10,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "The Antithesis Fault Injector was started",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Peak memory usage",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 328259,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected crashes",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected container exits",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis session errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain_progress_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 64,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "5216876290155302007",
+            "vtime": "27.5455107325688"
+          },
+          "event_group": "chain_progress_aborted",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "chain_progress_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "chain_progress_aborted",
+            "must_hit": true
+          },
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 57
+          }
+        }
+      ]
+    },
+    {
+      "name": "chain_progress_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 31814,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "committee_quorum_maintained",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 6686,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "create_action_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 20895,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-6801704559952085688",
+            "vtime": "27.48147952160798"
+          },
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 57
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "create_action_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "create_action_aborted",
+            "must_hit": true
+          },
+          "event_group": "create_action_aborted"
+        }
+      ]
+    },
+    {
+      "name": "create_action_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 42359,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "create_pparam_update_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 14446,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "1996223959369417614",
+            "vtime": "27.52827035775408"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "create_pparam_update_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "create_pparam_update_aborted",
+            "must_hit": true
+          },
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 57
+          },
+          "event_group": "create_pparam_update_aborted"
+        }
+      ]
+    },
+    {
+      "name": "create_pparam_update_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 35638,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "create_treasury_withdrawal_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 7438,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-3762603227945119256",
+            "vtime": "27.606479349313304"
+          },
+          "event_group": "create_treasury_withdrawal_aborted",
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 57
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "create_treasury_withdrawal_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "create_treasury_withdrawal_aborted",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_treasury_withdrawal_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 29612,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "eventually_votes_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 314,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "finally_governance_summary_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 240,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "govstate_invariant_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 13594,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "govstate_well_formed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 13594,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "leios_load_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 17437,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "pparam_update_enactment_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 21226,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "relay_reachable_under_fault",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 31814,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "setup_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 325,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-6793246004542064812",
+            "vtime": "27.399617411894724"
+          },
+          "event_group": "setup_aborted",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "setup_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "setup_aborted",
+            "must_hit": true
+          },
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 54
+          }
+        }
+      ]
+    },
+    {
+      "name": "treasury_withdrawal_enactment_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 21679,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "treasury_withdrawal_no_overpay",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 46,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "vote_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 6008,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-8909900952621798078",
+            "vtime": "27.86076421686448"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "vote_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "vote_aborted",
+            "must_hit": true
+          },
+          "event_group": "vote_aborted",
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 57
+          }
+        }
+      ]
+    },
+    {
+      "name": "vote_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 15504,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "vote_pparam_update_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 6091,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-4777645252833221680",
+            "vtime": "27.55747880297713"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "vote_pparam_update_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "vote_pparam_update_aborted",
+            "must_hit": true
+          },
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 57
+          },
+          "event_group": "vote_pparam_update_aborted"
+        }
+      ]
+    },
+    {
+      "name": "vote_pparam_update_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 14773,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "vote_treasury_withdrawal_aborted",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 2854,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "6465739175364583077",
+            "vtime": "27.527478132164106"
+          },
+          "event_group": "vote_treasury_withdrawal_aborted",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": null,
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "vote_treasury_withdrawal_aborted",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "vote_treasury_withdrawal_aborted",
+            "must_hit": true
+          },
+          "source": {
+            "container": "tx-firehose.example",
+            "name": "antithesis/pods/tx-firehose.example/sdk.jsonl",
+            "pid": 57
+          }
+        }
+      ]
+    },
+    {
+      "name": "vote_treasury_withdrawal_exits_zero",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 14568,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "cluster fork depth < k",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 9,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "4737156099473874496",
+            "vtime": "2183.22002100409"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "at": "2026-10-05T02:30:34.800485357Z",
+              "data": {
+                "kind": "AddedToCurrentChain",
+                "newSuffixSelectView": {
+                  "blockNo": 740,
+                  "issueNo": 0,
+                  "issuerHash": "c6e72c08a64afe232b2420d098fd6a0ad5da12d41dc1774e97258fc1",
+                  "kind": "PraosTiebreakerView",
+                  "slotNo": 10839,
+                  "tieBreakVRF": "5cf332d741c9ed8d70b14defe14972e1fd6a173bc77f6533ec670e43ac4ad0374d094cc3fa1df716d93bc82ab22eb7c47f146ee337e6bce4a614aeee5ff6a0ee",
+                  "weightBoost": 0
+                },
+                "newtip": "e93a2e9a2ee32f6d653194e0f215aa77d5bd23e0427d6e86bb82f86812ed4c18@10839"
+              },
+              "host": "p3",
+              "ns": "ChainDB.AddBlockEvent.AddedToCurrentChain",
+              "sev": "Notice",
+              "thread": "28"
+            },
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "cluster fork depth < k",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "cluster fork depth < k",
+            "must_hit": false
+          },
+          "source": {
+            "container": "tracer-sidecar.example",
+            "name": "antithesis/pods/tracer-sidecar.example/sdk.jsonl",
+            "pid": 1
+          },
+          "event_group": "cluster fork depth < k"
+        }
+      ]
+    },
+    {
+      "name": "no critical logs",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p1 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p2 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p3 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "PeerStatusChanged",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "TraceAddBlockEvent.SwitchedToAFork",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "action_fully_voted_after_recovery",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 4,
+      "counterexample_count": 310,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "9165878375801362071",
+            "vtime": "43.286472119856626"
+          },
+          "event_group": "action_fully_voted_after_recovery",
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": null,
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "action_fully_voted_after_recovery",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "action_fully_voted_after_recovery",
+            "must_hit": true
+          },
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 59
+          }
+        }
+      ]
+    },
+    {
+      "name": "action_majority_reached",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 233,
+      "counterexample_count": 313,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "2329869360496706129",
+            "vtime": "3046.967934792163"
+          },
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 7758
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "majority": 7,
+              "total": 2
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "action_majority_reached",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "action_majority_reached",
+            "must_hit": true
+          },
+          "event_group": "action_majority_reached"
+        }
+      ]
+    },
+    {
+      "name": "action_voted_by_all_roles",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 325,
+      "counterexample_count": 221,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "2329869360496706129",
+            "vtime": "3046.9679335893597"
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "cc": 1,
+              "drep": 1,
+              "spo": 0
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "action_voted_by_all_roles",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "action_voted_by_all_roles",
+            "must_hit": true
+          },
+          "event_group": "action_voted_by_all_roles",
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 7758
+          }
+        }
+      ]
+    },
+    {
+      "name": "actions_live",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 749,
+      "counterexample_count": 1623,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-3514755041567173787",
+            "vtime": "3026.2185025550425"
+          },
+          "event_group": "actions_live",
+          "source": {
+            "container": "gov-cli.example",
+            "name": "antithesis/pods/gov-cli.example/sdk.jsonl",
+            "pid": 7099
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "live": 0
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "actions_live",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "actions_live",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "chain_producing",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 19771,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain_stalled_under_fault",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 12043,
+      "counterexample_count": 0,
+      "counterexamples": []
+    }
+  ],
+  "chain": null,
+  "nightly": []
+}
