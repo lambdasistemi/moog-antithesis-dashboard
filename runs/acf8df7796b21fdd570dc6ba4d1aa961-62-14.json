@@ -1,0 +1,1521 @@
+{
+  "run_id": "acf8df7796b21fdd570dc6ba4d1aa961-62-14",
+  "status": "completed",
+  "created_at": "2026-10-04T22:29:08Z",
+  "started_at": "2026-10-04T22:29:08Z",
+  "completed_at": "2026-10-04T23:59:06Z",
+  "test_name": "amaru-v2",
+  "duration_minutes": 60,
+  "directory": "antithesis/testnets/leios-devnet",
+  "commit": "e04f1b6b95f107b6ef14c87cbfbfe370df187cdc",
+  "try": 1,
+  "requester": "wolf31o2",
+  "repository": "input-output-hk/ouroboros-leios",
+  "parameters": {
+    "antithesis.config_image": "us-central1-docker.pkg.dev/molten-verve-216720/pragma-repository/cardano-moog-config:7272140107",
+    "antithesis.description": "{\"testRun\":{\"commitId\":\"e04f1b6b95f107b6ef14c87cbfbfe370df187cdc\",\"directory\":\"antithesis/testnets/leios-devnet\",\"platform\":\"github\",\"repository\":{\"organization\":\"input-output-hk\",\"repo\":\"ouroboros-leios\"},\"requester\":\"wolf31o2\",\"try\":1,\"type\":\"test-run\"},\"testRunId\":\"72721401070b01ddc2bcc32bfecfaad77a264a6563a41f6c59bb427e3480fc36\"}",
+    "antithesis.duration": "60",
+    "antithesis.integrations.type": "none",
+    "antithesis.is_ephemeral": "false",
+    "antithesis.is_setup": "false",
+    "antithesis.performance_tier": "standard",
+    "antithesis.report.recipients": "antithesis@cardanofoundation.org",
+    "antithesis.source": "input-output-hk/ouroboros-leios",
+    "antithesis.test_name": "amaru-v2",
+    "custom.container_faults_kill_exclusion": "analysis,tx-firehose",
+    "custom.container_faults_pause_exclusion": "analysis,tx-firehose",
+    "custom.container_faults_stop_exclusion": "analysis,tx-firehose",
+    "custom.faults_enabled": "true",
+    "custom.instrumented": "true",
+    "custom.network_fault_exclusion": "analysis,tx-firehose"
+  },
+  "properties": [
+    {
+      "name": "No Antithesis errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Software images match expected platform",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 3,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build warnings",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Virtual time per wall time",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Test ran with full parallelism",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Containers joined the Antithesis network",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 5,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "The Antithesis Fault Injector was started",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Peak memory usage",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 16268,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected crashes",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "container: pool1, exit code: 1",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 3,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-1525804605213977208",
+            "vtime": "1554.5010581791867"
+          },
+          "image": "ghcr.io/input-output-hk/ouroboros-leios/antithesis-cardano-node-devnet:latest",
+          "name": "pool1",
+          "container_exit_code": 1,
+          "source": {
+            "name": "containers_meta"
+          },
+          "event": "died",
+          "event_group": "container: pool1, exit code: 1"
+        }
+      ]
+    },
+    {
+      "name": "container: pool2, exit code: 1",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 5,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-9174339051296993876",
+            "vtime": "652.5010288981721"
+          },
+          "event": "died",
+          "name": "pool2",
+          "image": "ghcr.io/input-output-hk/ouroboros-leios/antithesis-cardano-node-devnet:latest",
+          "container_exit_code": 1,
+          "source": {
+            "name": "containers_meta"
+          },
+          "event_group": "container: pool2, exit code: 1"
+        }
+      ]
+    },
+    {
+      "name": "container: pool3, exit code: 1",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 4,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "6888547566958386518",
+            "vtime": "361.711597714806"
+          },
+          "name": "pool3",
+          "event": "died",
+          "event_group": "container: pool3, exit code: 1",
+          "source": {
+            "name": "containers_meta"
+          },
+          "container_exit_code": 1,
+          "image": "ghcr.io/input-output-hk/ouroboros-leios/antithesis-cardano-node-devnet:latest"
+        }
+      ]
+    },
+    {
+      "name": "No Antithesis session errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Each block has exactly one creator",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 55,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Forged block slots never decrease within a node",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 55,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No node forges two blocks in the same slot",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 55,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No pool produces more than 60% of blocks",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 49,
+      "counterexample_count": 3,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-7170000528276997535",
+            "vtime": "656.011801654473"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "max_share": 0.636,
+              "per_pool": {
+                "pool1": 7,
+                "pool2": 2,
+                "pool3": 2
+              },
+              "total_blocks": 11
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "No pool produces more than 60% of blocks",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 166,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "No pool produces more than 60% of blocks",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "No pool produces more than 60% of blocks"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (0.0ms) < 5000.0ms",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 2,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Praos block diffusion p95 latency (0.5ms) < 5000.0ms",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 2,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Praos block diffusion p95 latency (1.5ms) < 5000.0ms",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Praos block diffusion p95 latency (100066.1ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-3869126857901577273",
+            "vtime": "344.23997300094925"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (100066.1ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 100066.143,
+              "sample_count": 26,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (100066.1ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (100066.1ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (10007.3ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-4213335326071726189",
+            "vtime": "100.20597336348146"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 10007.296,
+              "sample_count": 7,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (10007.3ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (10007.3ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "event_group": "Praos block diffusion p95 latency (10007.3ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (100274.1ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "3314574934266558253",
+            "vtime": "1889.3378470793832"
+          },
+          "event_group": "Praos block diffusion p95 latency (100274.1ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 100274.066,
+              "sample_count": 222,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (100274.1ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (100274.1ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (100376.4ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-8466151099828830742",
+            "vtime": "195.6119608702138"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 100376.378,
+              "sample_count": 12,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (100376.4ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (100376.4ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (100376.4ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (100434.7ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-7503233614651271383",
+            "vtime": "2181.996268153889"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 100434.71399999999,
+              "sample_count": 256,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (100434.7ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (100434.7ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "event_group": "Praos block diffusion p95 latency (100434.7ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (100499.5ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "1216215540164070020",
+            "vtime": "669.8501451627817"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 100499.45099999999,
+              "sample_count": 62,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (100499.5ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (100499.5ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (100499.5ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (100807.4ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-7577604902125085846",
+            "vtime": "489.280654667411"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 100807.444,
+              "sample_count": 43,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (100807.4ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (100807.4ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "event_group": "Praos block diffusion p95 latency (100807.4ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (101.1ms) < 5000.0ms",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Praos block diffusion p95 latency (101035.0ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "8274116018735413569",
+            "vtime": "1641.780108474195"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 101035.039,
+              "sample_count": 184,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (101035.0ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (101035.0ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (101035.0ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (101384.7ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-4067869011178306113",
+            "vtime": "986.6692478347104"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (101384.7ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 101384.67199999999,
+              "sample_count": 121,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (101384.7ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (101384.7ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (102525.8ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "7133330441855911993",
+            "vtime": "1735.7213733517565"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (102525.8ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 102525.78,
+              "sample_count": 203,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (102525.8ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (102525.8ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (102736.0ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-8221273576250144273",
+            "vtime": "441.77862984128296"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 102736.025,
+              "sample_count": 38,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (102736.0ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (102736.0ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (102736.0ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (102814.5ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-7390789966949941901",
+            "vtime": "1400.6716789507773"
+          },
+          "event_group": "Praos block diffusion p95 latency (102814.5ms) < 5000.0ms",
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 102814.489,
+              "sample_count": 151,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (102814.5ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (102814.5ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (103009.1ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "7430022109290357834",
+            "vtime": "912.2223760173656"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 103009.07800000001,
+              "sample_count": 112,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (103009.1ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (103009.1ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (103009.1ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (103322.5ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-176136129750449986",
+            "vtime": "1244.9817316266708"
+          },
+          "event_group": "Praos block diffusion p95 latency (103322.5ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 103322.49299999999,
+              "sample_count": 145,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (103322.5ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (103322.5ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (103572.2ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-4224404982334971963",
+            "vtime": "1414.9935855758376"
+          },
+          "event_group": "Praos block diffusion p95 latency (103572.2ms) < 5000.0ms",
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 103572.234,
+              "sample_count": 181,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (103572.2ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (103572.2ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (103969.6ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "4579384799281764266",
+            "vtime": "1092.1546361015644"
+          },
+          "event_group": "Praos block diffusion p95 latency (103969.6ms) < 5000.0ms",
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 103969.58200000001,
+              "sample_count": 148,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (103969.6ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (103969.6ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (103976.0ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "3154419472496061609",
+            "vtime": "762.6681903500576"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (103976.0ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 103975.97399999999,
+              "sample_count": 81,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (103976.0ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (103976.0ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (104095.4ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "752911945113573329",
+            "vtime": "1009.0823611691594"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 104095.369,
+              "sample_count": 117,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (104095.4ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (104095.4ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "event_group": "Praos block diffusion p95 latency (104095.4ms) < 5000.0ms",
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (104189.2ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "2359326351820536961",
+            "vtime": "868.1744600019883"
+          },
+          "event_group": "Praos block diffusion p95 latency (104189.2ms) < 5000.0ms",
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 104189.246,
+              "sample_count": 101,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (104189.2ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (104189.2ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (104890.1ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-3954195449667067416",
+            "vtime": "1096.948384362273"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 104890.072,
+              "sample_count": 141,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (104890.1ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (104890.1ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "event_group": "Praos block diffusion p95 latency (104890.1ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (104910.1ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-1572248169534518868",
+            "vtime": "1032.55976740201"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (104910.1ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 104910.132,
+              "sample_count": 137,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (104910.1ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (104910.1ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (105829.0ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "113847539665472876",
+            "vtime": "1571.878327802755"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 105828.952,
+              "sample_count": 202,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (105829.0ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (105829.0ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "event_group": "Praos block diffusion p95 latency (105829.0ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (106011.1ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "8972035604167900852",
+            "vtime": "159.9569706886541"
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (106011.1ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 106011.15,
+              "sample_count": 6,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (106011.1ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (106011.1ms) < 5000.0ms",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (106021.6ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "4539835756186480832",
+            "vtime": "1092.6098115304485"
+          },
+          "event_group": "Praos block diffusion p95 latency (106021.6ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 106021.58300000001,
+              "sample_count": 129,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (106021.6ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (106021.6ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (106337.2ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-78823772410784965",
+            "vtime": "195.33534124307334"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 106337.23000000001,
+              "sample_count": 17,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (106337.2ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (106337.2ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (106337.2ms) < 5000.0ms"
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (106384.5ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "2708101448721305533",
+            "vtime": "160.3165860415902"
+          },
+          "event_group": "Praos block diffusion p95 latency (106384.5ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 106384.481,
+              "sample_count": 9,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (106384.5ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (106384.5ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (106384.6ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "4054528538025229854",
+            "vtime": "632.681035796646"
+          },
+          "event_group": "Praos block diffusion p95 latency (106384.6ms) < 5000.0ms",
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 106384.619,
+              "sample_count": 63,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (106384.6ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (106384.6ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "Praos block diffusion p95 latency (106484.9ms) < 5000.0ms",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "9213367327226622000",
+            "vtime": "157.70470364624634"
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "p95_latency_ms": 106484.89,
+              "sample_count": 7,
+              "threshold_ms": 5000
+            },
+            "display_type": "Always",
+            "hit": true,
+            "id": "Praos block diffusion p95 latency (106484.9ms) < 5000.0ms",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 57,
+              "class": "",
+              "file": "/app/entrypoint-analysis.py",
+              "function": "report_assertions"
+            },
+            "message": "Praos block diffusion p95 latency (106484.9ms) < 5000.0ms",
+            "must_hit": true
+          },
+          "source": {
+            "container": "analysis",
+            "name": "python3.11",
+            "pid": 19
+          },
+          "event_group": "Praos block diffusion p95 latency (106484.9ms) < 5000.0ms"
+        }
+      ]
+    }
+  ],
+  "chain": null,
+  "nightly": []
+}
