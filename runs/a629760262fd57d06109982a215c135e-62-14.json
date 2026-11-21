@@ -1,0 +1,546 @@
+{
+  "run_id": "a629760262fd57d06109982a215c135e-62-14",
+  "status": "completed",
+  "created_at": "2026-10-06T01:40:17Z",
+  "started_at": "2026-10-06T01:40:17Z",
+  "completed_at": "2026-10-06T06:26:27Z",
+  "test_name": "amaru-v2",
+  "duration_minutes": 180,
+  "directory": "testnets/cardano_node_master",
+  "commit": "f3da6d4386bd27c1bed0f21f9d625c1c82da747c",
+  "try": 18,
+  "requester": "cfhal",
+  "repository": "cardano-foundation/cardano-node-antithesis",
+  "parameters": {
+    "antithesis.config_image": "us-central1-docker.pkg.dev/molten-verve-216720/pragma-repository/cardano-moog-config:3fa336f42b",
+    "antithesis.description": "{\"testRun\":{\"commitId\":\"f3da6d4386bd27c1bed0f21f9d625c1c82da747c\",\"directory\":\"testnets/cardano_node_master\",\"platform\":\"github\",\"repository\":{\"organization\":\"cardano-foundation\",\"repo\":\"cardano-node-antithesis\"},\"requester\":\"cfhal\",\"try\":18,\"type\":\"test-run\"},\"testRunId\":\"3fa336f42b482cac208ce4a5a6388a98bf989e4d369c95534bafa814c74eec5a\"}",
+    "antithesis.duration": "180",
+    "antithesis.integrations.type": "none",
+    "antithesis.is_ephemeral": "false",
+    "antithesis.is_setup": "false",
+    "antithesis.performance_tier": "standard",
+    "antithesis.report.recipients": "antithesis@cardanofoundation.org",
+    "antithesis.source": "cardano-foundation/cardano-node-antithesis",
+    "antithesis.test_name": "amaru-v2",
+    "custom.container_faults_kill_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.container_faults_pause_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.container_faults_stop_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator",
+    "custom.faults_enabled": "true",
+    "custom.instrumented": "true",
+    "custom.network_fault_exclusion": "asteria-game,sidecar,tracer,tracer-sidecar,tx-generator"
+  },
+  "properties": [
+    {
+      "name": "No Antithesis errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Software images match expected platform",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 12,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build warnings",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Virtual time per wall time",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Test ran with full parallelism",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Containers joined the Antithesis network",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 13,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "The Antithesis Fault Injector was started",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Peak memory usage",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 265122,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected crashes",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected container exits",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis session errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_admin_singleton",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 63759,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "cluster fork depth < k",
+      "status": "Failing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 5,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "5472539484970413200",
+            "vtime": "11907.299084295752"
+          },
+          "event_group": "cluster fork depth < k",
+          "source": {
+            "container": "tracer-sidecar.example",
+            "name": "antithesis/pods/tracer-sidecar.example/sdk.jsonl",
+            "pid": 1
+          },
+          "antithesis_assert": {
+            "assert_type": "always",
+            "condition": false,
+            "details": {
+              "at": "2026-10-06T05:05:18.638154137Z",
+              "data": {
+                "kind": "AddedToCurrentChain",
+                "newTipSelectView": {
+                  "chainLength": 435,
+                  "issueNo": 0,
+                  "issuerHash": "828672780a39baf10494cd9bb9efbbafd710669d1b0f36e92b1c1c5e",
+                  "kind": "PraosChainSelectView",
+                  "slotNo": 11958,
+                  "tieBreakVRF": "2b5327324c8ce6472de0a741781cb9cb9f17017757c4bd67cea1c2d6caa433ad80a280df3f2cab1d9ec9847b7ae1e718150119fd484a42eec22893dce49c8838"
+                },
+                "newtip": "8d55e37a9ae1b35893c04056416c3943ceac9697e9658f3e7764d328bb27a69a@11958",
+                "oldTipSelectView": {
+                  "chainLength": 434,
+                  "issueNo": 0,
+                  "issuerHash": "f10227e7875e2f7321548221016f098d7bc5c72420aa644815e86d8f",
+                  "kind": "PraosChainSelectView",
+                  "slotNo": 11934,
+                  "tieBreakVRF": "243a03b018b889a3e09e18f639baa3d6e3302638681fa89164b3f468a9ff5bf5f4b0f960f2d6dac9b7e3377966b2ae9259e205b9cbfc0e297c971c0896f36e67"
+                }
+              },
+              "host": "p1.example",
+              "ns": "ChainDB.AddBlockEvent.AddedToCurrentChain",
+              "sev": "Notice",
+              "thread": "27"
+            },
+            "display_type": "AlwaysOrUnreachable",
+            "hit": true,
+            "id": "cluster fork depth < k",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 0,
+              "class": "",
+              "file": "",
+              "function": ""
+            },
+            "message": "cluster fork depth < k",
+            "must_hit": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "no critical logs",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p1 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p2 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p3 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Any p4 log",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "PeerStatusChanged",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "TraceAddBlockEvent.SwitchedToAFork",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 225,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_already_deployed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 35635,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_asteria_created",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 18,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_create_asteria_deferred",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 597,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_bootstrap_deferred",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 2759,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game eventually_alive holds",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 177,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game heartbeat ticked",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 42059,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_asteria_observed_1",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 11919,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_asteria_observed_2",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 11893,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_asteria_observed_3",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 12282,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_move_planned_1",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 11912,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_move_planned_2",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 11885,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_move_planned_3",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 12268,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_player_ship_spawned_1",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 3323,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_state_consistent",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 23,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "cluster fork observed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "find log files",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_population_grew",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 30,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game eventually_alive entered",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 177,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "asteria_game heartbeat entered",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 42059,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_eventually_no_tx_yet",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 129,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_eventually_started",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 154,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_pressure_summary",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 135,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_refill_daemon_unreachable",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 61066,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_refill_driver_started",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 62557,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_refill_not_applicable",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 1203,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_transact_daemon_unreachable",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 24664,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_transact_driver_started",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 73711,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "tx_generator_transact_not_applicable",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 48916,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Unreachable",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    }
+  ],
+  "chain": {
+    "phase": "finished",
+    "outcome": "failure",
+    "slot": 135584988
+  },
+  "nightly": []
+}

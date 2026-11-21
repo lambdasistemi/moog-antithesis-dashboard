@@ -1,0 +1,823 @@
+{
+  "run_id": "e833773d561c9c0cf3fbe5f24b53f964-62-14",
+  "status": "completed",
+  "created_at": "2026-10-08T17:30:41Z",
+  "started_at": "2026-10-08T17:30:41Z",
+  "completed_at": "2026-10-08T19:29:07Z",
+  "test_name": "amaru-v2",
+  "duration_minutes": 60,
+  "directory": "antithesis/dingo-praos/testnets/dingo-praos",
+  "commit": "2e2239c2cddae13bf4f5b78dc651d2778d9e7b2d",
+  "try": 3,
+  "requester": "wolf31o2",
+  "repository": "blinklabs-io/cardano-compose-stacks",
+  "parameters": {
+    "antithesis.config_image": "us-central1-docker.pkg.dev/molten-verve-216720/pragma-repository/cardano-moog-config:e66c8ccdc7",
+    "antithesis.description": "{\"testRun\":{\"commitId\":\"2e2239c2cddae13bf4f5b78dc651d2778d9e7b2d\",\"directory\":\"antithesis/dingo-praos/testnets/dingo-praos\",\"platform\":\"github\",\"repository\":{\"organization\":\"blinklabs-io\",\"repo\":\"cardano-compose-stacks\"},\"requester\":\"wolf31o2\",\"try\":3,\"type\":\"test-run\"},\"testRunId\":\"e66c8ccdc77d35775d2b1e6c7f9ae4d392d78bd9b0d4c83e340a3fefb6facc7a\"}",
+    "antithesis.duration": "60",
+    "antithesis.integrations.type": "none",
+    "antithesis.is_ephemeral": "false",
+    "antithesis.is_setup": "false",
+    "antithesis.performance_tier": "standard",
+    "antithesis.report.recipients": "antithesis@cardanofoundation.org",
+    "antithesis.source": "blinklabs-io/cardano-compose-stacks",
+    "antithesis.test_name": "amaru-v2",
+    "custom.container_faults_kill_exclusion": "analysis,txpump",
+    "custom.container_faults_pause_exclusion": "analysis,txpump",
+    "custom.container_faults_stop_exclusion": "analysis,txpump",
+    "custom.faults_enabled": "true",
+    "custom.instrumented": "true",
+    "custom.network_fault_exclusion": "analysis,txpump"
+  },
+  "properties": [
+    {
+      "name": "No Antithesis errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Software images match expected platform",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 6,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis build warnings",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Virtual time per wall time",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Test ran with full parallelism",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Containers joined the Antithesis network",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 7,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "The Antithesis Fault Injector was started",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Peak memory usage",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 12971,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected crashes",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No unexpected container exits",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "No Antithesis session errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "no-equivocations",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "node-log-observability",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "slot-monotonicity",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "utxo-submission-uniqueness",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Always",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-convergence",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 297,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-growth",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-quality-p1",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 232,
+      "counterexample_count": 134,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-6100354795796232824",
+            "vtime": "457.4518063713331"
+          },
+          "event_group": "chain-quality-p1",
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "block_count": 34,
+              "node_id": "p1",
+              "share": 0.6666666666666666
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "chain-quality-p1",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "chain-quality-p1",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "chain-quality-p2",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 297,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-quality-p3",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 297,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-quality-p4",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 297,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-quality-p5",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 297,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-tip-lag",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 292,
+      "counterexample_count": 38,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "4547033468619587534",
+            "vtime": "184.06797848665155"
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "lag": 44,
+              "max_fork_depth": 40,
+              "max_tip": 142,
+              "min_tip": 98
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "chain-tip-lag",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "chain-tip-lag",
+            "must_hit": true
+          },
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          },
+          "event_group": "chain-tip-lag"
+        }
+      ]
+    },
+    {
+      "name": "delegations-processed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 225,
+      "counterexample_count": 141,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-5514872071251025895",
+            "vtime": "79.06768383621238"
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "delegations_processed": 0
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "delegations-processed",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "delegations-processed",
+            "must_hit": true
+          },
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          },
+          "event_group": "delegations-processed"
+        }
+      ]
+    },
+    {
+      "name": "epoch-boundary-crossed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 226,
+      "counterexample_count": 105,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "4534199424004362070",
+            "vtime": "169.06201646919362"
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "current_epoch": 0,
+              "max_slot": 128
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "epoch-boundary-crossed",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "epoch-boundary-crossed",
+            "must_hit": true
+          },
+          "event_group": "epoch-boundary-crossed",
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "governance-processed",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 120,
+      "counterexample_count": 244,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-5514872071251025895",
+            "vtime": "79.0676838606596"
+          },
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          },
+          "event_group": "governance-processed",
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "governance_processed": 0
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "governance-processed",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "governance-processed",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "mempool-activity",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 305,
+      "counterexample_count": 97,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-5514872071251025895",
+            "vtime": "79.06768381176516"
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "mempool_tx_count": 0
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "mempool-activity",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "mempool-activity",
+            "must_hit": true
+          },
+          "event_group": "mempool-activity",
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "mempool-recovery",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "pool-produced-block-p1",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "pool-produced-block-p2",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 326,
+      "counterexample_count": 31,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-4130658347353954159",
+            "vtime": "124.54961484018713"
+          },
+          "event_group": "pool-produced-block-p2",
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "block_count": 0,
+              "node_id": "p2"
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "pool-produced-block-p2",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "pool-produced-block-p2",
+            "must_hit": true
+          },
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "pool-produced-block-p3",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 331,
+      "counterexample_count": 15,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-4965749483767764712",
+            "vtime": "474.5524178456981"
+          },
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "block_count": 0,
+              "node_id": "p3"
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "pool-produced-block-p3",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "pool-produced-block-p3",
+            "must_hit": true
+          },
+          "event_group": "pool-produced-block-p3"
+        }
+      ]
+    },
+    {
+      "name": "pool-produced-block-p4",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 329,
+      "counterexample_count": 20,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-6232509284629991714",
+            "vtime": "124.78534814505838"
+          },
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          },
+          "event_group": "pool-produced-block-p4",
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "block_count": 0,
+              "node_id": "p4"
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "pool-produced-block-p4",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "pool-produced-block-p4",
+            "must_hit": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "pool-produced-block-p5",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 327,
+      "counterexample_count": 25,
+      "counterexamples": [
+        {
+          "moment": {
+            "input_hash": "-6232509284629991714",
+            "vtime": "124.78534816834144"
+          },
+          "antithesis_assert": {
+            "assert_type": "sometimes",
+            "condition": false,
+            "details": {
+              "block_count": 0,
+              "node_id": "p5"
+            },
+            "display_type": "Sometimes",
+            "hit": true,
+            "id": "pool-produced-block-p5",
+            "location": {
+              "begin_column": 0,
+              "begin_line": 33,
+              "class": "github.com/blinklabs-io/cardano-compose-stacks/antithesis/dingo-praos/internal/analysis",
+              "file": "/code/internal/analysis/assertions_antithesis.go",
+              "function": "Sometimes"
+            },
+            "message": "pool-produced-block-p5",
+            "must_hit": true
+          },
+          "event_group": "pool-produced-block-p5",
+          "source": {
+            "container": "antithesis-analysis-1",
+            "name": "analysis",
+            "pid": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "block-forged",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "chain-tip-advanced",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "mempool-tx-added",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 305,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "multiple-pools-producing",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "plutus-tx-submitted",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 35,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Unreachable",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Language name: Go, sdk version: 0.7.0",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 332,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Language name: Go, sdk version: 0.8.0",
+      "status": "Passing",
+      "is_group": true,
+      "is_event": true,
+      "example_count": 434,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "All commands were started at least once",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "All commands were run to completion at least once",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Always: Commands finish with zero exit code",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Never: Invalid commands found",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Unique commands found",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 1,
+      "counterexample_count": 0,
+      "counterexamples": []
+    },
+    {
+      "name": "Customer output volume",
+      "status": "Failing",
+      "is_group": false,
+      "is_event": null,
+      "example_count": 0,
+      "counterexample_count": 1,
+      "counterexamples": [
+        {
+          "session_id": "3342d110a0caaa8e23458d033cc49413-62-14",
+          "total_output_mb": 12287.058092,
+          "total_test_hours": 48.600833333333334,
+          "total_output_rate": 252.81579037396477
+        }
+      ]
+    },
+    {
+      "name": "Never: Cardano Node Errors",
+      "status": "Passing",
+      "is_group": false,
+      "is_event": true,
+      "example_count": 0,
+      "counterexample_count": 0,
+      "counterexamples": []
+    }
+  ],
+  "chain": null,
+  "nightly": []
+}
